@@ -1,0 +1,57 @@
+project:
+  path:
+    root: /root/aether/data
+
+#主配置文件指定
+solon.env: dev
+
+solon:
+  app:
+    name: Aether
+    version: 0.0.2
+
+server:
+  # 监听端口
+  port: 2333
+  request:
+    # 设定最大的请求包大小（或表单项的值大小）kb,mb 默认: 2m
+    maxBodySize: 10MB
+    # 设定最大的上传文件大小 kb,mb (默认使用 maxBodySize 配置值)
+    maxFileSize: 10MB
+    # 设定最大的请求头大小 kb,mb 默认: 8k
+    maxHeaderSize: 8KB
+
+# Sa-Token配置
+sa-token:
+  isReadCookie: false
+  # token前缀
+  token-prefix: Bearer
+
+#默认
+mybatis.db1:
+  # 支持包名 或 类名 //支持 ** 和 *
+  typeAliases:
+    - "com.xiaobai1226.aether.core.domain.entity"
+  #支 持包名 或 类名 或 xml（.xml结尾）//支持 ** 和 *
+  mappers:
+    - "com.xiaobai1226.aether.core.mapper"
+    - "classpath:mapper/*.xml"
+  configuration:
+    # 是否启用缓存
+    cacheEnabled: false
+    # 如果为 true，则要求所有 mapper 有 @Mapper 主解
+    mapperVerifyEnabled: false
+    # 是否将列名下划线转为驼峰命名
+    mapUnderscoreToCamelCase: true
+    # 日志实现
+    logImpl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  globalConfig:
+    # 是否显示Mybatis Plus启动时的Banner信息(banner)
+    banner: false
+    # 自动填充策略配置
+#    metaObjectHandler: "demo4031.dso.MetaObjectHandlerImpl"
+#    dbConfig:
+#      # 逻辑删除字段配置
+#      logicDeleteField: "deleted"
+#      # 逻辑删除值配置
+#      logicDeleteValue: "2"

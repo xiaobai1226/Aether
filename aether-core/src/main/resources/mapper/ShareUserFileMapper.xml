@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaobai1226.aether.core.mapper.ShareUserFileMapper">
+
+    <!-- 分页查询分享ID列表 -->
+    <select id="getShareIdListByPage" resultType="String">
+        SELECT share_id
+        FROM share_file
+        <where>
+            user_id = #{userId}
+        </where>
+        GROUP BY share_id
+    </select>
+
+    <!-- 查询分享文件列表 TODO 加入userFIle的查询条件，避免代码逻辑处理 -->
+    <select id="getShareFileDTOListByShareId" resultType="com.xiaobai1226.aether.core.domain.dto.ShareFileDTO">
+        SELECT share_file.*, user_file.name, user_file.file_status, user_file.item_type, user_file.path,
+        user_file.parent_id
+        FROM share_file AS share_file
+        LEFT JOIN user_file AS user_file ON share_file.user_file_id = user_file.id
+        <where>
+            share_file.share_id IN
+            <foreach item="item" index="index" collection="shareIds" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+            <if test="userId != null">
+                AND share_file.user_id = #{userId}
+            </if>
+        </where>
+    </select>
+
+    <!-- TODO 查询分享文件列表 临时的内容和上面一摸一样，暂时加了分页 -->
+    <select id="getShareFileDTOListByShareIdAndPage" resultType="com.xiaobai1226.aether.core.domain.dto.ShareFileDTO">
+        SELECT share_file.*, user_file.name, user_file.file_status, user_file.item_type
+        FROM share_file AS share_file
+        LEFT JOIN user_file AS user_file ON share_file.user_file_id = user_file.id
+        <where>
+            share_file.share_id IN
+            <foreach item="item" index="index" collection="shareIds" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+            <if test="userId != null">
+                AND share_file.user_id = #{userId}
+            </if>
+        </where>
+    </select>
+</mapper>

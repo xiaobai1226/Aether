@@ -1,0 +1,21 @@
+solon.logging.appender:
+  console:
+    level: DEBUG
+    pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %magenta(${PID:-}) --- %-15([%15.15thread]) %-56(%cyan(%-40.40logger{39}%L)) : %msg%n"
+
+# redis配置
+redis.ds1:
+  config: |
+    singleServerConfig:
+      password:
+      address: "redis://localhost:6379"
+      # 数据库索引
+      database: 0
+
+# mybatis plus配置
+# 配置数据源
+database.db1:
+  jdbcUrl: jdbc:mysql://localhost:3306/netdisk?useUnicode=true&characterEncoding=utf8&autoReconnect=true&rewriteBatchedStatements=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+  driverClassName: com.mysql.cj.jdbc.Driver
+  username: root
+  password: 123456
