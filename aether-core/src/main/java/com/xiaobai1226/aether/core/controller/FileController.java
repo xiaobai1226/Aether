@@ -521,12 +521,18 @@ public class FileController {
         var fileDO = fileService.getFileById(userFileDO.getFileId());
 
         // 判断文件是否存在
-        if (fileDO == null || !FileUtil.exist(fileDO.getPath())) {
+        if (fileDO == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+
+        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+
+        if (!FileUtil.exist(fileFullPath)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
         ctx.contentType("image/" + FileNameUtil.extName(fileDO.getName()));
-        FileUtils.readFile(ctx, fileDO.getPath());
+        FileUtils.readFile(ctx, fileFullPath);
     }
 
     /**
@@ -547,12 +553,18 @@ public class FileController {
         var fileDO = fileService.getFileById(userFileDO.getFileId());
 
         // 判断文件是否存在
-        if (fileDO == null || !FileUtil.exist(fileDO.getPath())) {
+        if (fileDO == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+
+        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+
+        if (!FileUtil.exist(fileFullPath)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
         ctx.contentType("video/" + FileNameUtil.extName(fileDO.getName()));
-        FileUtils.readFile(ctx, fileDO.getPath());
+        FileUtils.readFile(ctx, fileFullPath);
     }
 
     /**
@@ -573,11 +585,17 @@ public class FileController {
         var fileDO = fileService.getFileById(userFileDO.getFileId());
 
         // 判断文件是否存在
-        if (fileDO == null || !FileUtil.exist(fileDO.getPath())) {
+        if (fileDO == null) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
-        FileUtils.readFile(ctx, fileDO.getPath());
+        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+
+        if (!FileUtil.exist(fileFullPath)) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+
+        FileUtils.readFile(ctx, fileFullPath);
     }
 
     /**
@@ -601,13 +619,19 @@ public class FileController {
         var fileDO = fileService.getFileById(userFileDO.getFileId());
 
         // 判断文件是否存在
-        if (fileDO == null || !FileUtil.exist(fileDO.getPath())) {
+        if (fileDO == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+
+        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+
+        if (!FileUtil.exist(fileFullPath)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
         String sign = RandomUtil.randomString(20);
 
-        downloadRedisDAO.setDownloadSign(new DownloadFileDTO(fileDO.getId(), userFileDO.getName(), fileDO.getPath()), sign);
+        downloadRedisDAO.setDownloadSign(new DownloadFileDTO(fileDO.getId(), userFileDO.getName(), fileFullPath), sign);
 
         return sign;
     }

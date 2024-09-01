@@ -1,18 +1,83 @@
+<template>
+  <div class="uploader-panel">
+    <div class="uploader-title">
+      <span>上传列表</span>
+      <span class="tips">（仅展示本次上传任务）</span>
+    </div>
+    <div class="file-list">
+      <div v-for="(item, index) in fileList" :key="index" class="file-item">
+        <div class="upload-panel">
+          <div class="file-name">
+            {{ item.fileName }}
+          </div>
+          <div class="progress">
+            <el-progress :percentage="item.uploadProgress"
+                         v-if="item.status == STATUS.uploading.value || item.status == STATUS.upload_seconds.value || item.status == STATUS.upload_finish.value|| item.status == STATUS.pause.value">
+            </el-progress>
+          </div>
+          <div class="upload-status">
+            <!-- 图标 -->
+            <span :class="['iconfont', 'icon-' + STATUS[item.status].icon]"
+                  :style="{color: STATUS[item.status].color}">
+            </span>
+            <!-- 状态描述 -->
+            <span class="status" :style="{ color: STATUS[item.status].color }">
+              {{ item.status == 'fail' ? item.errorMsg : STATUS[item.status].desc }}
+            </span>
+            <!-- 上传中 -->
+            <span class="upload-info"
+                  v-if="item.status === STATUS.uploading.value || item.status === STATUS.pause.value">
+              {{ Utils.sizeToStr(item.uploadedSize) }} / {{ Utils.sizeToStr(item.totalSize) }}
+            </span>
+          </div>
+        </div>
+        <div class="op">
+          <!-- MD5 -->
+          <el-progress type="circle" :width="50" :percentage="item.md5Progress"
+                       v-if="item.status == STATUS.init.value"></el-progress>
+          <div class="op-btn">
+            <Icon :width="28" class="btn-item" iconName="pause" title="暂停"
+                  v-if="item.status === STATUS.uploading.value"
+                  @click="pauseUpload(item.uid)"></Icon>
+            <span v-if="item.status === STATUS.pause.value">
+              <Icon :width="28" class="btn-item" iconName="upload"
+                    v-if="item.status === STATUS.pause.value" title="上传"
+                    @click="startUpload(item.uid)"></Icon>
+              <Icon :width="28" class="del btn-item" iconName="delete" title="取消"
+                    v-if="item.status === STATUS.pause.value"
+                    @click="cancelUpload(item.uid)"></Icon>
+            </span>
+            <Icon :width="28" class="clean btn-item" iconName="clean" title="清除"
+                  v-if="item.status == STATUS.upload_finish.value || item.status == STATUS.upload_seconds.value"
+                  @click="clearUploadRecord(item.uid, index)"></Icon>
+            <Icon :width="28" class="clean btn-item" iconName="upload" title="重新开始"
+                  v-if="item.status === STATUS.cancel.value"
+                  @click="startUpload(item.uid)"></Icon>
+          </div>
+        </div>
+      </div>
+      <div v-if="fileList.length == 0">
+        <NoData msg="暂无上传任务"></NoData>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
-import {ref} from "vue";
-import Utils from "@/utils/Utils";
-import NoData from "@/components/NoData.vue";
-import {useUploaderStore} from "@/stores/uploader";
-import SparkMD5 from "spark-md5";
-import {uploadFile, cancelUploadFile} from "@/api/file";
-import type {UploadFileRequest} from "@/api/file/types";
-import Icon from "@/components/Icon.vue"
-import {useUserStore} from "@/stores/user";
+import { ref } from 'vue'
+import Utils from '@/utils/Utils'
+import NoData from '@/components/NoData.vue'
+import { useUploaderStore } from '@/stores/uploader'
+import SparkMD5 from 'spark-md5'
+import { uploadFile, cancelUploadFile } from '@/api/file'
+import type { UploadFileRequest } from '@/api/file/types'
+import Icon from '@/components/Icon.vue'
+import { useUserStore } from '@/stores/user'
 
 // 从pinia获取用户数据
-const userStore = useUserStore();
+const userStore = useUserStore()
 
-const uploaderStore = useUploaderStore();
+const uploaderStore = useUploaderStore()
 
 interface FileItem {
   // 文件，文件大小，文件流，文件名。。。
@@ -58,61 +123,72 @@ interface STATUS_OBJ {
 // 文件状态
 const STATUS: STATUS_OBJ = {
   empty_file: {
-    value: "empty_file",
-    desc: "文件为空",
-    color: "#F75000",
-    icon: "close"
+    value: 'empty_file',
+    desc: '文件为空',
+    color: '#F75000',
+    icon: 'close'
   },
   fail: {
-    value: "fail",
-    desc: "上传失败",
-    color: "#F75000",
-    icon: "close"
+    value: 'fail',
+    desc: '上传失败',
+    color: '#F75000',
+    icon: 'close'
   },
   init: {
-    value: "init",
-    desc: "解析中",
-    color: "#e6a23c",
-    icon: "clock"
+    value: 'init',
+    desc: '解析中',
+    color: '#e6a23c',
+    icon: 'clock'
   },
   uploading: {
-    value: "uploading",
-    desc: "上传中",
-    color: "#409eff",
-    icon: "upload"
+    value: 'uploading',
+    desc: '上传中',
+    color: '#409eff',
+    icon: 'upload'
   },
   pause: {
-    value: "pause",
-    desc: "已暂停",
-    color: "#409eff",
-    icon: "upload"
+    value: 'pause',
+    desc: '已暂停',
+    color: '#409eff',
+    icon: 'upload'
   },
   upload_finish: {
-    value: "upload_finish",
-    desc: "上传完成",
-    color: "#67c23a",
-    icon: "ok"
+    value: 'upload_finish',
+    desc: '上传完成',
+    color: '#67c23a',
+    icon: 'ok'
   },
   upload_seconds: {
-    value: "upload_seconds",
-    desc: "秒传",
-    color: "#67c23a",
-    icon: "ok"
+    value: 'upload_seconds',
+    desc: '秒传',
+    color: '#67c23a',
+    icon: 'ok'
   },
   cancel: {
-    value: "cancel",
-    desc: "已取消",
-    color: "#F75000",
-    icon: "close"
+    value: 'cancel',
+    desc: '已取消',
+    color: '#F75000',
+    icon: 'close'
+  },
+  wait: {
+    value: 'wait',
+    desc: '等待中',
+    color: '#409eff',
+    icon: 'wait'
   }
 }
 
 // 分片大小
-const chunkSize = 1024 * 1024 * 5;
+const chunkSize = 1024 * 1024 * 5
 // 文件列表
-const fileList = ref<Array<FileItem>>([]);
+const fileList = ref<Array<FileItem>>([])
+// 上传中数量
+let uploadingNum = 0
+// 等待上传数量
+let waitNum = 0
+
 // TODO 确定delList的类型
-const delList = ref<string[]>([]);
+const delList = ref<string[]>([])
 const addUploadFile = async (file: File, uid: string, path: string | null, uploadedCallback: () => void) => {
   const fileItem: FileItem = {
     // 文件，文件大小，文件流，文件名。。。
@@ -122,7 +198,7 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
     // MD5进度
     md5Progress: 0,
     // MD5值
-    md5: "",
+    md5: '',
     // 文件名
     fileName: file.name,
     // 上传状态
@@ -140,83 +216,92 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
     // 错误信息
     errorMsg: null,
     // 任务ID
-    taskId: "",
+    taskId: '',
     // 回调方法
     uploadedCallback: uploadedCallback
-  };
+  }
 
   // 向列表第一条插入元素
-  fileList.value.unshift(fileItem);
+  fileList.value.unshift(fileItem)
   if (fileItem.totalSize == 0) {
-    fileItem.status = STATUS.empty_file.value;
-    return;
-  }
-  // 计算MD5
-  let md5FileUid = await computeMD5(fileItem);
-  if (md5FileUid == null) {
-    return;
+    fileItem.status = STATUS.empty_file.value
+    return
   }
 
-  // 上传文件
-  await handleUploadFile(uid, 0, uploadedCallback);
-};
+  // 最大同时上传数量 3
+  if (uploadingNum >= 3) {
+    fileItem.status = STATUS.wait.value
+    waitNum++
+  } else {
+    uploadingNum++
+
+    // 计算MD5
+    let md5FileUid = await computeMD5(fileItem)
+    if (md5FileUid == null) {
+      return
+    }
+
+    // 上传文件
+    await handleUploadFile(uid, 0, uploadedCallback)
+  }
+}
 
 // 初始化uploaderStore中的方法
-uploaderStore.initAddUploadFileOfUploader(addUploadFile);
+uploaderStore.initAddUploadFileOfUploader(addUploadFile)
 
 /**
  * 计算MD5
  * @param fileItem
  */
 const computeMD5 = (fileItem: FileItem) => {
-  const file = fileItem.file;
-  const blobSlice = File.prototype.slice || (File as any).prototype.mozSlice || (File as any).prototype.webkitSlice;
-  const chunks = Math.ceil(file.size / chunkSize);
-  let currentChunk = 0;
-  const spark = new SparkMD5.ArrayBuffer();
-  const fileReader = new FileReader();
+  const file = fileItem.file
+  const blobSlice = File.prototype.slice || (File as any).prototype.mozSlice || (File as any).prototype.webkitSlice
+  const chunks = Math.ceil(file.size / chunkSize)
+  let currentChunk = 0
+  const spark = new SparkMD5.ArrayBuffer()
+  const fileReader = new FileReader()
 
   const loadNext = () => {
-    const start = currentChunk * chunkSize;
-    const end = start + chunkSize >= file.size ? file.size : start + chunkSize;
-    fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
-  };
-  loadNext();
+    const start = currentChunk * chunkSize
+    const end = start + chunkSize >= file.size ? file.size : start + chunkSize
+    fileReader.readAsArrayBuffer(blobSlice.call(file, start, end))
+  }
+  loadNext()
 
   return new Promise((resolve, reject) => {
-    const resultFile = getFileByUid(fileItem.uid);
+    const resultFile = getFileByUid(fileItem.uid)
 
     if (!resultFile) {
-      throw new Error("File is not found");
+      throw new Error('File is not found')
     }
 
     fileReader.onload = (progressEvent: ProgressEvent<FileReader>) => {
-      const target = progressEvent.target as FileReader;
-      spark.append(target.result);
-      currentChunk++;
+      const target = progressEvent.target as FileReader
+      spark.append(target.result)
+      currentChunk++
       if (currentChunk < chunks) {
         // console.log(`第${file.name},${currentChunk}分片解析完成，开始第${currentChunk + 1}分片解析`);
-        resultFile.md5Progress = Math.ceil((currentChunk / chunks) * 100);
-        loadNext();
+        resultFile.md5Progress = Math.ceil((currentChunk / chunks) * 100)
+        loadNext()
       } else {
-        const md5 = spark.end();
-        spark.destroy();
-        resultFile.md5Progress = 100;
-        resultFile.status = STATUS.uploading.value;
-        resultFile.md5 = md5;
-        resolve(fileItem.uid);
+        const md5 = spark.end()
+        spark.destroy()
+        resultFile.md5Progress = 100
+        resultFile.status = STATUS.uploading.value
+        resultFile.md5 = md5
+        resolve(fileItem.uid)
       }
-    };
+    }
     fileReader.onerror = () => {
-      resultFile.md5Progress = -1;
-      resultFile.status = STATUS.fail.value;
-      resolve(fileItem.uid);
-    };
+      resultFile.md5Progress = -1
+      resultFile.status = STATUS.fail.value
+      resolve(fileItem.uid)
+    }
   }).catch((error) => {
     // console.log(error);
-    return Promise.resolve(null);
-  });
-};
+    return Promise.resolve(null)
+  })
+}
 
 /**
  * 获取文件
@@ -224,9 +309,9 @@ const computeMD5 = (fileItem: FileItem) => {
  */
 const getFileByUid = (uid: string): FileItem | undefined => {
   const fileItem = fileList.value.find((item => {
-    return item.uid === uid;
-  }));
-  return fileItem;
+    return item.uid === uid
+  }))
+  return fileItem
 }
 
 /**
@@ -236,34 +321,34 @@ const getFileByUid = (uid: string): FileItem | undefined => {
  * @param uploadedCallback
  */
 const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallback: () => void) => {
-  chunkIndex = chunkIndex ? chunkIndex : 0;
+  chunkIndex = chunkIndex ? chunkIndex : 0
   // 分片上传
-  let currentFile = getFileByUid(uid);
+  let currentFile = getFileByUid(uid)
   if (currentFile) {
-    const file = currentFile.file;
-    const fileSize = currentFile.totalSize;
-    const chunks = Math.ceil(fileSize / chunkSize);
-    let shouldBreak = false;
+    const file = currentFile.file
+    const fileSize = currentFile.totalSize
+    const chunks = Math.ceil(fileSize / chunkSize)
+    let shouldBreak = false
     for (let i = chunkIndex; i < chunks; i++) {
       if (shouldBreak) {
-        break;
+        break
       }
 
-      let delIndex = delList.value.indexOf(uid);
+      let delIndex = delList.value.indexOf(uid)
       if (delIndex != -1) {
-        delList.value.splice(delIndex, 1);
-        break;
+        delList.value.splice(delIndex, 1)
+        break
       }
 
-      const currentUploadFile = getFileByUid(uid);
+      const currentUploadFile = getFileByUid(uid)
 
       if (currentUploadFile) {
         if (currentUploadFile.status !== STATUS.uploading.value) {
-          break;
+          break
         }
-        const start = i * chunkSize;
-        const end = start + chunkSize >= fileSize ? fileSize : start + chunkSize;
-        const chunkFile = file.slice(start, end);
+        const start = i * chunkSize
+        const end = start + chunkSize >= fileSize ? fileSize : start + chunkSize
+        const chunkFile = file.slice(start, end)
 
         const uploadFileRequest: UploadFileRequest = {
           taskId: currentFile.taskId,
@@ -272,52 +357,57 @@ const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
           identifier: currentFile.md5,
           chunkIndex: i,
           totalChunks: chunks
-        };
+        }
 
         if (currentFile.path) {
-          uploadFileRequest.path = currentFile.path;
+          uploadFileRequest.path = currentFile.path
         }
 
         await uploadFile(uploadFileRequest, chunkFile, (progressEvent) => {
-          let loaded = progressEvent.loaded;
+          let loaded = progressEvent.loaded
           if (loaded > fileSize) {
-            loaded = fileSize;
+            loaded = fileSize
           }
-          currentUploadFile.uploadedSize = i * chunkSize + loaded;
-          currentUploadFile.uploadProgress = Math.floor((currentUploadFile.uploadedSize / fileSize) * 100);
-        }).then(({data}) => {
-          currentUploadFile.taskId = data.taskId;
-          let statusString = STATUS.fail.value;
+          currentUploadFile.uploadedSize = i * chunkSize + loaded
+          currentUploadFile.uploadProgress = Math.floor((currentUploadFile.uploadedSize / fileSize) * 100)
+        }).then(({ data }) => {
+          currentUploadFile.taskId = data.taskId
+          let statusString = STATUS.fail.value
           if (data.status === 0) {
-            statusString = STATUS.upload_seconds.value;
+            statusString = STATUS.upload_seconds.value
           } else if (data.status === 1) {
             if (currentUploadFile.status === STATUS.pause.value) {
-              statusString = STATUS.pause.value;
+              statusString = STATUS.pause.value
             } else {
-              statusString = STATUS.uploading.value;
+              statusString = STATUS.uploading.value
             }
           } else if (data.status === 2) {
-            statusString = STATUS.upload_finish.value;
+            statusString = STATUS.upload_finish.value
           } else if (data.status === 3) {
-            statusString = STATUS.fail.value;
+            statusString = STATUS.fail.value
           }
 
-          currentUploadFile.status = STATUS[statusString].value;
-          currentUploadFile.currentChunkIndex = i;
+          currentUploadFile.status = STATUS[statusString].value
+          currentUploadFile.currentChunkIndex = i
           if (statusString == STATUS.upload_seconds.value || statusString == STATUS.upload_finish.value) {
-            currentUploadFile.uploadProgress = 100;
+            currentUploadFile.uploadProgress = 100
             // emit("uploadCallback");
-            shouldBreak = true;
+            shouldBreak = true
             // 执行回调
-            uploadedCallback();
+            uploadedCallback()
             // 更新用户空间
-            userStore.handleGetUserSpaceUsage();
+            userStore.handleGetUserSpaceUsage()
+          }
+
+          if (data.status === 0 || data.status === 2 || data.status === 3 || (data.status === 1 && currentUploadFile.status === STATUS.pause.value)) {
+            uploadingNum--
+            startOneWaitingUpload()
           }
         }).catch((error) => {
-          currentUploadFile.errorMsg = error.response.data.msg;
-          currentUploadFile.status = STATUS.fail.value;
-          shouldBreak = true;
-        });
+          currentUploadFile.errorMsg = error.response.data.msg
+          currentUploadFile.status = STATUS.fail.value
+          shouldBreak = true
+        })
 
         // const updateResult = await proxy.Request({
         //   url: api.upload,
@@ -360,119 +450,82 @@ const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
       }
     }
   }
-};
+}
+
+/**
+ * 获取第一个等待中上传文件
+ */
+const getFirstWaitingFile = () => {
+  const fileItem = fileList.value.find((item => item.status === STATUS.wait.value))
+  return fileItem
+}
+
+/**
+ * 开始一个等待中上传
+ */
+const startOneWaitingUpload = () => {
+  const file = getFirstWaitingFile()
+  if (file && uploadingNum < 3) {
+    uploadingNum++
+    waitNum--
+
+    file.status = STATUS.uploading.value
+    handleUploadFile(file.uid, file.currentChunkIndex, file.uploadedCallback)
+  }
+}
 
 /**
  * 开始上传
  */
 const startUpload = (uid: string) => {
-  const file = getFileByUid(uid);
+  const file = getFileByUid(uid)
   if (file && (file.status === STATUS.pause.value || file.status === STATUS.cancel.value)) {
-    file.status = STATUS.uploading.value;
-    handleUploadFile(uid, file.currentChunkIndex, file.uploadedCallback);
+    if (uploadingNum >= 3) {
+      waitNum++
+      file.status = STATUS.wait.value
+    } else {
+      uploadingNum++
+      file.status = STATUS.uploading.value
+      handleUploadFile(uid, file.currentChunkIndex, file.uploadedCallback)
+    }
   }
-};
+}
 
 /**
  * 暂停上传
  */
 const pauseUpload = (uid: string) => {
-  const file = getFileByUid(uid);
+  const file = getFileByUid(uid)
   if (file && file.status === STATUS.uploading.value) {
-    file.status = STATUS.pause.value;
+    file.status = STATUS.pause.value
   }
-};
+}
 
 /**
  * 取消上传
  */
 const cancelUpload = (uid: string) => {
-  const file = getFileByUid(uid);
+  const file = getFileByUid(uid)
   if (file && file.status === STATUS.pause.value) {
     cancelUploadFile(file.taskId).then(() => {
-      file.status = STATUS.cancel.value;
-      file.currentChunkIndex = 0;
-      file.uploadProgress = 0;
-      file.uploadedSize = 0;
-    });
+      file.status = STATUS.cancel.value
+      file.currentChunkIndex = 0
+      file.uploadProgress = 0
+      file.uploadedSize = 0
+    })
   }
-};
+}
 
 /**
  * 清除上传记录
  */
 const clearUploadRecord = (uid: string, index: number) => {
-  const file = getFileByUid(uid);
+  const file = getFileByUid(uid)
   if (file) {
-    fileList.value.splice(index, 1);
+    fileList.value.splice(index, 1)
   }
-};
+}
 </script>
-
-<template>
-  <div class="uploader-panel">
-    <div class="uploader-title">
-      <span>上传列表</span>
-      <span class="tips">（仅展示本次上传任务）</span>
-    </div>
-    <div class="file-list">
-      <div v-for="(item, index) in fileList" :key="index" class="file-item">
-        <div class="upload-panel">
-          <div class="file-name">
-            {{ item.fileName }}
-          </div>
-          <div class="progress">
-            <el-progress :percentage="item.uploadProgress"
-                         v-if="item.status == STATUS.uploading.value || item.status == STATUS.upload_seconds.value || item.status == STATUS.upload_finish.value|| item.status == STATUS.pause.value">
-            </el-progress>
-          </div>
-          <div class="upload-status">
-            <!-- 图标 -->
-            <span :class="['iconfont', 'icon-' + STATUS[item.status].icon]"
-                  :style="{color: STATUS[item.status].color}">
-            </span>
-            <!-- 状态描述 -->
-            <span class="status" :style="{ color: STATUS[item.status].color }">
-              {{ item.status == "fail" ? item.errorMsg : STATUS[item.status].desc }}
-            </span>
-            <!-- 上传中 -->
-            <span class="upload-info"
-                  v-if="item.status === STATUS.uploading.value || item.status === STATUS.pause.value">
-              {{ Utils.sizeToStr(item.uploadedSize) }} / {{ Utils.sizeToStr(item.totalSize) }}
-            </span>
-          </div>
-        </div>
-        <div class="op">
-          <!-- MD5 -->
-          <el-progress type="circle" :width="50" :percentage="item.md5Progress"
-                       v-if="item.status == STATUS.init.value"></el-progress>
-          <div class="op-btn">
-            <Icon :width="28" class="btn-item" iconName="pause" title="暂停"
-                  v-if="item.status === STATUS.uploading.value"
-                  @click="pauseUpload(item.uid)"></Icon>
-            <span v-if="item.status === STATUS.pause.value">
-              <Icon :width="28" class="btn-item" iconName="upload"
-                    v-if="item.status === STATUS.pause.value" title="上传"
-                    @click="startUpload(item.uid)"></Icon>
-              <Icon :width="28" class="del btn-item" iconName="delete" title="取消"
-                    v-if="item.status === STATUS.pause.value"
-                    @click="cancelUpload(item.uid)"></Icon>
-            </span>
-            <Icon :width="28" class="clean btn-item" iconName="clean" title="清除"
-                  v-if="item.status == STATUS.upload_finish.value || item.status == STATUS.upload_seconds.value"
-                  @click="clearUploadRecord(item.uid, index)"></Icon>
-            <Icon :width="28" class="clean btn-item" iconName="upload" title="重新开始"
-                  v-if="item.status === STATUS.cancel.value"
-                  @click="startUpload(item.uid)"></Icon>
-          </div>
-        </div>
-      </div>
-      <div v-if="fileList.length == 0">
-        <NoData msg="暂无上传任务"></NoData>
-      </div>
-    </div>
-  </div>
-</template>
 
 <style scoped lang="scss">
 .uploader-panel {

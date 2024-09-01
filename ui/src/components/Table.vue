@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, computed} from "vue";
+import { ref, computed } from 'vue'
 
 export interface Column {
   label: string;
@@ -10,7 +10,7 @@ export interface Column {
   fixed?: string;
 }
 
-const emit = defineEmits(["rowSelected", "rowClick"]);
+const emit = defineEmits(['rowSelected', 'rowClick'])
 const props = defineProps({
   dataSource: {
     type: Object,
@@ -25,15 +25,15 @@ const props = defineProps({
   },
   showPagination: {
     type: Boolean,
-    default: true,
+    default: true
   },
   showPageSize: {
     type: Boolean,
-    default: true,
+    default: true
   },
   options: {
     type: Object,
-    default: function () {
+    default: function() {
       return {
         extHeight: 0,
         showIndex: false
@@ -46,80 +46,81 @@ const props = defineProps({
     type: Boolean,
     default: true
   }
-});
+})
 
 const layout = computed(() => {
-  return `total, ${props.showPageSize ? "sizes" : ""}, prev, pager, next, jumper`;
-});
+  return `total, ${props.showPageSize ? 'sizes' : ''}, prev, pager, next, jumper`
+})
 
 // 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
-const topHeight = 60 + 20 + 30 + 46;
+const topHeight = 60 + 20 + 30 + 46
 
 const tableHeight = ref(
-    props.options.tableHeight ? props.options.tableHeight : window.innerHeight - topHeight - props.options.extHeight
-);
+  props.options.tableHeight ? props.options.tableHeight : window.innerHeight - topHeight - props.options.extHeight
+)
 
 // 初始化
 const init = () => {
   if (props.initFetch && props.fetch) {
-    props.fetch();
+    props.fetch()
   }
 }
 
-init();
+init()
 
-const dataTable = ref();
+const dataTable = ref()
 
 // 清除选中
 const clearSelection = () => {
-  dataTable.value.clearSelection();
+  dataTable.value.clearSelection()
 }
 
 // 设置行选中
 const setCurrentRow = (rowKey, rowValue) => {
   let row = props.dataSource.list.find((item) => {
-    return item[rowKey] == rowValue;
-  });
-  dataTable.value.setCurrentRow(row);
+    return item[rowKey] == rowValue
+  })
+  dataTable.value.setCurrentRow(row)
 }
 
 // 将子组件暴露出去，否则父组件无法调用
-defineExpose({setCurrentRow, clearSelection});
+defineExpose({ setCurrentRow, clearSelection })
 
 // 行点击
 const handleRowClick = (row: any) => {
-  emit("rowClick", row);
+  emit('rowClick', row)
 }
 
 // 多选
 const handleSelectionChange = (row: any) => {
-  emit("rowSelected", row);
+  emit('rowSelected', row)
 }
 
 // 切换每页的大小
 const handlePageSizeChange = (size: number) => {
-  props.dataSource.pageSize = size;
-  props.dataSource.pageNum = 1;
-  props.fetch();
+  props.dataSource.pageSize = size
+  props.dataSource.pageNum = 1
+  props.fetch()
 }
 
 // 切换页码
 const handlePageNoChange = (pageNum: number) => {
-  props.dataSource.pageNum = pageNum;
-  props.fetch();
+  props.dataSource.pageNum = pageNum
+  props.fetch()
 }
 </script>
 
 <template>
   <div>
-    <el-table ref="dataTable" :data="dataSource.list || []" :height="tableHeight" :stripe="options.stripe"
+    <el-table ref="dataTable" :data="dataSource.list || []" :height="tableHeight"
+              :stripe="options.stripe"
               :border="options.border" header-row-class-name="table-header-row" highlight-current-row
               @row-click="handleRowClick" @selection-change="handleSelectionChange">
       <!-- selection选择框 -->
       <el-table-column v-if="options.selectType && options.selectType == 'checkbox'" type="selection" width="50"
-                       align="center"/>
+                       align="center" />
       <!-- 序号 -->
-      <el-table-column v-if="options.showIndex" label="序号" type="index" width="60" align="center"/>
+      <el-table-column v-if="options.showIndex" label="序号" type="index" width="60" align="center" />
       <!-- 数据列 -->
       <template v-for="(column, index) in columns">
         <template v-if="column && column.scopedSlots">

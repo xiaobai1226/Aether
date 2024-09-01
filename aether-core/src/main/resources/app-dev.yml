@@ -1,3 +1,7 @@
+project:
+  path:
+    root: D:\programme\test\aether
+
 solon.logging.appender:
   console:
     level: DEBUG
