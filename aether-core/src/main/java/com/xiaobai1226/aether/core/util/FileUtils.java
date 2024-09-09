@@ -239,8 +239,9 @@ public class FileUtils {
             }
         }
 
-        if (FileUtil.exist(fileDO.getPath())) {
-            FileUtil.del(fileDO.getPath());
+        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+        if (FileUtil.exist(fileFullPath)) {
+            FileUtil.del(fileFullPath);
         }
     }
 }

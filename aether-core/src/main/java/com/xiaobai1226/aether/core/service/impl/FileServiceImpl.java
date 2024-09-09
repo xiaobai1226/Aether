@@ -70,13 +70,14 @@ public class FileServiceImpl implements FileService {
         // 设置文件名
         var newFileName = FileUtils.rename(oldFileName, taskId);
         // 设置文件存储全路径
-        var filePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_UPLOAD_FILE_FULL, DateUtil.format(new Date(), "yyyy/MM/dd"), newFileName);
+        var filePath = FileUtils.generatePath(FolderNameConsts.PATH_UPLOAD_FILE_FULL, DateUtil.format(new Date(), "yyyy/MM/dd"), newFileName);
+        var fileFinalPath = FileUtils.generatePath(rootPath, filePath);
 
         // 获取分片文件夹中的所有文件
         File[] files = FileUtils.getOrderedUploadTempFiles(tempFolder);
 
         // 合并分片文件
-        FileUtils.mergeFiles(files, filePath);
+        FileUtils.mergeFiles(files, fileFinalPath);
 
         return filePath;
     }

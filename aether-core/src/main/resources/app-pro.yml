@@ -1,3 +1,7 @@
+project:
+  path:
+    root: /root/aether/data
+
 solon.logging.appender:
   console:
     level: INFO
