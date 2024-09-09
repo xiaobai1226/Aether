@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.xiaobai1226"
-version = "0.0.2"
+version = "0.0.3"
 
 repositories {
     mavenCentral()
