@@ -174,7 +174,7 @@ const STATUS: STATUS_OBJ = {
     value: 'wait',
     desc: '等待中',
     color: '#409eff',
-    icon: 'wait'
+    icon: 'dengdaizhong'
   }
 }
 
@@ -184,8 +184,6 @@ const chunkSize = 1024 * 1024 * 5
 const fileList = ref<Array<FileItem>>([])
 // 上传中数量
 let uploadingNum = 0
-// 等待上传数量
-let waitNum = 0
 
 // TODO 确定delList的类型
 const delList = ref<string[]>([])
@@ -222,7 +220,7 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
   }
 
   // 向列表第一条插入元素
-  fileList.value.unshift(fileItem)
+  fileList.value.push(fileItem)
   if (fileItem.totalSize == 0) {
     fileItem.status = STATUS.empty_file.value
     return
@@ -231,7 +229,6 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
   // 最大同时上传数量 3
   if (uploadingNum >= 3) {
     fileItem.status = STATUS.wait.value
-    waitNum++
   } else {
     uploadingNum++
 
@@ -242,7 +239,7 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
     }
 
     // 上传文件
-    await handleUploadFile(uid, 0, uploadedCallback)
+    await md5AndUploadFile(uid, 0, uploadedCallback)
   }
 }
 
@@ -312,6 +309,30 @@ const getFileByUid = (uid: string): FileItem | undefined => {
     return item.uid === uid
   }))
   return fileItem
+}
+
+/**
+ * MD5并上传文件
+ */
+const md5AndUploadFile = async (uid: string, chunkIndex: number, uploadedCallback: () => void) => {
+
+  const file = getFileByUid(uid)
+
+  if (!file) {
+    return
+  }
+
+  if (chunkIndex == 0) {
+    file.status = STATUS.init.value
+    // 计算MD5
+    let md5FileUid = await computeMD5(file)
+    if (md5FileUid == null) {
+      return
+    }
+  }
+
+  // 上传文件
+  await handleUploadFile(uid, chunkIndex, uploadedCallback)
 }
 
 /**
@@ -407,6 +428,9 @@ const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
           currentUploadFile.errorMsg = error.response.data.msg
           currentUploadFile.status = STATUS.fail.value
           shouldBreak = true
+
+          uploadingNum--
+          startOneWaitingUpload()
         })
 
         // const updateResult = await proxy.Request({
@@ -467,10 +491,9 @@ const startOneWaitingUpload = () => {
   const file = getFirstWaitingFile()
   if (file && uploadingNum < 3) {
     uploadingNum++
-    waitNum--
 
     file.status = STATUS.uploading.value
-    handleUploadFile(file.uid, file.currentChunkIndex, file.uploadedCallback)
+    md5AndUploadFile(file.uid, file.currentChunkIndex, file.uploadedCallback)
   }
 }
 
@@ -481,12 +504,11 @@ const startUpload = (uid: string) => {
   const file = getFileByUid(uid)
   if (file && (file.status === STATUS.pause.value || file.status === STATUS.cancel.value)) {
     if (uploadingNum >= 3) {
-      waitNum++
       file.status = STATUS.wait.value
     } else {
       uploadingNum++
       file.status = STATUS.uploading.value
-      handleUploadFile(uid, file.currentChunkIndex, file.uploadedCallback)
+      md5AndUploadFile(uid, file.currentChunkIndex, file.uploadedCallback)
     }
   }
 }

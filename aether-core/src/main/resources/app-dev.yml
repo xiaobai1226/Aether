@@ -19,7 +19,7 @@ redis.ds1:
 # mybatis plus配置
 # 配置数据源
 database.db1:
-  jdbcUrl: jdbc:mysql://localhost:3306/netdisk?useUnicode=true&characterEncoding=utf8&autoReconnect=true&rewriteBatchedStatements=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+  jdbcUrl: jdbc:mysql://localhost:3306/aether?useUnicode=true&characterEncoding=utf8&autoReconnect=true&rewriteBatchedStatements=true&serverTimezone=GMT%2B8&allowMultiQueries=true
   driverClassName: com.mysql.cj.jdbc.Driver
   username: root
   password: 123456
