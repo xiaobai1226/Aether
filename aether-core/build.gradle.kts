@@ -3,16 +3,16 @@ plugins {
 }
 
 group = "com.xiaobai1226"
-version = "0.0.2"
+version = "0.0.3"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation(platform("org.noear:solon-parent:2.8.6"))
+    implementation(platform("org.noear:solon-parent:2.9.2"))
     implementation("org.noear:solon-web")
-    implementation("org.noear:solon.web.webdav:2.8.6")
+    implementation("org.noear:solon.web.webdav:2.9.1")
     implementation("org.noear:solon.logging.logback")
     implementation("org.noear:solon.validation")
     implementation("org.noear:mybatis-plus-extension-solon-plugin")

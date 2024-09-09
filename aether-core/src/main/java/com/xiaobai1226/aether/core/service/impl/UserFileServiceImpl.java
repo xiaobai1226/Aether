@@ -2,7 +2,6 @@ package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
@@ -11,7 +10,6 @@ import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
 import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
 import com.xiaobai1226.aether.core.constant.FolderNameConsts;
-import com.xiaobai1226.aether.core.constant.SystemConsts;
 import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
 import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
@@ -32,8 +30,6 @@ import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.core.util.FileUtils;
-import com.xiaobai1226.aether.core.util.ImageUtils;
-import com.xiaobai1226.aether.core.util.VideoUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
@@ -46,7 +42,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.zip.ZipEntry;
@@ -304,10 +299,11 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 如果是最后一片，执行合并分片操作
         var finalFilePath = fileService.mergeFile(uploadTempFileDTO.getFileName(), uploadFileVO.getTaskId(), tempFolder);
+        var finalFullFilePath = FileUtils.generatePath(rootPath, finalFilePath);
         uploadFileCacheDTO.setFinalFilePath(finalFilePath);
 
         // 获取最终文件
-        var finalFile = FileUtil.file(finalFilePath);
+        var finalFile = FileUtil.file(finalFullFilePath);
         // 获取最终文件大小
         var finalFileSize = FileUtil.size(finalFile);
         var finalFileName = finalFile.getName();
@@ -324,25 +320,26 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 获取文件类型
         var fileType = FileTypeEnum.getEnumByFileName(uploadTempFileDTO.getFileName());
-        String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH + FileUtils.replaceFileExtName(finalFileName, SystemConsts.THUMBNAIL_SUFFIX);
-        // 设置文件存储全路径
-        var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnailFileName);
-        uploadFileCacheDTO.setThumbnailFilePath(thumbnailFilePath);
-
-        // 图片生成缩略图
-        if (FileTypeEnum.PICTURE == fileType) {
-            var result = ImageUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150, -1);
-            thumbnailFileName = result ? thumbnailFileName : null;
-        } else if (FileTypeEnum.VIDEO == fileType) { // 视频生成缩略图
-            var result = VideoUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150);
-            thumbnailFileName = result ? thumbnailFileName : null;
-        } else {
-            thumbnailFileName = null;
-        }
-
-        if (thumbnailFileName == null) {
-            uploadFileCacheDTO.setThumbnailFilePath(null);
-        }
+        String thumbnailFileName = null;
+//        String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH + FileUtils.replaceFileExtName(finalFileName, SystemConsts.THUMBNAIL_SUFFIX);
+//        // 设置文件存储全路径
+//        var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnailFileName);
+//        uploadFileCacheDTO.setThumbnailFilePath(thumbnailFilePath);
+//
+//        // 图片生成缩略图
+//        if (FileTypeEnum.PICTURE == fileType) {
+//            var result = ImageUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150, -1);
+//            thumbnailFileName = result ? thumbnailFileName : null;
+//        } else if (FileTypeEnum.VIDEO == fileType) { // 视频生成缩略图
+//            var result = VideoUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150);
+//            thumbnailFileName = result ? thumbnailFileName : null;
+//        } else {
+//            thumbnailFileName = null;
+//        }
+//
+//        if (thumbnailFileName == null) {
+//            uploadFileCacheDTO.setThumbnailFilePath(null);
+//        }
 
         // 写入File库，获取文件ID
         var fileId = fileService.addFile(finalFileName, finalFilePath, finalFileSize, uploadTempFileDTO.getIdentifier(), thumbnailFileName, fileType);

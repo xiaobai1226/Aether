@@ -2,6 +2,7 @@ package com.xiaobai1226.aether.core.domain.vo;
 
 import lombok.Data;
 import org.noear.solon.validation.annotation.Length;
+import org.noear.solon.validation.annotation.NotBlank;
 import org.noear.solon.validation.annotation.NotNull;
 import org.noear.solon.validation.annotation.Pattern;
 
@@ -45,7 +46,7 @@ public class UploadFileVO {
     /**
      * md5码
      */
-    @NotNull(message = ERROR_IDENTIFIER_EMPTY)
+    @NotBlank(message = ERROR_IDENTIFIER_EMPTY)
     private String identifier;
 
     /**

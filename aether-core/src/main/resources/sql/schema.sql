@@ -42,7 +42,7 @@ DROP TABLE IF EXISTS file;
 CREATE TABLE file
 (
     id          int unsigned AUTO_INCREMENT COMMENT '主键ID' PRIMARY KEY,
-    name        varchar(200)                           NOT NULL COMMENT '文件名称（第一次上传时的原名称）',
+    name        varchar(200)                           NOT NULL COMMENT '文件名称',
     path        varchar(200)                           NOT NULL COMMENT '文件路径',
     size        bigint unsigned                        NOT NULL COMMENT '文件大小',
     thumbnail   varchar(100)                           NULL COMMENT '缩略图 只有视频与图片存在',

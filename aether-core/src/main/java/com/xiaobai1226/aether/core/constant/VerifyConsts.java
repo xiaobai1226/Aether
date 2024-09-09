@@ -45,5 +45,5 @@ public class VerifyConsts {
     /**
      * 文件或文件夹最大长度
      */
-    public static final int FILE_NAME_MAX_LENGTH = 100;
+    public static final int FILE_NAME_MAX_LENGTH = 255;
 }

@@ -1,3 +1,132 @@
+<template>
+  <div>
+    <div class="top">
+      <div class="top-op">
+        <div class="btn" v-show="selectedFileIds.length == 0">
+          <el-upload :show-file-list="false" :with-credentials="true" :multiple="true" :http-request="addUploadFile"
+                     :accept="fileAccept">
+            <el-button type="primary">
+              <span class="iconfont icon-upload"></span>
+              上传
+            </el-button>
+          </el-upload>
+        </div>
+        <el-button type="success" v-show="selectedFileIds.length == 0" @click="showEditPanel(-1)">
+          <span class="iconfont icon-folder-add"></span>
+          新建文件夹
+        </el-button>
+        <!--        <el-button type="primary" v-show="selectedFileIds.length > 0" @click="shareFileBatch">-->
+        <!--          <span class="iconfont icon-share"></span>-->
+        <!--          分享-->
+        <!--        </el-button>-->
+        <el-button type="danger" v-show="selectedFileIds.length > 0" @click="delFileBatch">
+          <span class="iconfont icon-delete"></span>
+          删除
+        </el-button>
+        <el-button type="warning" v-show="selectedFileIds.length > 0" @click="moveFileBatch">
+          <span class="iconfont icon-move"></span>
+          移动
+        </el-button>
+        <el-button type="warning" v-show="selectedFileIds.length > 0" @click="copyFileBatch">
+          <span class="iconfont icon-copy"></span>
+          复制
+        </el-button>
+        <!--        <div class="search-panel">-->
+        <!--          <el-input clearable placeholder="输入文件名搜索" v-model="fileNameFuzzy" @keyup.enter="search">-->
+        <!--            <template #suffix>-->
+        <!--              <i class="iconfont icon-search" @click="search"></i>-->
+        <!--            </template>-->
+        <!--          </el-input>-->
+        <!--        </div>-->
+        <div class="iconfont icon-refresh" @click="loadDataList"></div>
+      </div>
+      <!-- 导航 -->
+      <div>
+        <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
+        <Navigation ref="navigationRef" />
+      </div>
+    </div>
+
+    <div v-loading="loading">
+      <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
+        <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList"
+               :initFetch="false" :options="tableOptions" @rowSelected="rowSelected">
+          <template #fileName="{index, row}">
+            <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
+              <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
+              <!--              <template v-if="row.category == 1 || row.category == 3">-->
+              <!--                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>-->
+              <!--              </template>-->
+              <!--              <template v-else>-->
+              <!-- 如果是文件-->
+              <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
+              <!-- 如果是文件夹-->
+              <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
+              <!--              </template>-->
+              <span class="file-name" :title="row.name" v-if="showEditPanelIndex != index">
+              <span @click="preview(row)">{{ row.name }}</span>
+                <!-- TODO 需要删除 -->
+                <!--              <span v-if="row.status == 0" class="transfer-status">转码中</span>-->
+                <!--              <span v-if="row.status == 1" class="transfer-status transfer-fail">转码失败</span>-->
+            </span>
+              <!-- 新建文件夹或重命名输入栏 -->
+              <div class="edit-panel" v-if="showEditPanelIndex == index">
+                <el-input v-model.trim="editPanelFileName" ref="editPanelRef"
+                          @keyup.enter="submitEditPanel(index)">
+                  <template #suffix>{{ editPanelFileNameSuffix }}</template>
+                </el-input>
+                <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"
+                      @click="submitEditPanel(index)"></span>
+                <span class="iconfont icon-error" @click="hideEditPanel(index)"></span>
+              </div>
+              <!-- 操作栏 -->
+              <span class="op">
+              <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
+<!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
+                <span class="iconfont icon-download" v-if="row.itemType == 1" @click="download(row)">下载</span>
+                <span class="iconfont icon-delete" @click="delFile(row)">删除</span>
+                <span class="iconfont icon-edit" @click="showEditPanel(index)">重命名</span>
+                <span class="iconfont icon-move" @click="moveFile(row)">移动</span>
+                <span class="iconfont icon-copy" @click="copyFile(row)">复制</span>
+              </template>
+            </span>
+            </div>
+          </template>
+          <template #fileSize="{ index, row }">
+            <span v-if="row.size">{{ Utils.sizeToStr(row.size) }}</span>
+            <span v-else>-</span>
+          </template>
+        </Table>
+      </div>
+      <div class="no-data" v-else>
+        <div class="no-data-inner">
+          <Icon iconName="no_data" :width="120" fit="fill"></Icon>
+          <div class="tips">当前目录为空，上传你的第一个文件吧</div>
+          <div class="op-list">
+            <el-upload :show-file-list="false" :with-credentials="true" :multiple="true" :http-request="addUploadFile"
+                       :accept="fileAccept">
+              <div class="op-item">
+                <Icon iconName="file" :width="60"></Icon>
+                <div>上传文件</div>
+              </div>
+            </el-upload>
+            <div class="op-item" v-if="!currentCategory" @click="showEditPanel(-1)">
+              <Icon iconName="folder" :width="60"></Icon>
+              <div>新建目录</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <FolderSelect ref="folderSelectRef" @folderSelect="handleMoveOrCopyCallback"></FolderSelect>
+    <!-- 预览 -->
+    <Preview ref="previewRef"></Preview>
+    <!-- 分享 -->
+    <ShareFile ref="shareFileRef"></ShareFile>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { getFileListByPage, newFolder, rename, del, move, copy, createDownloadSign } from '@/api/file'
@@ -89,6 +218,11 @@ const currentPath = ref<string | null>(null)
 const navigationRef = ref()
 
 /**
+ * 是否正在加载中
+ */
+const loading = ref(true)
+
+/**
  * 加载文件列表
  */
 const loadDataList = () => {
@@ -101,6 +235,8 @@ const loadDataList = () => {
   if (currentPath.value != null) {
     getFileListByPageRequest.path = currentPath.value as string
   }
+
+  loading.value = true
 
   // 请求后台获取文件列表
   getFileListByPage(getFileListByPageRequest).then(({ data }) => {
@@ -115,6 +251,7 @@ const loadDataList = () => {
     } else {
       tableData.value = data
     }
+    loading.value = false
   })
 }
 
@@ -639,7 +776,6 @@ const fileAccept = computed(() => {
 
 // 搜素
 const search = () => {
-  console.log('eee')
   loadDataList()
 }
 
@@ -652,132 +788,6 @@ const download = (row: UserFileInfo) => {
   }
 }
 </script>
-
-<template>
-  <div>
-    <div class="top">
-      <div class="top-op">
-        <div class="btn" v-show="selectedFileIds.length == 0">
-          <el-upload :show-file-list="false" :with-credentials="true" :multiple="true" :http-request="addUploadFile"
-                     :accept="fileAccept">
-            <el-button type="primary">
-              <span class="iconfont icon-upload"></span>
-              上传
-            </el-button>
-          </el-upload>
-        </div>
-        <el-button type="success" v-show="selectedFileIds.length == 0" @click="showEditPanel(-1)">
-          <span class="iconfont icon-folder-add"></span>
-          新建文件夹
-        </el-button>
-        <!--        <el-button type="primary" v-show="selectedFileIds.length > 0" @click="shareFileBatch">-->
-        <!--          <span class="iconfont icon-share"></span>-->
-        <!--          分享-->
-        <!--        </el-button>-->
-        <el-button type="danger" v-show="selectedFileIds.length > 0" @click="delFileBatch">
-          <span class="iconfont icon-delete"></span>
-          删除
-        </el-button>
-        <el-button type="warning" v-show="selectedFileIds.length > 0" @click="moveFileBatch">
-          <span class="iconfont icon-move"></span>
-          移动
-        </el-button>
-        <el-button type="warning" v-show="selectedFileIds.length > 0" @click="copyFileBatch">
-          <span class="iconfont icon-copy"></span>
-          复制
-        </el-button>
-        <!--        <div class="search-panel">-->
-        <!--          <el-input clearable placeholder="输入文件名搜索" v-model="fileNameFuzzy" @keyup.enter="search">-->
-        <!--            <template #suffix>-->
-        <!--              <i class="iconfont icon-search" @click="search"></i>-->
-        <!--            </template>-->
-        <!--          </el-input>-->
-        <!--        </div>-->
-        <div class="iconfont icon-refresh" @click="loadDataList"></div>
-      </div>
-      <!-- 导航 -->
-      <div>
-        <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
-        <Navigation ref="navigationRef" />
-      </div>
-    </div>
-    <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
-      <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList" :initFetch="false"
-             :options="tableOptions" @rowSelected="rowSelected">
-        <template #fileName="{index, row}">
-          <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
-            <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
-            <template v-if="row.category == 1 || row.category == 3">
-              <Icon :thumbnail="row.thumbnail" :width="32"></Icon>
-            </template>
-            <template v-else>
-              <!-- 如果是文件-->
-              <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
-              <!-- 如果是文件夹-->
-              <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
-            </template>
-            <span class="file-name" :title="row.name" v-if="showEditPanelIndex != index">
-              <span @click="preview(row)">{{ row.name }}</span>
-              <!-- TODO 需要删除 -->
-              <!--              <span v-if="row.status == 0" class="transfer-status">转码中</span>-->
-              <!--              <span v-if="row.status == 1" class="transfer-status transfer-fail">转码失败</span>-->
-            </span>
-            <!-- 新建文件夹或重命名输入栏 -->
-            <div class="edit-panel" v-if="showEditPanelIndex == index">
-              <el-input v-model.trim="editPanelFileName" ref="editPanelRef"
-                        @keyup.enter="submitEditPanel(index)">
-                <template #suffix>{{ editPanelFileNameSuffix }}</template>
-              </el-input>
-              <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"
-                    @click="submitEditPanel(index)"></span>
-              <span class="iconfont icon-error" @click="hideEditPanel(index)"></span>
-            </div>
-            <!-- 操作栏 -->
-            <span class="op">
-              <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
-<!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
-                <span class="iconfont icon-download" v-if="row.itemType == 1" @click="download(row)">下载</span>
-                <span class="iconfont icon-delete" @click="delFile(row)">删除</span>
-                <span class="iconfont icon-edit" @click="showEditPanel(index)">重命名</span>
-                <span class="iconfont icon-move" @click="moveFile(row)">移动</span>
-                <span class="iconfont icon-copy" @click="copyFile(row)">复制</span>
-              </template>
-            </span>
-          </div>
-        </template>
-        <template #fileSize="{ index, row }">
-          <span v-if="row.size">{{ Utils.sizeToStr(row.size) }}</span>
-          <span v-else>-</span>
-        </template>
-      </Table>
-    </div>
-    <div class="no-data" v-else>
-      <div class="no-data-inner">
-        <Icon iconName="no_data" :width="120" fit="fill"></Icon>
-        <div class="tips">当前目录为空，上传你的第一个文件吧</div>
-        <div class="op-list">
-          <el-upload :show-file-list="false" :with-credentials="true" :multiple="true" :http-request="addUploadFile"
-                     :accept="fileAccept">
-            <div class="op-item">
-              <Icon iconName="file" :width="60"></Icon>
-              <div>上传文件</div>
-            </div>
-          </el-upload>
-          <div class="op-item" v-if="!currentCategory" @click="showEditPanel(-1)">
-            <Icon iconName="folder" :width="60"></Icon>
-            <div>新建目录</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <FolderSelect ref="folderSelectRef" @folderSelect="handleMoveOrCopyCallback"></FolderSelect>
-    <!-- 预览 -->
-    <Preview ref="previewRef"></Preview>
-    <!-- 分享 -->
-    <ShareFile ref="shareFileRef"></ShareFile>
-  </div>
-</template>
 
 <style scoped lang="scss">
 @import "@/styles/file.list.scss";
