@@ -37,7 +37,7 @@ tasks.withType<JavaCompile> {
 tasks.withType<Jar> {
     manifest {
         attributes.apply {
-            set("Main-Class", "com.xiaobai1226.aether.core.NetdiskCoreApp")
+            set("Main-Class", "com.xiaobai1226.aether.core.AetherCoreApp")
         }
     }
 
