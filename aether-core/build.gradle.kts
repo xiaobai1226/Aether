@@ -12,6 +12,7 @@ repositories {
 dependencies {
     implementation(platform("org.noear:solon-parent:2.9.2"))
     implementation("org.noear:solon-web")
+    implementation("org.noear:solon-view-thymeleaf")
     implementation("org.noear:solon.web.webdav:2.9.1")
     implementation("org.noear:solon.logging.logback")
     implementation("org.noear:solon.validation")
@@ -37,7 +38,7 @@ tasks.withType<JavaCompile> {
 tasks.withType<Jar> {
     manifest {
         attributes.apply {
-            set("Main-Class", "com.xiaobai1226.aether.core.NetdiskCoreApp")
+            set("Main-Class", "com.xiaobai1226.aether.core.AetherCoreApp")
         }
     }
 
