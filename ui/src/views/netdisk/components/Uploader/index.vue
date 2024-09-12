@@ -232,12 +232,6 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
   } else {
     uploadingNum++
 
-    // 计算MD5
-    let md5FileUid = await computeMD5(fileItem)
-    if (md5FileUid == null) {
-      return
-    }
-
     // 上传文件
     await md5AndUploadFile(uid, 0, uploadedCallback)
   }

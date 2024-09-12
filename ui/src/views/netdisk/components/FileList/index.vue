@@ -783,7 +783,7 @@ const search = () => {
 const download = (row: UserFileInfo) => {
   if (row.id) {
     createDownloadSign(row.id).then(({ data }) => {
-      window.location.href = 'http://127.0.0.1:8080/api/v1/file/download?sign=' + data
+      window.location.href = '/api/v1/file/download?sign=' + data
     })
   }
 }

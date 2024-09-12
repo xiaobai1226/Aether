@@ -10,6 +10,7 @@ declare module 'vue' {
     Avatar: typeof import('./src/components/Avatar.vue')['default']
     AvatarUpload: typeof import('./src/components/AvatarUpload.vue')['default']
     Dialog: typeof import('./src/components/Dialog.vue')['default']
+    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
     ElDialog: typeof import('element-plus/es')['ElDialog']
