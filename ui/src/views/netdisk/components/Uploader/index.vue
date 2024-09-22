@@ -198,7 +198,7 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
     // MD5值
     md5: '',
     // 文件名
-    fileName: file.name,
+    fileName: file.webkitRelativePath ? file.webkitRelativePath : file.name,
     // 上传状态
     status: STATUS.init.value,
     // 已上传大小

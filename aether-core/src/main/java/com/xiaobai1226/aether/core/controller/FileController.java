@@ -171,6 +171,13 @@ public class FileController {
             parentId = parentUserFile.getId();
         }
 
+        /**
+         * 如果是上传文件夹，判断文件路径
+         */
+        if (StrUtil.isNotEmpty(uploadFileVO.getRelativePath())) {
+
+        }
+
         // 如果taskId为空，则生成taskId
         if (StrUtil.isBlank(uploadFileVO.getTaskId())) {
             // 生成taskId

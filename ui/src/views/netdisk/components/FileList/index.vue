@@ -3,13 +3,12 @@
     <div class="top">
       <div class="top-op">
         <div class="btn" v-show="selectedFileIds.length == 0">
-          <el-upload :show-file-list="false" :with-credentials="true" :multiple="true" :http-request="addUploadFile"
-                     :accept="fileAccept">
-            <el-button type="primary">
-              <span class="iconfont icon-upload"></span>
-              上传
-            </el-button>
-          </el-upload>
+          <el-button type="primary" @click="openUploadPopup">
+            <span class="iconfont icon-upload"></span>
+            上传
+          </el-button>
+          <UploadPopup ref="uploadPopupRef" :category="currentCategory" :path="currentPath"
+                       :callbackFunction="loadDataList" />
         </div>
         <el-button type="success" v-show="selectedFileIds.length == 0" @click="showEditPanel(-1)">
           <span class="iconfont icon-folder-add"></span>
@@ -103,13 +102,10 @@
           <Icon iconName="no_data" :width="120" fit="fill"></Icon>
           <div class="tips">当前目录为空，上传你的第一个文件吧</div>
           <div class="op-list">
-            <el-upload :show-file-list="false" :with-credentials="true" :multiple="true" :http-request="addUploadFile"
-                       :accept="fileAccept">
-              <div class="op-item">
-                <Icon iconName="file" :width="60"></Icon>
-                <div>上传文件</div>
-              </div>
-            </el-upload>
+            <div class="op-item" @click="openUploadPopup">
+              <Icon iconName="file" :width="60"></Icon>
+              <div>上传文件</div>
+            </div>
             <div class="op-item" v-if="!currentCategory" @click="showEditPanel(-1)">
               <Icon iconName="folder" :width="60"></Icon>
               <div>新建目录</div>
@@ -140,15 +136,14 @@ import type {
   CopyRequest, DeleteRequest
 } from '@/api/file/types'
 import Table from '@/components/Table.vue'
+import UploadPopup from '@/components/UploadPopup.vue'
 import type { Column } from '@/components/Table.vue'
 import Utils from '@/utils/Utils'
 import { ElMessage } from 'element-plus'
 import Icon from '@/components/Icon.vue'
-import { useUploaderStore } from '@/stores/uploader'
 import Confirm from '@/utils/Confirm'
 import FolderSelect from '@/components/FolderSelect.vue'
 import Navigation from '@/components/Navigation.vue'
-import CategoryInfo from '@/js/CategoryInfo.js'
 import { useRoute, useRouter } from 'vue-router'
 import Preview from '@/components/preview/Preview.vue'
 import ShareFile from '@/views/netdisk/components/ShareFile/index.vue'
@@ -158,8 +153,6 @@ import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
 
 // 从pinia获取用户数据
 const userStore = useUserStore()
-
-const uploaderStore = useUploaderStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -294,14 +287,6 @@ watch(
   },
   { immediate: true }
 )
-
-/**
- * 增加上传文件
- * @param fileData
- */
-const addUploadFile = (fileData: any) => {
-  uploaderStore.addUploadFile(fileData.file, fileData.file.uid, currentPath.value, loadDataList)
-}
 
 /**
  * 显示操作栏的索引 -1 为不展示，其他为要展示行的索引
@@ -753,6 +738,12 @@ const openShareDialog = (ids: Array<number>, title: string) => {
 
 const previewRef = ref()
 
+const uploadPopupRef = ref()
+
+const openUploadPopup = () => {
+  uploadPopupRef.value.show()
+}
+
 /**
  * 预览
  * @param row
@@ -768,11 +759,6 @@ const preview = (row: UserFileInfo) => {
 }
 
 const fileNameFuzzy = ref()
-
-const fileAccept = computed(() => {
-  const categoryItem = CategoryInfo[currentCategory.value]
-  return categoryItem ? categoryItem.accept : ''
-})
 
 // 搜素
 const search = () => {
