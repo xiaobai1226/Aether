@@ -1,11 +1,11 @@
 <template>
-  <el-dialog v-model="popupVisible" title="上传" width="600" :close-on-click-modal="false">
-    <el-upload drag :show-file-list="false" :with-credentials="true" :multiple="true" directory
+  <el-dialog v-model="popupVisible" title="上传" width="280" :close-on-click-modal="false">
+    <el-upload :show-file-list="false" :with-credentials="true" :multiple="true"
                :http-request="addUploadFile"
                :accept="fileAccept">
-          <span class="tips">
-            拖动文件到此处以上传，或点击：
-          </span>
+      <!--      <span class="tips">-->
+      <!--        点击上传文件或文件夹-->
+      <!--      </span>-->
 
       <div class="buttons">
         <div class="btn_upload_file">
@@ -78,6 +78,7 @@ const addWebkitdirectory = (isFolder: Boolean) => {
 const addUploadFile = (fileData: any) => {
   uploaderStore.addUploadFile(fileData.file, fileData.file.uid, props.path, props.callbackFunction as () => void)
 }
+
 </script>
 
 <style scoped lang="scss">
@@ -91,8 +92,8 @@ const addUploadFile = (fileData: any) => {
 .buttons {
   display: flex;
   justify-content: center;
-  margin-top: 40px;
-  margin-bottom: 15px;
+  //margin-top: 40px;
+  //margin-bottom: 15px;
 }
 
 .btn_upload_file {

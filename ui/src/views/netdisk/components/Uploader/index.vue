@@ -378,6 +378,10 @@ const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
           uploadFileRequest.path = currentFile.path
         }
 
+        if (file.webkitRelativePath) {
+          uploadFileRequest.relativePath = file.webkitRelativePath
+        }
+
         await uploadFile(uploadFileRequest, chunkFile, (progressEvent) => {
           let loaded = progressEvent.loaded
           if (loaded > fileSize) {

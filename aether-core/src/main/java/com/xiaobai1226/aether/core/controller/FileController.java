@@ -162,7 +162,7 @@ public class FileController {
         // 获取当前会话账号id, 并转化为`int`类型
         final var userId = StpUtil.getLoginIdAsInt();
 
-        var parentId = 0;
+        Integer parentId = 0;
         if (StrUtil.isNotEmpty(uploadFileVO.getPath())) {
             var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, uploadFileVO.getPath());
             if (parentUserFile == null) {
@@ -171,11 +171,19 @@ public class FileController {
             parentId = parentUserFile.getId();
         }
 
-        /**
-         * 如果是上传文件夹，判断文件路径
-         */
+        // 如果是上传文件夹，判断文件路径
         if (StrUtil.isNotEmpty(uploadFileVO.getRelativePath())) {
+            var relativePath = uploadFileVO.getRelativePath();
+            int lastIndex = relativePath.lastIndexOf("/");
+            if (lastIndex > 0) {
+                relativePath = relativePath.substring(0, lastIndex);
+            }
 
+            parentId = userFileService.getParentFolderByPathOrCreate(userId, parentId, relativePath);
+
+            if (parentId == null) {
+                throw new FailResultException(SYSTEM_ERROR);
+            }
         }
 
         // 如果taskId为空，则生成taskId

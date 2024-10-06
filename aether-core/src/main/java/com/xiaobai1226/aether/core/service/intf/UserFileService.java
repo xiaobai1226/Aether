@@ -33,6 +33,17 @@ public interface UserFileService extends IService<UserFileDO> {
     UserFileDO getParentFolderByPath(Integer userId, Integer parentId, String path);
 
     /**
+     * 根据path获取父文件夹ID，如果不存在则创建这个文件夹
+     *
+     * @param userId   用户ID
+     * @param parentId 父ID
+     * @param path     所属文件夹路径
+     * @return 文件夹ID
+     * @author bai
+     */
+    Integer getParentFolderByPathOrCreate(Integer userId, Integer parentId, String path);
+
+    /**
      * 根据path获取用户文件数据
      *
      * @param userId 用户ID
@@ -73,9 +84,10 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param folderName 文件夹名称
      * @param parentId   父ID
      * @param userId     用户ID
+     * @return 文件夹ID
      * @author bai
      */
-    void newFolder(String folderName, Integer parentId, Integer userId);
+    Integer newFolder(String folderName, Integer parentId, Integer userId);
 
     /**
      * 根据文件ID获取文件数据
