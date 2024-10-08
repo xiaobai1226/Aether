@@ -6,6 +6,7 @@ import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.NioUtil;
 import cn.hutool.core.io.file.FileNameUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.core.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.domain.entity.FileDO;
@@ -47,14 +48,15 @@ public class FileUtils {
      */
     public static String rename(String name) {
         var extName = FileNameUtil.extName(name);
-        String time = DateUtil.format(new Date(), "yyyyMMddHHmmss");
+        String randomString = DateUtil.format(new Date(), "yyyyMMddHHmmss") + RandomUtil.randomNumbers(4);
+
         // 如果后缀不为空，则提取后缀名处理
         if (StrUtil.isNotEmpty(extName)) {
             var mainName = FileNameUtil.mainName(name);
-            return mainName + StrUtil.UNDERLINE + time + StrUtil.DOT + extName;
+            return mainName + StrUtil.UNDERLINE + randomString + StrUtil.DOT + extName;
         }
 
-        return name + StrUtil.UNDERLINE + time;
+        return name + StrUtil.UNDERLINE + randomString;
     }
 
     /**
