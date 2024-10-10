@@ -72,7 +72,6 @@
               <div class="edit-panel" v-if="showEditPanelIndex == index">
                 <el-input v-model.trim="editPanelFileName" ref="editPanelRef"
                           @keyup.enter="submitEditPanel(index)">
-                  <template #suffix>{{ editPanelFileNameSuffix }}</template>
                 </el-input>
                 <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"
                       @click="submitEditPanel(index)"></span>
@@ -321,11 +320,6 @@ const editPanelRef = ref()
 const editPanelFileName = ref<string | null>(null)
 
 /**
- * 新建文件夹或重命名输入框的文件名后缀
- */
-const editPanelFileNameSuffix = ref<string>()
-
-/**
  * 显示新建文件夹或重命名输入框的索引 -1 为不展示，其他为要展示行的索引
  */
 const showEditPanelIndex = ref<number>(-1)
@@ -369,22 +363,19 @@ const showEditPanel = (index: number) => {
     let currentData = tableData.value.list[index]
     // 展示重命名输入框
     showEditPanelIndex.value = index
+    let selectEndIndex = 0
 
-    // 编辑文件，如果是文件则处理后缀
-    if (currentData.itemType == 1 && currentData.name) {
-      let lastIndex = currentData.name.lastIndexOf('.')
-      if (lastIndex != -1) {
-        editPanelFileName.value = currentData.name.substring(0, lastIndex)
-        editPanelFileNameSuffix.value = currentData.name.substring(lastIndex)
-      } else {
-        editPanelFileName.value = currentData.name
-        editPanelFileNameSuffix.value = ''
+    if (currentData.name) {
+      selectEndIndex = currentData.name.length
+      editPanelFileName.value = currentData.name
+
+      // 编辑文件，如果是文件则处理后缀
+      if (currentData.itemType == 1) {
+        let lastIndex = currentData.name.lastIndexOf('.')
+        if (lastIndex != -1) {
+          selectEndIndex = lastIndex
+        }
       }
-    } else {
-      if (currentData.name) {
-        editPanelFileName.value = currentData.name
-      }
-      editPanelFileNameSuffix.value = ''
     }
 
     editing.value = true
@@ -392,6 +383,9 @@ const showEditPanel = (index: number) => {
       // 光标聚焦
       if (editPanelRef.value) {
         editPanelRef.value.focus()
+
+        const inputDOM = editPanelRef.value.$el.querySelector('input')
+        inputDOM.setSelectionRange(0, selectEndIndex)
       }
     })
   }
