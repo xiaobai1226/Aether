@@ -139,7 +139,7 @@ public class FileController {
         }
 
         // 修改名称
-        var result = userFileService.updateFileNameById(fileRenameVO.getId(), userId, fileRenameVO.getNewName(), NORMAL);
+        var result = userFileService.rename(fileRenameVO.getId(), userId, fileRenameVO.getNewName(), userFileDO, NORMAL);
 
         if (!result) {
             throw new FailResultException(BAD_REQUEST_ERROR, ERROR_RENAME);

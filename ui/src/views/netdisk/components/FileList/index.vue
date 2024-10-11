@@ -70,12 +70,13 @@
             </span>
               <!-- 新建文件夹或重命名输入栏 -->
               <div class="edit-panel" v-if="showEditPanelIndex == index">
-                <el-input v-model.trim="editPanelFileName" ref="editPanelRef"
+                <el-input v-model.trim="editPanelFileName" ref="editPanelRef" @blur="hideEditPanel(index)"
                           @keyup.enter="submitEditPanel(index)">
                 </el-input>
                 <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"
-                      @click="submitEditPanel(index)"></span>
-                <span class="iconfont icon-error" @click="hideEditPanel(index)"></span>
+                      @click="submitEditPanel(index)" @mousedown="submitEditPanelMouseDown"
+                      @mouseup="submitEditPanelMouseUp"></span>
+                <span class="iconfont icon-error"></span>
               </div>
               <!-- 操作栏 -->
               <span class="op">
@@ -391,11 +392,17 @@ const showEditPanel = (index: number) => {
   }
 }
 
+const isClickSubmitEditPanel = ref(false)
+
 /**
  * 隐藏新建文件夹或重命名输入框
  * @param index 对应行索引
  */
 const hideEditPanel = (index: number) => {
+  if (isClickSubmitEditPanel.value) {
+    return
+  }
+
   // 获取对应行的数据
   const fileData: UserFileInfo = tableData.value.list[index]
   // 如果id不为空则为重命名，否则为新建文件夹
@@ -409,20 +416,45 @@ const hideEditPanel = (index: number) => {
 }
 
 /**
+ * 按下提交新建文件夹或重命名请求按鈕
+ */
+const submitEditPanelMouseDown = () => {
+  isClickSubmitEditPanel.value = true
+}
+
+/**
+ * 抬起提交新建文件夹或重命名请求按鈕
+ */
+const submitEditPanelMouseUp = () => {
+  isClickSubmitEditPanel.value = false
+}
+
+/**
  * 提交新建文件夹或重命名请求
  */
 const submitEditPanel = (index: number) => {
-
   // 校验名称格式
   const regex = new RegExp(RegexEnum.REGEX_FILE_NAME)
+  let checkResult = true
+  let warnInfo = ''
   if (!editPanelFileName.value) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY)
-    return
+    checkResult = false
+    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY
   } else if ((editPanelFileName.value as string).length > 100) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string)
-    return
+    checkResult = false
+    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string
   } else if (!regex.test((editPanelFileName.value as string))) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_FILE_NAME_FORMAT)
+    checkResult = false
+    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_FORMAT
+  }
+
+  if (!checkResult) {
+    // 光标聚焦
+    if (editPanelRef.value) {
+      editPanelRef.value.focus()
+    }
+
+    ElMessage.warning(warnInfo)
     return
   }
 
@@ -442,6 +474,11 @@ const submitEditPanel = (index: number) => {
       hideEditPanel(index)
       // 重新加载数据
       loadDataList()
+    }).catch(() => {
+      // 光标聚焦
+      if (editPanelRef.value) {
+        editPanelRef.value.focus()
+      }
     })
   }
   // 新建文件夹
@@ -459,6 +496,11 @@ const submitEditPanel = (index: number) => {
       hideEditPanel(0)
       // 重新加载数据
       loadDataList()
+    }).catch(() => {
+      // 光标聚焦
+      if (editPanelRef.value) {
+        editPanelRef.value.focus()
+      }
     })
   }
 }

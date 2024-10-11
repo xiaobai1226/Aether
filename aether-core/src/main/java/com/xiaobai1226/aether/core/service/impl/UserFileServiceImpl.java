@@ -277,6 +277,24 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
+    public Boolean rename(Integer id, Integer userId, String newName, UserFileDO userFileDO, UserFileStatusEnum userFileStatus) {
+        LambdaUpdateWrapper<UserFileDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+        lambdaUpdateWrapper.set(UserFileDO::getName, newName).eq(UserFileDO::getId, id).eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, userFileStatus.flag());
+
+        // TODO 重新设计category和File的fileType字段
+//        if (UserFileItemTypeEnum.isFile(userFileDO.getItemType())) {
+//            var category = FileTypeEnum.getEnumByFileName(newName).category().flag();
+//            if (!Objects.equals(category, userFileDO.getCategory())) {
+//                lambdaUpdateWrapper.set(UserFileDO::getCategory, category);
+//            }
+//        }
+
+        var updateNameResult = userFileMapper.update(null, lambdaUpdateWrapper);
+
+        return updateNameResult == 1;
+    }
+
+    @Override
     public UploadResultDTO secondUploadFile(Integer userId, Integer parentId, UploadFileVO uploadFileVO, FileDO fileDO) {
         // 插入数据库
         addUserFile(userId, fileDO.getId(), parentId, uploadFileVO.getFileName(), FILE, NORMAL, fileDO.getSize());

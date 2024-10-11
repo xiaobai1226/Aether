@@ -112,6 +112,18 @@ public interface UserFileService extends IService<UserFileDO> {
     Boolean updateFileNameById(Integer id, Integer userId, String newName, UserFileStatusEnum userFileStatus);
 
     /**
+     * 重命名
+     *
+     * @param id             文件或文件夹ID
+     * @param userId         用户ID
+     * @param newName        新名称
+     * @param userFileDO     要修改的文件信息
+     * @param userFileStatus 文件状态
+     * @return 修改结果
+     */
+    Boolean rename(Integer id, Integer userId, String newName, UserFileDO userFileDO, UserFileStatusEnum userFileStatus);
+
+    /**
      * 秒传文件（当文件已存在时使用）
      *
      * @param userId       用户ID
