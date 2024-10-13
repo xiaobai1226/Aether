@@ -139,7 +139,7 @@ public class FileController {
         }
 
         // 修改名称
-        var result = userFileService.updateFileNameById(fileRenameVO.getId(), userId, fileRenameVO.getNewName(), NORMAL);
+        var result = userFileService.rename(fileRenameVO.getId(), userId, fileRenameVO.getNewName(), userFileDO, NORMAL);
 
         if (!result) {
             throw new FailResultException(BAD_REQUEST_ERROR, ERROR_RENAME);
@@ -162,13 +162,28 @@ public class FileController {
         // 获取当前会话账号id, 并转化为`int`类型
         final var userId = StpUtil.getLoginIdAsInt();
 
-        var parentId = 0;
+        Integer parentId = 0;
         if (StrUtil.isNotEmpty(uploadFileVO.getPath())) {
             var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, uploadFileVO.getPath());
             if (parentUserFile == null) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
             parentId = parentUserFile.getId();
+        }
+
+        // 如果是上传文件夹，判断文件路径
+        if (StrUtil.isNotEmpty(uploadFileVO.getRelativePath())) {
+            var relativePath = uploadFileVO.getRelativePath();
+            int lastIndex = relativePath.lastIndexOf("/");
+            if (lastIndex > 0) {
+                relativePath = relativePath.substring(0, lastIndex);
+            }
+
+            parentId = userFileService.getParentFolderByPathOrCreate(userId, parentId, relativePath);
+
+            if (parentId == null) {
+                throw new FailResultException(SYSTEM_ERROR);
+            }
         }
 
         // 如果taskId为空，则生成taskId

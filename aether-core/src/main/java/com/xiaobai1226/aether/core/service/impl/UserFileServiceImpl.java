@@ -30,6 +30,7 @@ import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.core.util.FileUtils;
+import com.xiaobai1226.aether.core.util.LockManager;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
@@ -123,6 +124,63 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
+    public Integer getParentFolderByPathOrCreate(Integer userId, Integer parentId, String path) {
+        if (StrUtil.isEmpty(path)) {
+            return null;
+        }
+
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        String[] dirs = path.split("/");
+
+        if (dirs.length == 0) {
+            return null;
+        }
+
+        if (parentId == null) {
+            parentId = 0;
+        }
+
+        LambdaQueryChainWrapper<UserFileDO> lambdaQuery;
+        UserFileDO userFileDO;
+        // 是否新建
+        var isCreate = false;
+        var lockKey = "";
+        for (int i = 0; i < dirs.length; i++) {
+            lockKey = parentId + ":" + dirs[i];
+
+            // 上锁
+            LockManager.lock(lockKey);
+
+            try {
+                if (!isCreate) {
+                    lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
+                    userFileDO = lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getParentId, parentId).eq(UserFileDO::getName, dirs[i]).eq(UserFileDO::getFileStatus, NORMAL.flag()).eq(UserFileDO::getItemType, UserFileItemTypeEnum.FOLDER.flag()).one();
+
+                    if (userFileDO == null) {
+                        parentId = newFolder(dirs[i], parentId, userId);
+                        isCreate = true;
+                    } else {
+                        parentId = userFileDO.getId();
+                    }
+                } else {
+                    parentId = newFolder(dirs[i], parentId, userId);
+                }
+            } finally {
+                LockManager.unlock(lockKey);
+            }
+
+            if (i == dirs.length - 1) {
+                return parentId;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
     public UserFileDTO getUserFileDTOByPath(Integer userId, String path) {
         if (StrUtil.isEmpty(path)) {
             return null;
@@ -195,8 +253,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public void newFolder(String folderName, Integer parentId, Integer userId) {
-        addUserFile(userId, null, parentId, folderName, UserFileItemTypeEnum.FOLDER, NORMAL, null);
+    public Integer newFolder(String folderName, Integer parentId, Integer userId) {
+        return addUserFile(userId, null, parentId, folderName, UserFileItemTypeEnum.FOLDER, NORMAL, null);
     }
 
     @Override
@@ -213,6 +271,24 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     public Boolean updateFileNameById(Integer id, Integer userId, String newName, UserFileStatusEnum userFileStatus) {
         LambdaUpdateWrapper<UserFileDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<>();
         lambdaUpdateWrapper.set(UserFileDO::getName, newName).eq(UserFileDO::getId, id).eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, userFileStatus.flag());
+        var updateNameResult = userFileMapper.update(null, lambdaUpdateWrapper);
+
+        return updateNameResult == 1;
+    }
+
+    @Override
+    public Boolean rename(Integer id, Integer userId, String newName, UserFileDO userFileDO, UserFileStatusEnum userFileStatus) {
+        LambdaUpdateWrapper<UserFileDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+        lambdaUpdateWrapper.set(UserFileDO::getName, newName).eq(UserFileDO::getId, id).eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, userFileStatus.flag());
+
+        // TODO 重新设计category和File的fileType字段
+//        if (UserFileItemTypeEnum.isFile(userFileDO.getItemType())) {
+//            var category = FileTypeEnum.getEnumByFileName(newName).category().flag();
+//            if (!Objects.equals(category, userFileDO.getCategory())) {
+//                lambdaUpdateWrapper.set(UserFileDO::getCategory, category);
+//            }
+//        }
+
         var updateNameResult = userFileMapper.update(null, lambdaUpdateWrapper);
 
         return updateNameResult == 1;
@@ -587,7 +663,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
      * @param fileSize           文件大小
      */
     @Tran
-    private void addUserFile(Integer userId, Integer fileId, Integer parentId, String fileName, UserFileItemTypeEnum userFileItemType, UserFileStatusEnum userFileStatusEnum, Long fileSize) {
+    private Integer addUserFile(Integer userId, Integer fileId, Integer parentId, String fileName, UserFileItemTypeEnum userFileItemType, UserFileStatusEnum userFileStatusEnum, Long fileSize) {
 
         var userFileDO = new UserFileDO();
 
@@ -631,6 +707,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                 throw new FailResultException(SYSTEM_ERROR);
             }
         }
+
+        return userFileDO.getId();
     }
 
     /**

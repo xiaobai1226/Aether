@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.core.domain.dto.UserFileDTO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
+import com.xiaobai1226.aether.core.util.FileUtils;
 import com.xiaobai1226.aether.core.webdav.intf.FileInfo;
 import com.xiaobai1226.aether.core.webdav.intf.FileSystem;
 import org.noear.solon.annotation.Component;
@@ -24,6 +25,9 @@ import java.util.Objects;
  */
 @Component
 public class NetdiskFileSystem implements FileSystem {
+
+    @Inject("${project.path.root}")
+    private String rootPath;
 
     @Inject
     private UserFileService userFileService;
@@ -108,7 +112,8 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public InputStream fileInputStream(String reqPath, long start, long length, Integer userId) {
         var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-        InputStream in = FileUtil.getInputStream(userFileDTO.getPath());
+        var fileFullPath = FileUtils.generatePath(rootPath, userFileDTO.getPath());
+        InputStream in = FileUtil.getInputStream(fileFullPath);
         if (length == 0) {
             return in;
         } else {
