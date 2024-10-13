@@ -48,6 +48,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Table: typeof import('./src/components/Table.vue')['default']
+    UploadPopup: typeof import('./src/components/UploadPopup.vue')['default']
     Window: typeof import('./src/components/Window.vue')['default']
   }
   export interface ComponentCustomProperties {
