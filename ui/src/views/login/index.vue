@@ -1,3 +1,61 @@
+<template>
+  <div class="login-body">
+    <div class="login-panel">
+      <!-- TODO rules警告待解决，代码能生效 -->
+      <el-form class="login-register" :model="loginForm" :rules="rules" ref="loginFormRef" @submit.prevent status-icon
+               @keyup.enter="handleLogin">
+        <div class="login-title">Aether</div>
+        <!-- input输入 -->
+        <el-form-item prop="username">
+          <el-input size="large" clearable placeholder="请输入用户名" v-model.trim="loginForm.username">
+            <template #prefix>
+              <span class="iconfont icon-account"></span>
+            </template>
+          </el-input>
+        </el-form-item>
+        <!-- 密码 -->
+        <el-form-item prop="password">
+          <el-input type="password" size="large" placeholder="请输入密码" v-model.trim="loginForm.password"
+                    show-password>
+            <template #prefix>
+              <span class="iconfont icon-password"></span>
+            </template>
+          </el-input>
+        </el-form-item>
+        <!-- 验证码 -->
+        <el-form-item prop="captchaCode">
+          <div class="check-code-panel">
+            <el-input size="large" placeholder="请输入验证码" v-model.trim="loginForm.captchaCode">
+              <template #prefix>
+                <span class="iconfont icon-yanzhengyanzhengma"></span>
+              </template>
+            </el-input>
+
+            <img :src="captchaBase64" class="check-code" @click="getCaptcha" />
+          </div>
+        </el-form-item>
+        <!-- 其他选项 -->
+        <el-form-item>
+          <!--          <div class="remember-me-panel">-->
+          <!--            <el-checkbox v-model.trim="loginForm.rememberMe">记住我</el-checkbox>-->
+          <!--          </div>-->
+          <div class="no-account">
+            <!-- TODO 补全忘记密码与没有账号 -->
+            <a href="javascript:void(0)" class="a-link" @click="showPanel(2)">忘记密码？</a>
+            <a href="javascript:void(0)" class="a-link" @click="showPanel(0)">没有账号？</a>
+          </div>
+        </el-form-item>
+        <!-- 登录按钮 -->
+        <el-form-item>
+          <el-button type="primary" class="op-btn" size="large" @click="handleLogin">
+            <span>登录</span>
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { LoginInfo } from '@/api/account/types'
@@ -86,85 +144,18 @@ onMounted(() => {
 })
 </script>
 
-<template>
-  <div class="login-body">
-    <div class="bg"></div>
-    <div class="login-panel">
-      <!-- TODO rules警告待解决，代码能生效 -->
-      <el-form class="login-register" :model="loginForm" :rules="rules" ref="loginFormRef" @submit.prevent status-icon
-               @keyup.enter="handleLogin">
-        <div class="login-title">Netdisk</div>
-        <!-- input输入 -->
-        <el-form-item prop="username">
-          <el-input size="large" clearable placeholder="请输入用户名" v-model.trim="loginForm.username">
-            <template #prefix>
-              <span class="iconfont icon-account"></span>
-            </template>
-          </el-input>
-        </el-form-item>
-        <!-- 密码 -->
-        <el-form-item prop="password">
-          <el-input type="password" size="large" placeholder="请输入密码" v-model.trim="loginForm.password"
-                    show-password>
-            <template #prefix>
-              <span class="iconfont icon-password"></span>
-            </template>
-          </el-input>
-        </el-form-item>
-        <!-- 验证码 -->
-        <el-form-item prop="captchaCode">
-          <div class="check-code-panel">
-            <el-input size="large" placeholder="请输入验证码" v-model.trim="loginForm.captchaCode">
-              <template #prefix>
-                <span class="iconfont icon-yanzhengyanzhengma"></span>
-              </template>
-            </el-input>
-
-            <img :src="captchaBase64" class="check-code" @click="getCaptcha" />
-          </div>
-        </el-form-item>
-        <!-- 其他选项 -->
-        <el-form-item>
-          <!--          <div class="remember-me-panel">-->
-          <!--            <el-checkbox v-model.trim="loginForm.rememberMe">记住我</el-checkbox>-->
-          <!--          </div>-->
-          <div class="no-account">
-            <!-- TODO 补全忘记密码与没有账号 -->
-            <a href="javascript:void(0)" class="a-link" @click="showPanel(2)">忘记密码？</a>
-            <a href="javascript:void(0)" class="a-link" @click="showPanel(0)">没有账号？</a>
-          </div>
-        </el-form-item>
-        <!-- 登录按钮 -->
-        <el-form-item>
-          <el-button type="primary" class="op-btn" size="large" @click="handleLogin">
-            <span>登录</span>
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </div>
-  </div>
-</template>
-
 <style lang="scss" scoped>
 .login-body {
   height: calc(100vh);
   background-size: cover;
-  background: url(@/assets/images/login_bg.jpg);
   display: flex;
-
-  .bg {
-    flex: 1;
-    background-position: center;
-    background-size: 800px;
-    background-repeat: no-repeat;
-    background-image: url(@/assets/images/login_img.png);
-  }
+  align-items: center;
+  justify-content: center;
 }
 
 .login-panel {
   width: 430px;
-  margin-right: 15%;
-  margin-top: calc((100vh - 500px) / 2);
+  border: 1px solid darkgrey;
 
   .login-register {
     padding: 25px;

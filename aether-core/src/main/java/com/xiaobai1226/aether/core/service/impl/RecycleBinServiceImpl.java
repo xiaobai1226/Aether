@@ -270,6 +270,9 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             throw new FailResultException(SYSTEM_ERROR);
         }
 
+        // 存储本次还原文件的名称
+        var restoreNameSet = new HashSet<String>();
+
         for (var userFileDO : userFileDOList) {
             if (!rootUserFileIdSet.contains(userFileDO.getId())) {
                 continue;
@@ -297,12 +300,26 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
                 parentId = 0;
             }
 
-            // 检查父目录下，有没有与根元素同名文件或文件夹
-//            var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(), userId, parentId, NORMAL, UserFileItemTypeEnum.getEnumByFlag(userFileDO.getItemType()));
-            var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(), userId, parentId, NORMAL);
+            // 是否重名
+            var isExistRepeatName = false;
 
-            // 查询结果不为空
-            if (sameNameFile != null) {
+            // 检查已改名的文件，有没有同名文件或文件夹（避免还原多个同名文件或文件夹时导致还原后名称重复）
+            var checkName = parentId + "-" + userFileDO.getName();
+            if (restoreNameSet.contains(checkName)) {
+                isExistRepeatName = true;
+            } else {
+                // 检查父目录下，有没有与根元素同名文件或文件夹
+//            var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(), userId, parentId, NORMAL, UserFileItemTypeEnum.getEnumByFlag(userFileDO.getItemType()));
+                var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(), userId, parentId, NORMAL);
+
+                // 查询结果不为空
+                if (sameNameFile != null) {
+                    isExistRepeatName = true;
+                }
+            }
+
+            // 如果重名则改名
+            if (isExistRepeatName) {
                 // 有同名文件\文件夹，修改文件名
                 var newName = FileUtils.rename(userFileDO.getName());
                 var updateResult = userFileService.updateFileNameById(userFileDO.getId(), userId, newName, DEL);
@@ -310,6 +327,10 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
                 if (!updateResult) {
                     throw new FailResultException(SYSTEM_ERROR);
                 }
+
+                restoreNameSet.add(parentId + "-" + newName);
+            } else {
+                restoreNameSet.add(checkName);
             }
 
             // 如果父目录不存在

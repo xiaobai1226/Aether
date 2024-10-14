@@ -45,6 +45,7 @@
             user_file.user_id = #{userFileDO.userId}
             AND user_file.file_status = #{userFileDO.fileStatus}
             AND user_file.name = #{userFileDO.name}
+            AND user_file.parent_id = #{userFileDO.parentId}
         </where>
     </select>
 

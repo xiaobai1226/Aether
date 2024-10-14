@@ -63,7 +63,7 @@ public class SystemConsts {
     /**
      * 头像后缀
      */
-    public static final String AVATAR_SUFFIX = ".jpg";
+    public static final String AVATAR_SUFFIX = ".png";
 
     /**
      * 缩略图后缀

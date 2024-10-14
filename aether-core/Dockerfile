@@ -11,7 +11,7 @@ RUN mkdir -p /root/aether/config
 WORKDIR /root/aether
 
 # 将项目构建生成的 jar 文件复制到容器中
-COPY ./build/libs/aether-core-0.0.3.jar /root/aether/aether.jar
+COPY ./build/libs/aether-core-0.1.0.jar /root/aether/aether.jar
 
 ENTRYPOINT exec java $JAVA_OPTS -jar aether.jar --solon.config.add=./config/app.yml --env=pro
 

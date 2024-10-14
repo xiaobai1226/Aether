@@ -30,6 +30,11 @@ public class UploadFileVO {
     private String path;
 
     /**
+     * 上传文件夹，文件所属文件夹路径
+     */
+    private String relativePath;
+
+    /**
      * 文件名称
      */
     @NotNull(message = ERROR_FILE_NAME_EMPTY)

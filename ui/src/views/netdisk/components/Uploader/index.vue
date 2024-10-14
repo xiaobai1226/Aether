@@ -198,7 +198,7 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
     // MD5值
     md5: '',
     // 文件名
-    fileName: file.name,
+    fileName: file.webkitRelativePath ? file.webkitRelativePath : file.name,
     // 上传状态
     status: STATUS.init.value,
     // 已上传大小
@@ -231,12 +231,6 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
     fileItem.status = STATUS.wait.value
   } else {
     uploadingNum++
-
-    // 计算MD5
-    let md5FileUid = await computeMD5(fileItem)
-    if (md5FileUid == null) {
-      return
-    }
 
     // 上传文件
     await md5AndUploadFile(uid, 0, uploadedCallback)
@@ -382,6 +376,10 @@ const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
 
         if (currentFile.path) {
           uploadFileRequest.path = currentFile.path
+        }
+
+        if (file.webkitRelativePath) {
+          uploadFileRequest.relativePath = file.webkitRelativePath
         }
 
         await uploadFile(uploadFileRequest, chunkFile, (progressEvent) => {

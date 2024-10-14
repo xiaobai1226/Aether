@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {onMounted, watch, ref} from "vue";
-import {getAvatar} from "@/api/user";
+import { onMounted, watch, ref } from 'vue'
+import { getAvatar } from '@/api/user'
 
 const props = defineProps({
   width: {
@@ -10,40 +10,40 @@ const props = defineProps({
   avatar: {
     type: String
   }
-});
+})
 
 // 用于存储头像的URL数据
-const avatarUrl = ref('');
+const avatarUrl = ref('')
 
 /**
  * 更新头像图片
  */
 const updateAvatarImage = () => {
-  getAvatar().then(({data}) => {
-    avatarUrl.value = URL.createObjectURL(new Blob([data]));
-  });
+  getAvatar().then(({ data }) => {
+    avatarUrl.value = URL.createObjectURL(new Blob([data]))
+  })
 }
 
-defineExpose({updateAvatarImage});
+defineExpose({ updateAvatarImage })
 
 onMounted(() => {
   if (props.avatar === undefined) {
-    updateAvatarImage();
+    updateAvatarImage()
   } else {
-    avatarUrl.value = props.avatar;
+    avatarUrl.value = props.avatar
   }
-});
+})
 
 watch(() => props.avatar, (newAvatar) => {
   if (newAvatar) {
-    avatarUrl.value = newAvatar;
+    avatarUrl.value = newAvatar
   }
-});
+})
 </script>
 
 <template>
 <span class="avatar" :style="{ width: width + 'px', height: width + 'px' }">
-    <img :src="avatarUrl"/>
+  <img :src="avatarUrl" alt="" />
 </span>
 </template>
 
