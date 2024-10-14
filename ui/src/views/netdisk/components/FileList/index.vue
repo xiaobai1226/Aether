@@ -3,13 +3,12 @@
     <div class="top">
       <div class="top-op">
         <div class="btn" v-show="selectedFileIds.length == 0">
-          <el-upload :show-file-list="false" :with-credentials="true" :multiple="true" :http-request="addUploadFile"
-                     :accept="fileAccept">
-            <el-button type="primary">
-              <span class="iconfont icon-upload"></span>
-              上传
-            </el-button>
-          </el-upload>
+          <el-button type="primary" @click="openUploadPopup">
+            <span class="iconfont icon-upload"></span>
+            上传
+          </el-button>
+          <UploadPopup ref="uploadPopupRef" :category="currentCategory" :path="currentPath"
+                       :callbackFunction="loadDataList" />
         </div>
         <el-button type="success" v-show="selectedFileIds.length == 0" @click="showEditPanel(-1)">
           <span class="iconfont icon-folder-add"></span>
@@ -71,13 +70,13 @@
             </span>
               <!-- 新建文件夹或重命名输入栏 -->
               <div class="edit-panel" v-if="showEditPanelIndex == index">
-                <el-input v-model.trim="editPanelFileName" ref="editPanelRef"
+                <el-input v-model.trim="editPanelFileName" ref="editPanelRef" @blur="hideEditPanel(index)"
                           @keyup.enter="submitEditPanel(index)">
-                  <template #suffix>{{ editPanelFileNameSuffix }}</template>
                 </el-input>
                 <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"
-                      @click="submitEditPanel(index)"></span>
-                <span class="iconfont icon-error" @click="hideEditPanel(index)"></span>
+                      @click="submitEditPanel(index)" @mousedown="submitEditPanelMouseDown"
+                      @mouseup="submitEditPanelMouseUp"></span>
+                <span class="iconfont icon-error"></span>
               </div>
               <!-- 操作栏 -->
               <span class="op">
@@ -103,13 +102,10 @@
           <Icon iconName="no_data" :width="120" fit="fill"></Icon>
           <div class="tips">当前目录为空，上传你的第一个文件吧</div>
           <div class="op-list">
-            <el-upload :show-file-list="false" :with-credentials="true" :multiple="true" :http-request="addUploadFile"
-                       :accept="fileAccept">
-              <div class="op-item">
-                <Icon iconName="file" :width="60"></Icon>
-                <div>上传文件</div>
-              </div>
-            </el-upload>
+            <div class="op-item" @click="openUploadPopup">
+              <Icon iconName="file" :width="60"></Icon>
+              <div>上传文件</div>
+            </div>
             <div class="op-item" v-if="!currentCategory" @click="showEditPanel(-1)">
               <Icon iconName="folder" :width="60"></Icon>
               <div>新建目录</div>
@@ -140,15 +136,14 @@ import type {
   CopyRequest, DeleteRequest
 } from '@/api/file/types'
 import Table from '@/components/Table.vue'
+import UploadPopup from '@/components/UploadPopup.vue'
 import type { Column } from '@/components/Table.vue'
 import Utils from '@/utils/Utils'
 import { ElMessage } from 'element-plus'
 import Icon from '@/components/Icon.vue'
-import { useUploaderStore } from '@/stores/uploader'
 import Confirm from '@/utils/Confirm'
 import FolderSelect from '@/components/FolderSelect.vue'
 import Navigation from '@/components/Navigation.vue'
-import CategoryInfo from '@/js/CategoryInfo.js'
 import { useRoute, useRouter } from 'vue-router'
 import Preview from '@/components/preview/Preview.vue'
 import ShareFile from '@/views/netdisk/components/ShareFile/index.vue'
@@ -158,8 +153,6 @@ import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
 
 // 从pinia获取用户数据
 const userStore = useUserStore()
-
-const uploaderStore = useUploaderStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -296,14 +289,6 @@ watch(
 )
 
 /**
- * 增加上传文件
- * @param fileData
- */
-const addUploadFile = (fileData: any) => {
-  uploaderStore.addUploadFile(fileData.file, fileData.file.uid, currentPath.value, loadDataList)
-}
-
-/**
  * 显示操作栏的索引 -1 为不展示，其他为要展示行的索引
  */
 const showActionBarIndex = ref<number>(-1)
@@ -334,11 +319,6 @@ const editPanelRef = ref()
  * 新建文件夹或重命名输入框的文件名
  */
 const editPanelFileName = ref<string | null>(null)
-
-/**
- * 新建文件夹或重命名输入框的文件名后缀
- */
-const editPanelFileNameSuffix = ref<string>()
 
 /**
  * 显示新建文件夹或重命名输入框的索引 -1 为不展示，其他为要展示行的索引
@@ -384,22 +364,19 @@ const showEditPanel = (index: number) => {
     let currentData = tableData.value.list[index]
     // 展示重命名输入框
     showEditPanelIndex.value = index
+    let selectEndIndex = 0
 
-    // 编辑文件，如果是文件则处理后缀
-    if (currentData.itemType == 1 && currentData.name) {
-      let lastIndex = currentData.name.lastIndexOf('.')
-      if (lastIndex != -1) {
-        editPanelFileName.value = currentData.name.substring(0, lastIndex)
-        editPanelFileNameSuffix.value = currentData.name.substring(lastIndex)
-      } else {
-        editPanelFileName.value = currentData.name
-        editPanelFileNameSuffix.value = ''
+    if (currentData.name) {
+      selectEndIndex = currentData.name.length
+      editPanelFileName.value = currentData.name
+
+      // 编辑文件，如果是文件则处理后缀
+      if (currentData.itemType == 1) {
+        let lastIndex = currentData.name.lastIndexOf('.')
+        if (lastIndex != -1) {
+          selectEndIndex = lastIndex
+        }
       }
-    } else {
-      if (currentData.name) {
-        editPanelFileName.value = currentData.name
-      }
-      editPanelFileNameSuffix.value = ''
     }
 
     editing.value = true
@@ -407,16 +384,25 @@ const showEditPanel = (index: number) => {
       // 光标聚焦
       if (editPanelRef.value) {
         editPanelRef.value.focus()
+
+        const inputDOM = editPanelRef.value.$el.querySelector('input')
+        inputDOM.setSelectionRange(0, selectEndIndex)
       }
     })
   }
 }
+
+const isClickSubmitEditPanel = ref(false)
 
 /**
  * 隐藏新建文件夹或重命名输入框
  * @param index 对应行索引
  */
 const hideEditPanel = (index: number) => {
+  if (isClickSubmitEditPanel.value) {
+    return
+  }
+
   // 获取对应行的数据
   const fileData: UserFileInfo = tableData.value.list[index]
   // 如果id不为空则为重命名，否则为新建文件夹
@@ -430,20 +416,45 @@ const hideEditPanel = (index: number) => {
 }
 
 /**
+ * 按下提交新建文件夹或重命名请求按鈕
+ */
+const submitEditPanelMouseDown = () => {
+  isClickSubmitEditPanel.value = true
+}
+
+/**
+ * 抬起提交新建文件夹或重命名请求按鈕
+ */
+const submitEditPanelMouseUp = () => {
+  isClickSubmitEditPanel.value = false
+}
+
+/**
  * 提交新建文件夹或重命名请求
  */
 const submitEditPanel = (index: number) => {
-
   // 校验名称格式
   const regex = new RegExp(RegexEnum.REGEX_FILE_NAME)
+  let checkResult = true
+  let warnInfo = ''
   if (!editPanelFileName.value) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY)
-    return
+    checkResult = false
+    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY
   } else if ((editPanelFileName.value as string).length > 100) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string)
-    return
+    checkResult = false
+    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string
   } else if (!regex.test((editPanelFileName.value as string))) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_FILE_NAME_FORMAT)
+    checkResult = false
+    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_FORMAT
+  }
+
+  if (!checkResult) {
+    // 光标聚焦
+    if (editPanelRef.value) {
+      editPanelRef.value.focus()
+    }
+
+    ElMessage.warning(warnInfo)
     return
   }
 
@@ -463,6 +474,11 @@ const submitEditPanel = (index: number) => {
       hideEditPanel(index)
       // 重新加载数据
       loadDataList()
+    }).catch(() => {
+      // 光标聚焦
+      if (editPanelRef.value) {
+        editPanelRef.value.focus()
+      }
     })
   }
   // 新建文件夹
@@ -480,6 +496,11 @@ const submitEditPanel = (index: number) => {
       hideEditPanel(0)
       // 重新加载数据
       loadDataList()
+    }).catch(() => {
+      // 光标聚焦
+      if (editPanelRef.value) {
+        editPanelRef.value.focus()
+      }
     })
   }
 }
@@ -753,6 +774,12 @@ const openShareDialog = (ids: Array<number>, title: string) => {
 
 const previewRef = ref()
 
+const uploadPopupRef = ref()
+
+const openUploadPopup = () => {
+  uploadPopupRef.value.show()
+}
+
 /**
  * 预览
  * @param row
@@ -769,11 +796,6 @@ const preview = (row: UserFileInfo) => {
 
 const fileNameFuzzy = ref()
 
-const fileAccept = computed(() => {
-  const categoryItem = CategoryInfo[currentCategory.value]
-  return categoryItem ? categoryItem.accept : ''
-})
-
 // 搜素
 const search = () => {
   loadDataList()
@@ -783,7 +805,7 @@ const search = () => {
 const download = (row: UserFileInfo) => {
   if (row.id) {
     createDownloadSign(row.id).then(({ data }) => {
-      window.location.href = 'http://127.0.0.1:8080/api/v1/file/download?sign=' + data
+      window.location.href = '/api/v1/file/download?sign=' + data
     })
   }
 }
