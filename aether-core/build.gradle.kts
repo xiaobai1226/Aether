@@ -3,14 +3,14 @@ plugins {
 }
 
 group = "com.xiaobai1226"
-version = "0.1.0"
+version = "0.2.0"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation(platform("org.noear:solon-parent:2.9.2"))
+    implementation(platform("org.noear:solon-parent:3.0.1"))
     implementation("org.noear:solon-web")
     implementation("org.noear:solon-view-thymeleaf")
     implementation("org.noear:solon.web.webdav:2.9.1")
