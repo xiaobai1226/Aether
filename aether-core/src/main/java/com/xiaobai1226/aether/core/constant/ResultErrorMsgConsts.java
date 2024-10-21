@@ -201,7 +201,7 @@ public class ResultErrorMsgConsts {
     /**
      * 文件(夹)名称格式错误
      */
-    public static final String ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<,>,|,*,?,,/";
+    public static final String ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<>|*?/";
 
     /**
      * 文件(夹)名称长度错误

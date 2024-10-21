@@ -17,7 +17,7 @@ export enum RegexEnum {
     /**
      * 文件或文件夹名称正则表达式
      */
-    REGEX_FILE_NAME = "^[^<>|*?,/]*$",
+    REGEX_FILE_NAME = "^[^<>|*?/]*$",
 
     /**
      * 提取码正则表达式

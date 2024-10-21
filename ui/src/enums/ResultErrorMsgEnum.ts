@@ -58,7 +58,7 @@ export enum ResultErrorMsgEnum {
     /**
      * 文件(夹)名称格式错误
      */
-    ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<,>,|,*,?,,/",
+    ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<>|*?/",
 
     /**
      * 文件(夹)名称长度错误
