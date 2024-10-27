@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("org.noear:solon-parent:3.0.1"))
+    implementation(platform("org.noear:solon-parent:3.0.2"))
     implementation("org.noear:solon-web")
     implementation("org.noear:solon-boot-jetty")
     implementation("org.noear:solon-view-thymeleaf")
