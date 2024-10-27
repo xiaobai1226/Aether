@@ -299,6 +299,11 @@ public class ResultErrorMsgConsts {
     public static final String ERROR_RESTORE_CONTENT_EMPTY = "请选择要还原的文件(夹)";
 
     /**
+     * 下载内容为空错误
+     */
+    public static final String ERROR_DOWNLOAD_CONTENT_EMPTY = "请选择要下载的文件(夹)";
+
+    /**
      * 服务器错误
      */
     public static final String ERROR_SERVER = "服务器内部错误";

@@ -91,6 +91,11 @@ export enum ResultErrorMsgEnum {
     ERROR_DEL_CONTENT_EMPTY = "请选择要删除的文件(夹)",
 
     /**
+     * 下载内容为空错误
+     */
+    ERROR_DOWNLOAD_CONTENT_EMPTY = "请选择要下载的文件(夹)",
+
+    /**
      * 分享内容为空错误
      */
     ERROR_SHARE_CONTENT_EMPTY = "请选择要分享的文件(夹)",

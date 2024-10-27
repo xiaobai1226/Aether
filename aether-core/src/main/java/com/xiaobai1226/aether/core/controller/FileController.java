@@ -24,13 +24,12 @@ import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
-import org.noear.solon.validation.annotation.NotNull;
-import org.noear.solon.validation.annotation.Valid;
-import org.noear.solon.validation.annotation.Validated;
+import org.noear.solon.validation.annotation.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.Date;
 import java.util.stream.Collectors;
 
 import static com.xiaobai1226.aether.core.constant.GateWayTagConsts.API_V1;
@@ -616,37 +615,31 @@ public class FileController {
     /**
      * 创建下载链接
      *
-     * @param id 要下载的文件ID
+     * @param ids 要下载的文件ID集合
      * @author bai
      */
     @Post
     @Mapping("/createDownloadSign")
-    public String createDownloadSign(Integer id) {
+    public String createDownloadSign(@Validated @NotBlank(message = ERROR_DOWNLOAD_CONTENT_EMPTY) String ids) {
+
         // 获取当前会话账号id, 并转化为`int`类型
         var userId = StpUtil.getLoginIdAsInt();
 
-        var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
+        List<Integer> idList = Arrays.stream(ids.split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().collect(Collectors.toList());
 
-        if (userFileDO == null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        if (CollUtil.isEmpty(idList)) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_DOWNLOAD_CONTENT_EMPTY);
         }
 
-        var fileDO = fileService.getFileById(userFileDO.getFileId());
+        var userFileDTOList = userFileService.getUserFileDTOListByIds(idList, userId, NORMAL);
 
-        // 判断文件是否存在
-        if (fileDO == null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
-
-        if (!FileUtil.exist(fileFullPath)) {
+        if (CollUtil.isEmpty(userFileDTOList) || userFileDTOList.size() != idList.size()) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
         String sign = RandomUtil.randomString(20);
 
-        downloadRedisDAO.setDownloadSign(new DownloadFileDTO(fileDO.getId(), userFileDO.getName(), fileFullPath), sign);
+        downloadRedisDAO.setDownloadSign(new DownloadFileDTO(idList, userId), sign);
 
         return sign;
     }
@@ -663,18 +656,26 @@ public class FileController {
             var downloadFileDTO = downloadRedisDAO.getDownloadInfo(sign);
 
             // 判断sign是否存在
-            if (downloadFileDTO == null || !FileUtil.exist(downloadFileDTO.getPath())) {
+            if (downloadFileDTO == null) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_SIGN);
             }
 
-            //输出的文件名，可以自己指定
-            DownloadedFile file = new DownloadedFile(new File(downloadFileDTO.getPath()), downloadFileDTO.getName());
+            var userFileTreeDTOList = userFileService.getUserFileTreeListByIds(downloadFileDTO.getIds(), downloadFileDTO.getUserId(), NORMAL);
+
+            if (CollUtil.isEmpty(userFileTreeDTOList) || userFileTreeDTOList.size() != downloadFileDTO.getIds().size()) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+
+            // 获取全部要下载的文件
+            userFileService.getSubUserFileTree(downloadFileDTO.getUserId(), userFileTreeDTOList);
+
+            var downloadedFile = userFileService.download(userFileTreeDTOList, downloadFileDTO.getUserId());
 
             //不做为附件下载（按需配置）
             //file.asAttachment(false);
 
             //也可用接口输出
-            ctx.outputAsFile(file);
+            ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             throw new FailResultException(SYSTEM_ERROR);
         }
@@ -751,60 +752,5 @@ public class FileController {
      */
 //    public void getFile() {
 //        // TODO 待做，看视频
-//    }
-
-    /**
-     * 下载
-     *
-     * @author bai
-     */
-//    @GetMapping("/download")
-//    public void download(@RequestParam("ids") @NotNull(message = "文件或文件夹ID不能为空") List<Long> ids, HttpServletResponse response) {
-//        try {
-//            // 获取当前会话账号id, 并转化为`long`类型
-//            var userId = StpUtil.getLoginIdAsLong();
-//
-//            var downloadFileDTO = userFileService.download(ids, userId);
-//            var file = downloadFileDTO.getFile();
-//
-//            byte[] buffer = new byte[1024];
-//            BufferedInputStream bis = null;
-//            OutputStream os = null;
-//            try {
-//                //文件是否存在
-//                if (file.exists()) {
-//                    //设置响应
-//                    response.setContentType("application/octet-stream;charset=UTF-8");
-//                    // 将响应头中的Content-Disposition暴露出来，不然前端获取不到
-//                    response.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
-//                    // 在响应头中的Content-Disposition里设置文件名称
-//                    response.setHeader("Content-Disposition", "attachment;filename=" + downloadFileDTO.getFileName());
-//                    response.setCharacterEncoding("UTF-8");
-//                    os = response.getOutputStream();
-//                    bis = new BufferedInputStream(new FileInputStream(file));
-//                    while (bis.read(buffer) != -1) {
-//                        os.write(buffer);
-//                    }
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            } finally {
-//                try {
-//                    if (bis != null) {
-//                        bis.close();
-//                    }
-//                    if (os != null) {
-//                        os.flush();
-//                        os.close();
-//                    }
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-////            logger.error("文件读写错误", e);
-////            return null;
-//        }
 //    }
 }

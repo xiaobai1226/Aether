@@ -183,11 +183,11 @@ export const getFile = (id: number): AxiosPromise<ArrayBuffer> => {
 
 /**
  * 获取下载链接
- * @param id
+ * @param ids
  */
-export const createDownloadSign = (id: number): AxiosPromise => {
+export const createDownloadSign = (ids: string): AxiosPromise => {
   const url = baseUrl + '/createDownloadSign'
-  const data = { id: id }
+  const data = { ids: ids }
 
   return httpInstance.post(url, data, {
     showSuccessMsg: false
