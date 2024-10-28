@@ -307,7 +307,7 @@ public class FileController {
         }
 
         // 如果目标目录就是文件所在目录，直接返回
-        if (sourceUserFileDOList.get(0).getParentId() == targetId) {
+        if (sourceUserFileDOList.getFirst().getParentId() == targetId) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_IN_CURRENT_FOLDER);
         }
 
@@ -398,7 +398,7 @@ public class FileController {
             targetId = targetUserFile.getId();
         }
 
-        if (sourceUserFileTreeList.get(0).getParentId() == targetId) {
+        if (sourceUserFileTreeList.getFirst().getParentId() == targetId) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_IN_CURRENT_FOLDER);
         }
 

@@ -114,17 +114,14 @@ const handleLogin = () => {
   loginFormRef.value.validate((valid: boolean) => {
     // 所有表单都通过校验才为true
     if (valid) {
-      const loadingInstance = ElLoading.service({ fullscreen: true })
       accountStore.accountLogin(loginForm.value)
         .then(() => {
-          loadingInstance.close()
           // 跳转首页
           router.replace({ path: '/' })
         })
         .catch(() => {
           // 验证失败，重新生成验证码
           getCaptcha()
-          loadingInstance.close()
         })
     }
   })

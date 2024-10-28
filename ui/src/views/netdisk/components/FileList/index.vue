@@ -64,7 +64,7 @@
       </div>
     </div>
 
-    <div v-loading="loading">
+    <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList"
                :initFetch="false" :options="tableOptions" @rowSelected="rowSelected">
@@ -142,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { getFileListByPage, newFolder, rename, del, move, copy, createDownloadSign } from '@/api/file'
 import type {
   GetFileListByPageRequest,
@@ -229,9 +229,9 @@ const currentPath = ref<string | null>(null)
 const navigationRef = ref()
 
 /**
- * 是否正在加载中
+ * 加载Ref
  */
-const loading = ref(true)
+const loadingRef = ref()
 
 /**
  * 加载文件列表
@@ -247,10 +247,8 @@ const loadDataList = () => {
     getFileListByPageRequest.path = currentPath.value as string
   }
 
-  loading.value = true
-
   // 请求后台获取文件列表
-  getFileListByPage(getFileListByPageRequest).then(({ data }) => {
+  getFileListByPage(getFileListByPageRequest, loadingRef.value).then(({ data }) => {
     if (data == null) {
       tableData.value = {
         list: [],
@@ -262,7 +260,6 @@ const loadDataList = () => {
     } else {
       tableData.value = data
     }
-    loading.value = false
   })
 }
 

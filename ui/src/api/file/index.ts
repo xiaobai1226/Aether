@@ -15,24 +15,28 @@ const baseUrl = '/file'
 /**
  * 分页获取文件列表
  * @param params
+ * @param loadingTarget
  */
-export const getFileListByPage = (params: GetFileListByPageRequest): AxiosPromise<GetFileListByPageResponse> => {
+export const getFileListByPage = (params: GetFileListByPageRequest, loadingTarget?: HTMLElement): AxiosPromise<GetFileListByPageResponse> => {
   const url = baseUrl + '/getFileListByPage'
   return httpInstance.get(url, {
     params: params,
-    showSuccessMsg: false
+    showSuccessMsg: false,
+    loadingTarget: loadingTarget
   } as NetdiskInternalAxiosRequestConfig)
 }
 
 /**
  * 分页获取文件夹列表
  * @param params
+ * @param loadingTarget
  */
-export const getFolderListByPage = (params: GetFolderListByPageRequest): AxiosPromise<GetFileListByPageResponse> => {
+export const getFolderListByPage = (params: GetFolderListByPageRequest, loadingTarget?: HTMLElement): AxiosPromise<GetFileListByPageResponse> => {
   const url = baseUrl + '/getFolderListByPage'
   return httpInstance.get(url, {
     params: params,
-    showSuccessMsg: false
+    showSuccessMsg: false,
+    loadingTarget: loadingTarget
   } as NetdiskInternalAxiosRequestConfig)
 }
 
