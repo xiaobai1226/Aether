@@ -85,7 +85,8 @@ export const uploadFile = (uploadFileRequest: UploadFileRequest, chunkFile: Blob
       'Content-Type': 'multipart/form-data'
     },
     showErrMsg: false,
-    showSuccessMsg: false
+    showSuccessMsg: false,
+    showLoading: false
   } as NetdiskInternalAxiosRequestConfig)
 }
 
@@ -97,7 +98,8 @@ export const cancelUploadFile = (taskId: string): AxiosPromise => {
   const url = baseUrl + '/cancelUploadFile'
   const data = { taskId: taskId }
   return httpInstance.post(url, data, {
-    showSuccessMsg: false
+    showSuccessMsg: false,
+    showLoading: false
   } as NetdiskInternalAxiosRequestConfig)
 }
 

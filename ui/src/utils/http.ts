@@ -43,7 +43,6 @@ httpInstance.interceptors.request.use((config: NetdiskInternalAxiosRequestConfig
         // 开启Loading
         loading = ElLoading.service({ target: config.loadingTarget })
       } else {
-        console.log("sdadadadadadadad")
         // 开启Loading
         loading = ElLoading.service({ fullscreen: true })
       }
