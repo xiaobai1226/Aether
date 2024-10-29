@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.xiaobai1226"
-version = "0.1.0"
+version = "0.2.0"
 description = "家庭网盘项目"
 java.sourceCompatibility = JavaVersion.VERSION_21
 

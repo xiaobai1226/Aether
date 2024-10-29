@@ -15,24 +15,28 @@ const baseUrl = '/file'
 /**
  * 分页获取文件列表
  * @param params
+ * @param loadingTarget
  */
-export const getFileListByPage = (params: GetFileListByPageRequest): AxiosPromise<GetFileListByPageResponse> => {
+export const getFileListByPage = (params: GetFileListByPageRequest, loadingTarget?: HTMLElement): AxiosPromise<GetFileListByPageResponse> => {
   const url = baseUrl + '/getFileListByPage'
   return httpInstance.get(url, {
     params: params,
-    showSuccessMsg: false
+    showSuccessMsg: false,
+    loadingTarget: loadingTarget
   } as NetdiskInternalAxiosRequestConfig)
 }
 
 /**
  * 分页获取文件夹列表
  * @param params
+ * @param loadingTarget
  */
-export const getFolderListByPage = (params: GetFolderListByPageRequest): AxiosPromise<GetFileListByPageResponse> => {
+export const getFolderListByPage = (params: GetFolderListByPageRequest, loadingTarget?: HTMLElement): AxiosPromise<GetFileListByPageResponse> => {
   const url = baseUrl + '/getFolderListByPage'
   return httpInstance.get(url, {
     params: params,
-    showSuccessMsg: false
+    showSuccessMsg: false,
+    loadingTarget: loadingTarget
   } as NetdiskInternalAxiosRequestConfig)
 }
 
@@ -81,7 +85,8 @@ export const uploadFile = (uploadFileRequest: UploadFileRequest, chunkFile: Blob
       'Content-Type': 'multipart/form-data'
     },
     showErrMsg: false,
-    showSuccessMsg: false
+    showSuccessMsg: false,
+    showLoading: false
   } as NetdiskInternalAxiosRequestConfig)
 }
 
@@ -93,7 +98,8 @@ export const cancelUploadFile = (taskId: string): AxiosPromise => {
   const url = baseUrl + '/cancelUploadFile'
   const data = { taskId: taskId }
   return httpInstance.post(url, data, {
-    showSuccessMsg: false
+    showSuccessMsg: false,
+    showLoading: false
   } as NetdiskInternalAxiosRequestConfig)
 }
 
@@ -183,11 +189,11 @@ export const getFile = (id: number): AxiosPromise<ArrayBuffer> => {
 
 /**
  * 获取下载链接
- * @param id
+ * @param ids
  */
-export const createDownloadSign = (id: number): AxiosPromise => {
+export const createDownloadSign = (ids: string): AxiosPromise => {
   const url = baseUrl + '/createDownloadSign'
-  const data = { id: id }
+  const data = { ids: ids }
 
   return httpInstance.post(url, data, {
     showSuccessMsg: false

@@ -221,10 +221,10 @@ const addUploadFile = async (file: File, uid: string, path: string | null, uploa
 
   // 向列表第一条插入元素
   fileList.value.push(fileItem)
-  if (fileItem.totalSize == 0) {
-    fileItem.status = STATUS.empty_file.value
-    return
-  }
+  // if (fileItem.totalSize == 0) {
+  //   fileItem.status = STATUS.empty_file.value
+  //   return
+  // }
 
   // 最大同时上传数量 3
   if (uploadingNum >= 3) {
@@ -342,7 +342,8 @@ const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
   if (currentFile) {
     const file = currentFile.file
     const fileSize = currentFile.totalSize
-    const chunks = Math.ceil(fileSize / chunkSize)
+    let chunks = Math.ceil(fileSize / chunkSize)
+    chunks = chunks === 0 ? 1 : chunks
     let shouldBreak = false
     for (let i = chunkIndex; i < chunks; i++) {
       if (shouldBreak) {
@@ -388,7 +389,8 @@ const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
             loaded = fileSize
           }
           currentUploadFile.uploadedSize = i * chunkSize + loaded
-          currentUploadFile.uploadProgress = Math.floor((currentUploadFile.uploadedSize / fileSize) * 100)
+          let uploadProgress = Math.floor((currentUploadFile.uploadedSize / fileSize) * 100)
+          currentUploadFile.uploadProgress = uploadProgress ? uploadProgress : 0
         }).then(({ data }) => {
           currentUploadFile.taskId = data.taskId
           let statusString = STATUS.fail.value

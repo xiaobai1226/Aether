@@ -3,6 +3,8 @@ package com.xiaobai1226.aether.core.domain.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 下载文件实体类DTO
  *
@@ -13,18 +15,13 @@ import lombok.Data;
 public class DownloadFileDTO {
 
     /**
-     * 文件ID
+     * 要下载的文件ID集合
      */
-    private Integer id;
+    private List<Integer> ids;
 
     /**
-     * 文件名称
+     * 用户ID
      */
-    private String name;
-
-    /**
-     * 文件路径
-     */
-    private String path;
+    private Integer userId;
 
 }

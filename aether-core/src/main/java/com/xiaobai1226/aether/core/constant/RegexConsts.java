@@ -22,7 +22,7 @@ public class RegexConsts {
     /**
      * 文件或文件夹名称正则表达式
      */
-    public static final String REGEX_FILE_NAME = "^[^<>\\|\\*\\?,/]*$";
+    public static final String REGEX_FILE_NAME = "^[^<>\\|\\*\\?/]*$";
 
     /**
      * 提取码正则表达式

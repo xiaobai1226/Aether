@@ -15,7 +15,7 @@ import static com.xiaobai1226.aether.core.constant.GateWayTagConsts.API_V1;
 public class ApiV1Gateway extends Gateway {
     @Override
     protected void register() {
-        before(new SaTokenHandler());
+        filter(new SaTokenHandler());
         addBeans(bw -> API_V1.equals(bw.tag()));
     }
 }

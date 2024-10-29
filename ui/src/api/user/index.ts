@@ -1,20 +1,20 @@
-import httpArrayBufferInstance from "@/utils/HttpArrayBuffer";
-import httpInstance from "@/utils/http";
-import type {NetdiskInternalAxiosRequestConfig} from "@/utils/http";
-import type {AxiosPromise} from "axios";
-import type {UserSpaceUsage} from "@/api/user/types";
+import httpArrayBufferInstance from '@/utils/HttpArrayBuffer'
+import httpInstance from '@/utils/http'
+import type { NetdiskInternalAxiosRequestConfig } from '@/utils/http'
+import type { AxiosPromise } from 'axios'
+import type { UserSpaceUsage } from '@/api/user/types'
 
-const baseUrl = '/user';
+const baseUrl = '/user'
 
 /**
  * 获取头像
  */
 export const getAvatar = (): AxiosPromise<ArrayBuffer> => {
-    return httpArrayBufferInstance({
-        url: baseUrl + '/getAvatar',
-        method: 'GET',
-        responseType: 'arraybuffer'
-    });
+  return httpArrayBufferInstance({
+    url: baseUrl + '/getAvatar',
+    method: 'GET',
+    responseType: 'arraybuffer'
+  })
 }
 
 /**
@@ -22,17 +22,17 @@ export const getAvatar = (): AxiosPromise<ArrayBuffer> => {
  * @param file 头像文件
  */
 export const updateUserAvatar = (file: File): AxiosPromise => {
-    const formData = new FormData();
-    formData.append("avatar", file);
+  const formData = new FormData()
+  formData.append('avatar', file)
 
-    return httpInstance({
-        url: baseUrl + '/updateUserAvatar',
-        method: 'POST',
-        data: formData,
-        headers: {
-            "Content-Type": "multipart/form-data",
-        }
-    });
+  return httpInstance({
+    url: baseUrl + '/updateUserAvatar',
+    method: 'POST',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
 }
 
 /**
@@ -40,17 +40,17 @@ export const updateUserAvatar = (file: File): AxiosPromise => {
  * @param password 密码
  */
 export const updateUserPassword = (password: string): AxiosPromise => {
-    return httpInstance({
-        url: baseUrl + '/updateUserPassword',
-        method: 'POST',
-        data: {password: password}
-    });
+  return httpInstance({
+    url: baseUrl + '/updateUserPassword',
+    method: 'POST',
+    data: { password: password }
+  })
 }
 
 /**
  * 获取用户存储空间
  */
 export const getUserSpaceUsage = (): AxiosPromise<UserSpaceUsage> => {
-    const url = baseUrl + '/getUserSpaceUsage';
-    return httpInstance.get(url, {showSuccessMsg: false} as NetdiskInternalAxiosRequestConfig);
+  const url = baseUrl + '/getUserSpaceUsage'
+  return httpInstance.get(url, { showSuccessMsg: false, showLoading: false } as NetdiskInternalAxiosRequestConfig)
 }

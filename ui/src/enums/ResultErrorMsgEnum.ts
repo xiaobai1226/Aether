@@ -58,7 +58,7 @@ export enum ResultErrorMsgEnum {
     /**
      * 文件(夹)名称格式错误
      */
-    ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<,>,|,*,?,,/",
+    ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<>|*?/",
 
     /**
      * 文件(夹)名称长度错误
@@ -89,6 +89,11 @@ export enum ResultErrorMsgEnum {
      * 删除内容为空错误
      */
     ERROR_DEL_CONTENT_EMPTY = "请选择要删除的文件(夹)",
+
+    /**
+     * 下载内容为空错误
+     */
+    ERROR_DOWNLOAD_CONTENT_EMPTY = "请选择要下载的文件(夹)",
 
     /**
      * 分享内容为空错误

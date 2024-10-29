@@ -35,13 +35,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
+import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.data.annotation.Tran;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -940,97 +938,70 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
 
-//    @Override
-//    public DownloadFileDTO download(List<Long> ids, Long userId) {
-//        try {
-//            var fileDOList = userFileDao.getUserFiles(ids, userId);
-//
-//            if (fileDOList != null && fileDOList.size() > 0) {
-//                if (fileDOList.size() == 1) {
-//                    // 获取本地文件系统中的文件资源
-//                    FileReader fileReader = new FileReader(fileDOList.get(0).getFileUrl());
-//                    var file = fileReader.getFile();
-//                    return new DownloadFileDTO(file, fileDOList.get(0).getUserFileName());
-//                } else {
-//                    var fileList = new ArrayList<File>();
-//                    for (var file : fileDOList) {
-//                        fileList.add(new File(file.getFileUrl()));
-//                    }
-//
-//                    String fileName = "aaa.zip";
-//                    File temp = File.createTempFile("aaa", ".zip");
-////                    File sysTempDir = new File(System.getProperty("java.io.tmpdir") + "/" + fileName);
-//
-//                    // 调用压缩方法
-//                    zipFiles(fileList, temp);
-//
-////                    File sysTempDir = new File(System.getProperty("java.io.tmpdir"));
-////                    sysTempDir.
-////                    File newTempDir = new File(sysTempDir, dirName);
-////                    ZipUtil.zip();
-//
-//                    return new DownloadFileDTO(temp, fileName);
-//                }
-//            }
-//
-////            for (var file : fileDOList) {
-////                if (file.getType() == 1) {
-////                    FileReader fileReader = new FileReader(file.getFileUrl());
-////                    fileReader.getInputStream();
-////                }
-////            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//        return null;
-//    }
+    @Override
+    public DownloadedFile download(List<UserFileTreeDTO> userFileTreeDTOList, Integer userId) throws IOException {
+        if (userFileTreeDTOList.size() == 1 && UserFileItemTypeEnum.isFile(userFileTreeDTOList.getFirst().getItemType())) {
+            return new DownloadedFile(new File(FileUtils.generatePath(rootPath, userFileTreeDTOList.getFirst().getPath())), userFileTreeDTOList.getFirst().getName());
+        } else {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+                zipFiles(userFileTreeDTOList, zos, null, true);
+            }
 
-    public static void zipFiles(List<File> srcFiles, File zipFile) {
-        // 判断压缩后的文件存在不，不存在则创建
-        if (!zipFile.exists()) {
+            var name = "打包下载.zip";
+            if (userFileTreeDTOList.size() == 1) {
+                name = userFileTreeDTOList.getFirst().getName() + "." + "zip";
+            }
+
+            return new DownloadedFile("application/zip", new ByteArrayInputStream(baos.toByteArray()), name);
+        }
+    }
+
+    /**
+     * 递归获取文件并压缩
+     *
+     * @param userFileTreeDTOList 用户文件
+     * @param zipOutputStream
+     * @param parentPath          父路径
+     */
+    private void zipFiles(List<UserFileTreeDTO> userFileTreeDTOList, ZipOutputStream zipOutputStream, String parentPath, Boolean isRoot) {
+        for (var userFileTreeDTO : userFileTreeDTOList) {
+            var fileFullPath = parentPath == null ? userFileTreeDTO.getName() : FileUtils.generatePath(parentPath, userFileTreeDTO.getName());
+
             try {
-                zipFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        // 创建 FileOutputStream 对象
-        FileOutputStream fileOutputStream = null;
-        // 创建 ZipOutputStream
-        ZipOutputStream zipOutputStream = null;
-        // 创建 FileInputStream 对象
-        FileInputStream fileInputStream = null;
+                if (UserFileItemTypeEnum.isFolder(userFileTreeDTO.getItemType())) {
+                    if (isRoot && userFileTreeDTOList.size() == 1) {
+                        fileFullPath = null;
+                    } else {
+                        // 创建 ZipEntry 对象
+                        ZipEntry zipEntry = new ZipEntry(fileFullPath + "/");
+                        zipOutputStream.putNextEntry(zipEntry);
+                    }
 
-        try {
-            // 实例化 FileOutputStream 对象
-            fileOutputStream = new FileOutputStream(zipFile);
-            // 实例化 ZipOutputStream 对象
-            zipOutputStream = new ZipOutputStream(fileOutputStream);
-            // 创建 ZipEntry 对象
-            ZipEntry zipEntry = null;
-            // 遍历源文件数组
-            for (int i = 0; i < srcFiles.size(); i++) {
-                // 将源文件数组中的当前文件读入 FileInputStream 流中
-                fileInputStream = new FileInputStream(srcFiles.get(i));
-                // 实例化 ZipEntry 对象，源文件数组中的当前文件
-                zipEntry = new ZipEntry(srcFiles.get(i).getName());
-                zipOutputStream.putNextEntry(zipEntry);
-                // 该变量记录每次真正读的字节个数
-                int len;
-                // 定义每次读取的字节数组
-                byte[] buffer = new byte[1024];
-                while ((len = fileInputStream.read(buffer)) > 0) {
-                    zipOutputStream.write(buffer, 0, len);
+                    if (CollUtil.isNotEmpty(userFileTreeDTO.getChildUserFileDTOList())) {
+                        zipFiles(userFileTreeDTO.getChildUserFileDTOList(), zipOutputStream, fileFullPath, false);
+                    }
+                } else {
+                    // 创建 ZipEntry 对象
+                    ZipEntry zipEntry = new ZipEntry(fileFullPath);
+                    zipOutputStream.putNextEntry(zipEntry);
+
+                    byte[] bytes = new byte[1024];
+                    try (FileInputStream fileInputStream = new FileInputStream(FileUtils.generatePath(rootPath, userFileTreeDTO.getPath()))) {
+
+                        int length;
+                        while ((length = fileInputStream.read(bytes)) >= 0) {
+                            zipOutputStream.write(bytes, 0, length);
+                        }
+                    } catch (IOException e) {
+                        log.error(e.getMessage());
+                    }
                 }
-            }
-            zipOutputStream.closeEntry();
-            zipOutputStream.close();
-            fileInputStream.close();
-            fileOutputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
+                zipOutputStream.closeEntry();
+            } catch (IOException e) {
+                log.error(e.getMessage());
+            }
+        }
     }
 }

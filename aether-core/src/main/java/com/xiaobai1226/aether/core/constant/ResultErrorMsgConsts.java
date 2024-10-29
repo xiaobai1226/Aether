@@ -201,7 +201,7 @@ public class ResultErrorMsgConsts {
     /**
      * 文件(夹)名称格式错误
      */
-    public static final String ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<,>,|,*,?,,/";
+    public static final String ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<>|*?/";
 
     /**
      * 文件(夹)名称长度错误
@@ -297,6 +297,11 @@ public class ResultErrorMsgConsts {
      * 还原内容为空错误
      */
     public static final String ERROR_RESTORE_CONTENT_EMPTY = "请选择要还原的文件(夹)";
+
+    /**
+     * 下载内容为空错误
+     */
+    public static final String ERROR_DOWNLOAD_CONTENT_EMPTY = "请选择要下载的文件(夹)";
 
     /**
      * 服务器错误

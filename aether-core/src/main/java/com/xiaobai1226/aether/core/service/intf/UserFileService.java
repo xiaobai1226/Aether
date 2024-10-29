@@ -9,6 +9,7 @@ import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFolderVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
+import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 
 import java.io.IOException;
@@ -364,11 +365,9 @@ public interface UserFileService extends IService<UserFileDO> {
     /**
      * 下载
      *
-     * @param id     文件或文件夹ID
-     * @param userId 用户ID
-     * @return 修改结果的条数
-     * @author bai
-     * @date 2022/11/02 19:45
+     * @param userFileTreeDTOList 文件或文件夹信息集合
+     * @param userId              用户ID
+     * @return DownloadedFile对象
      */
-//    DownloadFileDTO download(List<Long> id, Long userId);
+    DownloadedFile download(List<UserFileTreeDTO> userFileTreeDTOList, Integer userId) throws IOException;
 }

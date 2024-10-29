@@ -3,7 +3,7 @@
 <mapper namespace="com.xiaobai1226.aether.core.mapper.UserFileMapper">
     <!--    分页查询用户文件列表-->
     <select id="getFileListByPage" resultType="com.xiaobai1226.aether.core.domain.dto.UserFileDTO">
-        SELECT user_file.*, file.size, file.thumbnail, file.file_type, file.identifier
+        SELECT user_file.*, file.size, file.thumbnail, file.file_type, file.identifier, file.path
         FROM user_file AS user_file
         LEFT JOIN file AS file ON user_file.file_id = file.id
         <where>
@@ -21,7 +21,7 @@
 
     <!--    查询用户文件列表根据ID集合-->
     <select id="getUserFileDTOByIds" resultType="com.xiaobai1226.aether.core.domain.dto.UserFileDTO">
-        SELECT user_file.*, file.size, file.thumbnail, file.file_type, file.identifier
+        SELECT user_file.*, file.size, file.thumbnail, file.file_type, file.identifier, file.path
         FROM user_file AS user_file
         LEFT JOIN file AS file ON user_file.file_id = file.id
         <where>

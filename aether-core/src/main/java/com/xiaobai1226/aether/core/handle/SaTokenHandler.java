@@ -3,12 +3,13 @@ package com.xiaobai1226.aether.core.handle;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
 import org.noear.solon.core.handle.Context;
-import org.noear.solon.core.handle.Handler;
+import org.noear.solon.core.handle.Filter;
+import org.noear.solon.core.handle.FilterChain;
 
 /**
  * SaToken拦截器
  */
-public class SaTokenHandler implements Handler {
+public class SaTokenHandler implements Filter {
     /**
      * 无需登录即可访问的地址
      */
@@ -34,7 +35,9 @@ public class SaTokenHandler implements Handler {
             "/api/v1/file/download"};
 
     @Override
-    public void handle(Context ctx) throws Throwable {
+    public void doFilter(Context ctx, FilterChain chain) throws Throwable {
         SaRouter.match("/**").notMatch(excludePathArray).check(StpUtil::checkLogin);
+
+        chain.doFilter(ctx);
     }
 }
