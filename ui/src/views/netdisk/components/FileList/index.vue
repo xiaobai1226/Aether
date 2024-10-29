@@ -14,6 +14,24 @@
           <span class="iconfont icon-folder-add"></span>
           新建文件夹
         </el-button>
+
+        <el-dropdown class="dropdown_download" placement="bottom" v-show="selectedFileIds.length > 0">
+          <el-button type="success">
+            <span class="iconfont icon-download"></span>
+            下载
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item>
+                <span @click="downloadBatch(1)">批量下载</span>
+              </el-dropdown-item>
+              <el-dropdown-item>
+                <span @click="downloadBatch(2)">打包下载</span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+
         <!--        <el-button type="primary" v-show="selectedFileIds.length > 0" @click="shareFileBatch">-->
         <!--          <span class="iconfont icon-share"></span>-->
         <!--          分享-->
@@ -46,7 +64,7 @@
       </div>
     </div>
 
-    <div v-loading="loading">
+    <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList"
                :initFetch="false" :options="tableOptions" @rowSelected="rowSelected">
@@ -82,7 +100,7 @@
               <span class="op">
               <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
 <!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
-                <span class="iconfont icon-download" v-if="row.itemType == 1" @click="download(row)">下载</span>
+                <span class="iconfont icon-download" @click="download(row)">下载</span>
                 <span class="iconfont icon-delete" @click="delFile(row)">删除</span>
                 <span class="iconfont icon-edit" @click="showEditPanel(index)">重命名</span>
                 <span class="iconfont icon-move" @click="moveFile(row)">移动</span>
@@ -124,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { getFileListByPage, newFolder, rename, del, move, copy, createDownloadSign } from '@/api/file'
 import type {
   GetFileListByPageRequest,
@@ -211,9 +229,9 @@ const currentPath = ref<string | null>(null)
 const navigationRef = ref()
 
 /**
- * 是否正在加载中
+ * 加载Ref
  */
-const loading = ref(true)
+const loadingRef = ref()
 
 /**
  * 加载文件列表
@@ -229,10 +247,8 @@ const loadDataList = () => {
     getFileListByPageRequest.path = currentPath.value as string
   }
 
-  loading.value = true
-
   // 请求后台获取文件列表
-  getFileListByPage(getFileListByPageRequest).then(({ data }) => {
+  getFileListByPage(getFileListByPageRequest, loadingRef.value).then(({ data }) => {
     if (data == null) {
       tableData.value = {
         list: [],
@@ -244,7 +260,6 @@ const loadDataList = () => {
     } else {
       tableData.value = data
     }
-    loading.value = false
   })
 }
 
@@ -802,10 +817,49 @@ const search = () => {
 }
 
 // 下载文件
-const download = (row: UserFileInfo) => {
-  if (row.id) {
-    createDownloadSign(row.id).then(({ data }) => {
-      window.location.href = '/api/v1/file/download?sign=' + data
+const download = (userFileInfo: UserFileInfo) => {
+  if (!userFileInfo || !userFileInfo.id) {
+    ElMessage.warning(ResultErrorMsgEnum.ERROR_DOWNLOAD_CONTENT_EMPTY)
+    return
+  }
+
+  const currentDownloadFileIds: Array<number> = []
+  currentDownloadFileIds.push(userFileInfo.id)
+
+  handleDownload(currentDownloadFileIds, 1)
+}
+
+/**
+ * 批量下载选中的文件
+ * @param type 下载类型 1 批量下载 2 打包下载
+ */
+const downloadBatch = (type: number) => {
+  if (selectedFileIds.value.length == 0) {
+    ElMessage.warning(ResultErrorMsgEnum.ERROR_DOWNLOAD_CONTENT_EMPTY)
+    return
+  }
+  let currentDownloadFileIds: Array<number> = []
+  currentDownloadFileIds = currentDownloadFileIds.concat(selectedFileIds.value)
+
+  handleDownload(currentDownloadFileIds, type)
+}
+
+/**
+ * 删除文件
+ *
+ * @param currentDownloadFileIds 要下载的文件ID集合
+ * @param type 下载类型 1 批量下载 2 打包下载
+ */
+const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => {
+  if (type === 1) {
+    currentDownloadFileIds.forEach((id => {
+      createDownloadSign(id.toString()).then(({ data }) => {
+        window.open(import.meta.env.VITE_HTTP_BASE_URL + '/file/download?sign=' + data)
+      })
+    }))
+  } else if (type === 2) {
+    createDownloadSign(currentDownloadFileIds.join(',')).then(({ data }) => {
+      window.open(import.meta.env.VITE_HTTP_BASE_URL + '/file/download?sign=' + data)
     })
   }
 }
@@ -813,4 +867,8 @@ const download = (row: UserFileInfo) => {
 
 <style scoped lang="scss">
 @import "@/styles/file.list.scss";
+
+.dropdown_download {
+  margin-right: 12px;
+}
 </style>

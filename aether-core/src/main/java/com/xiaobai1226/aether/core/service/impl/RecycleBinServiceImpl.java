@@ -121,7 +121,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         var recycleBinWrapper = lambdaQuery.eq(RecycleBinDO::getUserId, userId);
 
         // 删除全部文件，如果只有一个元素，且为-1, 则为全部删除
-        if (recycleIds.size() != 1 || !Objects.equals(recycleIds.get(0), "-1")) {
+        if (recycleIds.size() != 1 || !Objects.equals(recycleIds.getFirst(), "-1")) {
             recycleBinWrapper.in(RecycleBinDO::getRecycleId, recycleIds);
         }
 
