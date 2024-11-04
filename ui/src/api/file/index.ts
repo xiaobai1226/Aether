@@ -22,6 +22,7 @@ export const getFileListByPage = (params: GetFileListByPageRequest, loadingTarge
   return httpInstance.get(url, {
     params: params,
     showSuccessMsg: false,
+    showLoading: false,
     loadingTarget: loadingTarget
   } as NetdiskInternalAxiosRequestConfig)
 }

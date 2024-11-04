@@ -67,7 +67,7 @@
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList"
-               :initFetch="false" :options="tableOptions" @rowSelected="rowSelected">
+               :initFetch="false" :options="tableOptions" :loading="loading" @rowSelected="rowSelected">
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
@@ -203,7 +203,7 @@ const columns: Column[] = [
 const tableData = ref<GetFileListByPageResponse>({
   list: [],
   pageNum: 1,
-  pageSize: 15,
+  pageSize: 30,
   total: 0,
   totalPage: 0
 })
@@ -234,9 +234,16 @@ const navigationRef = ref()
 const loadingRef = ref()
 
 /**
+ * 正在加载标识
+ */
+const loading = ref(false)
+
+/**
  * 加载文件列表
  */
 const loadDataList = () => {
+  loading.value = true
+
   const getFileListByPageRequest: GetFileListByPageRequest = {
     pageNum: tableData.value.pageNum,
     pageSize: tableData.value.pageSize,
@@ -250,16 +257,28 @@ const loadDataList = () => {
   // 请求后台获取文件列表
   getFileListByPage(getFileListByPageRequest, loadingRef.value).then(({ data }) => {
     if (data == null) {
-      tableData.value = {
-        list: [],
-        pageNum: 1,
-        pageSize: 15,
-        total: 0,
-        totalPage: 0
+      if (tableData.value.pageNum === 1) {
+        tableData.value = {
+          list: [],
+          pageNum: 1,
+          pageSize: 30,
+          total: 0,
+          totalPage: 0
+        }
       }
     } else {
-      tableData.value = data
+      if (tableData.value.pageNum === 1) {
+        tableData.value = data
+      } else if (tableData.value.pageNum > 1) {
+        tableData.value.totalPage = data.totalPage
+        tableData.value.total = data.total
+        tableData.value.list = tableData.value.list.concat(data.list)
+      }
     }
+
+    loading.value = false
+  }).catch(() => {
+    loading.value = false
   })
 }
 
