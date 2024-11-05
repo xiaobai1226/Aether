@@ -8,7 +8,7 @@
             上传
           </el-button>
           <UploadPopup ref="uploadPopupRef" :category="currentCategory" :path="currentPath"
-                       :callbackFunction="loadDataList" />
+                       :callbackFunction="reload" />
         </div>
         <el-button type="success" v-show="selectedFileIds.length == 0" @click="showEditPanel(-1)">
           <span class="iconfont icon-folder-add"></span>
@@ -55,13 +55,14 @@
         <!--            </template>-->
         <!--          </el-input>-->
         <!--        </div>-->
-        <div class="iconfont icon-refresh" @click="loadDataList"></div>
+        <div class="iconfont icon-refresh" @click="reload"></div>
       </div>
       <!-- 导航 -->
       <div>
         <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
         <Navigation ref="navigationRef" />
       </div>
+      <div class="total_number">共 {{ tableData.total }} 项</div>
     </div>
 
     <div ref="loadingRef">
@@ -255,7 +256,7 @@ const loadDataList = () => {
   }
 
   // 请求后台获取文件列表
-  getFileListByPage(getFileListByPageRequest, loadingRef.value).then(({ data }) => {
+  getFileListByPage(getFileListByPageRequest, getFileListByPageRequest.pageNum === 1, loadingRef.value).then(({ data }) => {
     if (data == null) {
       if (tableData.value.pageNum === 1) {
         tableData.value = {
@@ -280,6 +281,14 @@ const loadDataList = () => {
   }).catch(() => {
     loading.value = false
   })
+}
+
+/**
+ * 重新加载
+ */
+const reload = () => {
+  tableData.value.pageNum = 1
+  loadDataList()
 }
 
 /**
@@ -317,7 +326,7 @@ watch(
     })
 
     // 加载数据
-    loadDataList()
+    reload()
   },
   { immediate: true }
 )
@@ -507,7 +516,7 @@ const submitEditPanel = (index: number) => {
       editing.value = false
       hideEditPanel(index)
       // 重新加载数据
-      loadDataList()
+      reload()
     }).catch(() => {
       // 光标聚焦
       if (editPanelRef.value) {
@@ -529,7 +538,7 @@ const submitEditPanel = (index: number) => {
       editing.value = false
       hideEditPanel(0)
       // 重新加载数据
-      loadDataList()
+      reload()
     }).catch(() => {
       // 光标聚焦
       if (editPanelRef.value) {
@@ -619,7 +628,7 @@ const handleMove = (targetPath: string) => {
 
   move(data).then(() => {
     // 重新加载数据
-    loadDataList()
+    reload()
 
     // 关闭选择文件夹弹窗
     folderSelectRef.value.close()
@@ -752,7 +761,7 @@ const handleDelete = (currentDelFileIds: Array<number>, message: string) => {
     }
 
     del(data).then(() => {
-      loadDataList()
+      reload()
     })
   })
 }
@@ -832,7 +841,7 @@ const fileNameFuzzy = ref()
 
 // 搜素
 const search = () => {
-  loadDataList()
+  reload()
 }
 
 // 下载文件
@@ -889,5 +898,11 @@ const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => 
 
 .dropdown_download {
   margin-right: 12px;
+}
+
+.total_number {
+  font-size: 12px;
+  color: #25262BB8;
+  margin-bottom: 5px;
 }
 </style>

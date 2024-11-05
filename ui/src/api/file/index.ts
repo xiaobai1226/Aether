@@ -16,13 +16,14 @@ const baseUrl = '/file'
  * 分页获取文件列表
  * @param params
  * @param loadingTarget
+ * @param showLoading
  */
-export const getFileListByPage = (params: GetFileListByPageRequest, loadingTarget?: HTMLElement): AxiosPromise<GetFileListByPageResponse> => {
+export const getFileListByPage = (params: GetFileListByPageRequest, showLoading: Boolean, loadingTarget?: HTMLElement): AxiosPromise<GetFileListByPageResponse> => {
   const url = baseUrl + '/getFileListByPage'
   return httpInstance.get(url, {
     params: params,
     showSuccessMsg: false,
-    showLoading: false,
+    showLoading: showLoading,
     loadingTarget: loadingTarget
   } as NetdiskInternalAxiosRequestConfig)
 }

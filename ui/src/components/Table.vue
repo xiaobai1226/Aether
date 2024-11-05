@@ -25,6 +25,10 @@
           </el-table-column>
         </template>
       </template>
+      <template v-slot:append>
+        <div v-if="loadingStatus" class="loading" v-loading="loadingStatus" element-loading-text="加载中..."></div>
+        <div v-if="noMore" class="no_more">没有更多了</div>
+      </template>
     </el-table>
     <!-- 分页 -->
     <!--    <div class="pagination" v-if="showPagination">-->
@@ -125,6 +129,11 @@ const noMore = computed(() => props.dataSource.list.length >= props.dataSource.t
  */
 const disabled = computed(() => props.loading || noMore.value)
 
+/**
+ * loading状态
+ */
+const loadingStatus = computed(() => props.loading && props.dataSource.pageNum !== 1)
+
 // 清除选中
 const clearSelection = () => {
   dataTable.value.clearSelection()
@@ -149,14 +158,6 @@ const handleRowClick = (row: any) => {
 // 多选
 const handleSelectionChange = (row: any) => {
   emit('rowSelected', row)
-}
-
-/**
- * 重新加载
- */
-const reload = () => {
-  props.dataSource.pageNum = 1
-  props.fetch()
 }
 
 /**
@@ -190,6 +191,18 @@ const loadNextPage = () => {
 //.el-pagination {
 //  justify-content: right;
 //}
+
+.loading {
+  height: 70px;
+  margin-bottom: 20px;
+}
+
+.no_more {
+  height: 50px;
+  text-align: center;
+  line-height: 50px;
+  color: #25252B5C
+}
 
 :deep(.el-table__cell) {
   padding: 4px 0;
