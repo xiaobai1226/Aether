@@ -150,7 +150,7 @@ const setCurrentRow = (rowKey, rowValue) => {
 }
 
 const clearSort = () => {
-  // dataTable.value.clearSort()
+  dataTable.value.clearSort()
 }
 
 // 将子组件暴露出去，否则父组件无法调用

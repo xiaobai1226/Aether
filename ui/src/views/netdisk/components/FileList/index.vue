@@ -208,7 +208,7 @@ const columns: Column[] = [
 const tableData = ref<GetFileListByPageResponse>({
   list: [],
   pageNum: 1,
-  pageSize: 30,
+  pageSize: 50,
   total: 0,
   totalPage: 0
 })
@@ -302,7 +302,7 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
  */
 const reload = () => {
   tableData.value.pageNum = 1
-  // dataTableRef.value.clearSort()
+  dataTableRef.value && dataTableRef.value.clearSort()
   loadDataList()
 }
 
@@ -335,9 +335,7 @@ watch(
     }
 
     nextTick().then(() => {
-      if (navigationRef.value) {
-        navigationRef.value.updateFolderList(currentPath.value)
-      }
+      navigationRef.value && navigationRef.value.updateFolderList(currentPath.value)
     })
 
     // 加载数据

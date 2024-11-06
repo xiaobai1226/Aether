@@ -141,7 +141,7 @@ public enum FileTypeEnum {
      */
     public static FileTypeEnum getEnumByExt(String ext) {
         for (var value : values()) {
-            if (value.extSet.contains(ext)) {
+            if (value.extSet.contains(ext.toLowerCase())) {
                 return value;
             }
         }
