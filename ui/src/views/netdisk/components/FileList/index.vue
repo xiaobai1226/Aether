@@ -68,7 +68,8 @@
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList"
-               :initFetch="false" :options="tableOptions" :loading="loading" @rowSelected="rowSelected">
+               :initFetch="false" :options="tableOptions" :loading="loading"
+               @rowSelected="rowSelected">
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
@@ -183,18 +184,21 @@ const columns: Column[] = [
   {
     label: '文件名',
     prop: 'fileName',
-    scopedSlots: 'fileName'
+    scopedSlots: 'fileName',
+    sortable: 'custom'
   },
   {
     label: '修改时间',
     prop: 'updateTime',
-    width: 200
+    width: 200,
+    sortable: 'custom'
   },
   {
     label: '文件大小',
     prop: 'fileSize',
     scopedSlots: 'fileSize',
-    width: 200
+    width: 200,
+    sortable: 'custom'
   }
 ]
 
@@ -234,6 +238,8 @@ const navigationRef = ref()
  */
 const loadingRef = ref()
 
+const dataTableRef = ref()
+
 /**
  * 正在加载标识
  */
@@ -242,7 +248,7 @@ const loading = ref(false)
 /**
  * 加载文件列表
  */
-const loadDataList = () => {
+const loadDataList = (sortField?: number, sortOrder?: number) => {
   loading.value = true
 
   const getFileListByPageRequest: GetFileListByPageRequest = {
@@ -253,6 +259,14 @@ const loadDataList = () => {
 
   if (currentPath.value != null) {
     getFileListByPageRequest.path = currentPath.value as string
+  }
+
+  if (sortField) {
+    getFileListByPageRequest.sortField = sortField
+  }
+
+  if (sortOrder) {
+    getFileListByPageRequest.sortOrder = sortOrder
   }
 
   // 请求后台获取文件列表
@@ -288,6 +302,7 @@ const loadDataList = () => {
  */
 const reload = () => {
   tableData.value.pageNum = 1
+  // dataTableRef.value.clearSort()
   loadDataList()
 }
 

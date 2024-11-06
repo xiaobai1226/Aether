@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-table ref="dataTable" :data="dataSource.list || []" :height="tableHeight"
+    <el-table ref="dataTable" :data="dataSource.list || []" :height="tableHeight" @sort-change="sortChange"
               :stripe="options.stripe" v-el-table-infinite-scroll="loadNextPage" :infinite-scroll-disabled="disabled"
               :border="options.border" header-row-class-name="table-header-row" highlight-current-row
               @row-click="handleRowClick" @selection-change="handleSelectionChange">
@@ -13,7 +13,7 @@
       <template v-for="(column, index) in columns">
         <template v-if="column && column.scopedSlots">
           <el-table-column :key="index" :label="column.label" :prop="column.prop" :width="column.width"
-                           :align="column.align || 'left'">
+                           :align="column.align || 'left'" :sortable="column.sortable">
             <template #default="scope">
               <slot :name="column.scopedSlots" :row="scope.row" :index="scope.$index"></slot>
             </template>
@@ -21,7 +21,7 @@
         </template>
         <template v-else>
           <el-table-column :key="index" :label="column.label" :prop="column.prop" :width="column.width"
-                           :align="column.align || 'left'" :fixed="column.fixed">
+                           :align="column.align || 'left'" :fixed="column.fixed" :sortable="column.sortable">
           </el-table-column>
         </template>
       </template>
@@ -52,6 +52,7 @@ export interface Column {
   width?: number;
   align?: string;
   fixed?: string;
+  sortable?: string | boolean;
 }
 
 const emit = defineEmits(['rowSelected', 'rowClick'])
@@ -94,6 +95,7 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
+  // sortChange: Function
 })
 
 // const layout = computed(() => {
@@ -147,8 +149,12 @@ const setCurrentRow = (rowKey, rowValue) => {
   dataTable.value.setCurrentRow(row)
 }
 
+const clearSort = () => {
+  // dataTable.value.clearSort()
+}
+
 // 将子组件暴露出去，否则父组件无法调用
-defineExpose({ setCurrentRow, clearSelection })
+defineExpose({ setCurrentRow, clearSelection, clearSort })
 
 // 行点击
 const handleRowClick = (row: any) => {
@@ -166,6 +172,30 @@ const handleSelectionChange = (row: any) => {
 const loadNextPage = () => {
   props.dataSource.pageNum = props.dataSource.pageNum + 1
   props.fetch()
+}
+
+/**
+ * 排序查询
+ */
+const sortChange = (sortMessage: any) => {
+  let sortField = undefined
+  if (sortMessage.prop === 'fileName') {
+    sortField = 1
+  } else if (sortMessage.prop === 'updateTime') {
+    sortField = 2
+  } else if (sortMessage.prop === 'fileSize') {
+    sortField = 3
+  }
+
+  let sortOrder = undefined
+  if (sortMessage.order === 'ascending') {
+    sortOrder = 1
+  } else if (sortMessage.order === 'descending') {
+    sortOrder = 2
+  }
+
+  props.dataSource.pageNum = 1
+  props.fetch(sortField, sortOrder)
 }
 
 // 切换每页的大小
