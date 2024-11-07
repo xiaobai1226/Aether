@@ -45,14 +45,13 @@ public class SaTokenFilter implements Filter {
 
     @Override
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {
-
         if (urlCheckPathSet.contains(ctx.path())) {
             String tokenBase64 = ctx.param("token");
             if (tokenBase64 != null) {
                 String token = Base64.decodeStr(tokenBase64);
                 String[] tokenParam = token.split(":");
                 if (tokenParam.length == 2) {
-                    ctx.headerAdd(tokenParam[0], tokenParam[1]);
+                    ctx.headerMap().add(tokenParam[0], tokenParam[1]);
                 }
             }
         }
