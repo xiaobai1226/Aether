@@ -22,11 +22,9 @@ import com.xiaobai1226.aether.core.util.FileUtils;
 import com.xiaobai1226.aether.core.util.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
-import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.*;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.Date;
@@ -85,6 +83,12 @@ public class FileController {
             parentId = parentUserFile.getId();
         }
 
+        if (userFileVO.getSortField() == null) {
+            userFileVO.setSortField(1);
+        }
+        if (userFileVO.getSortOrder() == null) {
+            userFileVO.setSortOrder(1);
+        }
         return userFileService.getFileList(userId, parentId, userFileVO);
     }
 

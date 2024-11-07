@@ -68,7 +68,7 @@
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList"
-               :initFetch="false" :options="tableOptions" :loading="loading"
+               :initFetch="false" :options="tableOptions" :loading="loading" :sortChange="sortChange"
                @rowSelected="rowSelected">
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
@@ -304,6 +304,30 @@ const reload = () => {
   tableData.value.pageNum = 1
   dataTableRef.value && dataTableRef.value.clearSort()
   loadDataList()
+}
+
+/**
+ * 排序查询
+ */
+const sortChange = (sortMessage: any) => {
+  let sortField = undefined
+  if (sortMessage.prop === 'fileName') {
+    sortField = 1
+  } else if (sortMessage.prop === 'updateTime') {
+    sortField = 2
+  } else if (sortMessage.prop === 'fileSize') {
+    sortField = 3
+  }
+
+  let sortOrder = undefined
+  if (sortMessage.order === 'ascending') {
+    sortOrder = 1
+  } else if (sortMessage.order === 'descending') {
+    sortOrder = 2
+  }
+
+  tableData.value.pageNum = 1
+  loadDataList(sortField, sortOrder)
 }
 
 /**

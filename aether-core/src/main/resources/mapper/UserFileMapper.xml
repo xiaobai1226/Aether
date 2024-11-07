@@ -16,7 +16,27 @@
                 AND user_file.category = #{userFileDO.category}
             </if>
         </where>
-        ORDER BY user_file.item_type ASC, user_file.update_time DESC
+        ORDER BY user_file.item_type ASC
+        <choose>
+            <when test="sortFieldIndex == 1 and sortOrder == 1">
+                , user_file.name ASC
+            </when>
+            <when test="sortFieldIndex == 1 and sortOrder == 2">
+                , user_file.name DESC
+            </when>
+            <when test="sortFieldIndex == 2 and sortOrder == 1">
+                , user_file.update_time ASC
+            </when>
+            <when test="sortFieldIndex == 2 and sortOrder == 2">
+                , user_file.update_time DESC
+            </when>
+            <when test="sortFieldIndex == 3 and sortOrder == 1">
+                , file.size ASC
+            </when>
+            <when test="sortFieldIndex == 3 and sortOrder == 2">
+                , file.size DESC
+            </when>
+        </choose>
     </select>
 
     <!--    查询用户文件列表根据ID集合-->

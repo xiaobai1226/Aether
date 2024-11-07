@@ -94,8 +94,8 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
-  }
-  // sortChange: Function
+  },
+  sortChange: Function
 })
 
 // const layout = computed(() => {
@@ -172,30 +172,6 @@ const handleSelectionChange = (row: any) => {
 const loadNextPage = () => {
   props.dataSource.pageNum = props.dataSource.pageNum + 1
   props.fetch()
-}
-
-/**
- * 排序查询
- */
-const sortChange = (sortMessage: any) => {
-  let sortField = undefined
-  if (sortMessage.prop === 'fileName') {
-    sortField = 1
-  } else if (sortMessage.prop === 'updateTime') {
-    sortField = 2
-  } else if (sortMessage.prop === 'fileSize') {
-    sortField = 3
-  }
-
-  let sortOrder = undefined
-  if (sortMessage.order === 'ascending') {
-    sortOrder = 1
-  } else if (sortMessage.order === 'descending') {
-    sortOrder = 2
-  }
-
-  props.dataSource.pageNum = 1
-  props.fetch(sortField, sortOrder)
 }
 
 // 切换每页的大小

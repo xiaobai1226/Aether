@@ -18,7 +18,7 @@
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList" :initFetch="false"
-               :options="tableOptions" @rowSelected="rowSelected" :loading="loading">
+               :options="tableOptions" @rowSelected="rowSelected" :loading="loading" :sortChange="sortChange">
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
@@ -83,8 +83,8 @@ const columns = [
   {
     label: '文件名',
     prop: 'fileName',
-    scopedSlots: 'fileName',
-    sortable: 'custom'
+    scopedSlots: 'fileName'
+    // sortable: 'custom'
   },
   {
     label: '删除时间',
@@ -96,15 +96,15 @@ const columns = [
     label: '文件大小',
     prop: 'fileSize',
     scopedSlots: 'fileSize',
-    width: 200,
-    sortable: 'custom'
+    width: 200
+    // sortable: 'custom'
   },
   {
     label: '有效时间',
     prop: 'validityPeriod',
     scopedSlots: 'validityPeriod',
-    width: 200,
-    sortable: 'custom'
+    width: 200
+    // sortable: 'custom'
   }
 ]
 
@@ -188,6 +188,32 @@ const reload = () => {
   tableData.value.pageNum = 1
   dataTableRef.value && dataTableRef.value.clearSort()
   loadDataList()
+}
+
+/**
+ * 排序查询
+ */
+const sortChange = (sortMessage: any) => {
+  let sortField = undefined
+  if (sortMessage.prop === 'fileName') {
+    sortField = 1
+  } else if (sortMessage.prop === 'deleteTime') {
+    sortField = 2
+  } else if (sortMessage.prop === 'fileSize') {
+    sortField = 3
+  } else if (sortMessage.prop === 'validityPeriod') {
+    sortField = 4
+  }
+
+  let sortOrder = undefined
+  if (sortMessage.order === 'ascending') {
+    sortOrder = 1
+  } else if (sortMessage.order === 'descending') {
+    sortOrder = 2
+  }
+
+  tableData.value.pageNum = 1
+  loadDataList(sortField, sortOrder)
 }
 
 /**
