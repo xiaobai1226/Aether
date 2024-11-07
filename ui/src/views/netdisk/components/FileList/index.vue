@@ -89,15 +89,14 @@
                 <!--              <span v-if="row.status == 1" class="transfer-status transfer-fail">转码失败</span>-->
             </span>
               <!-- 新建文件夹或重命名输入栏 -->
-              <div class="edit-panel" v-if="showEditPanelIndex == index">
-                <el-input v-model.trim="editPanelFileName" ref="editPanelRef" @blur="hideEditPanel(index)"
-                          @keyup.enter="submitEditPanel(index)">
-                </el-input>
-                <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"
-                      @click="submitEditPanel(index)" @mousedown="submitEditPanelMouseDown"
-                      @mouseup="submitEditPanelMouseUp"></span>
-                <span class="iconfont icon-error"></span>
-              </div>
+              <!--              <div class="edit-panel" v-if="showEditPanelIndex == index">-->
+              <!--                <el-input v-model.trim="editPanelFileName" ref="editPanelRef"-->
+              <!--                          @keyup.enter="submitEditPanel(index)">-->
+              <!--                </el-input>-->
+              <!--                <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"-->
+              <!--                      @click="submitEditPanel(index)" />-->
+              <!--                <span class="iconfont icon-error" @click="hideEditPanel(index)" />-->
+              <!--              </div>-->
               <!-- 操作栏 -->
               <span class="op">
               <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
@@ -159,7 +158,7 @@ import Table from '@/components/Table.vue'
 import UploadPopup from '@/components/UploadPopup.vue'
 import type { Column } from '@/components/Table.vue'
 import Utils from '@/utils/Utils'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Icon from '@/components/Icon.vue'
 import Confirm from '@/utils/Confirm'
 import FolderSelect from '@/components/FolderSelect.vue'
@@ -386,11 +385,6 @@ const hideActionBar = () => {
 }
 
 /**
- * 编辑行状态 true 为正在编辑
- */
-const editing = ref<boolean>(false)
-
-/**
  * 新建文件夹或重命名输入框
  */
 const editPanelRef = ref()
@@ -410,37 +404,14 @@ const showEditPanelIndex = ref<number>(-1)
  * @param index 对应行索引，-1 为新建文件夹
  */
 const showEditPanel = (index: number) => {
+
+  let message = '新建文件夹'
+
   // 如果是新建文件夹
   if (index === -1) {
-    // 如果已经处于编辑行状态，则直接return，否则改为正在编辑状态
-    if (editing.value) {
-      return
-    } else {
-      editing.value = true
-    }
-
     // 将操作栏栏隐藏
     hideActionBar()
-
-    // 向数组开头添加一个新元素，并返回数组长度
-    tableData.value.list.unshift({ itemType: 0, path: currentPath.value || '/' })
-    // 展示新建文件夹输入框
-    showEditPanelIndex.value = 0
-    nextTick(() => {
-      // 光标聚焦
-      if (editPanelRef.value) {
-        editPanelRef.value.focus()
-      }
-    })
   } else {
-    // 如果目前存在新建文件夹，则删除第一个元素
-    if (!tableData.value.list[0].id) {
-      tableData.value.list.splice(0, 1)
-      index = index - 1
-      // 隐藏原本的EditPanel
-      hideEditPanel(0)
-    }
-
     let currentData = tableData.value.list[index]
     // 展示重命名输入框
     showEditPanelIndex.value = index
@@ -459,7 +430,6 @@ const showEditPanel = (index: number) => {
       }
     }
 
-    editing.value = true
     nextTick(() => {
       // 光标聚焦
       if (editPanelRef.value) {
@@ -470,43 +440,26 @@ const showEditPanel = (index: number) => {
       }
     })
   }
-}
 
-const isClickSubmitEditPanel = ref(false)
-
-/**
- * 隐藏新建文件夹或重命名输入框
- * @param index 对应行索引
- */
-const hideEditPanel = (index: number) => {
-  if (isClickSubmitEditPanel.value) {
-    return
-  }
-
-  // 获取对应行的数据
-  const fileData: UserFileInfo = tableData.value.list[index]
-  // 如果id不为空则为重命名，否则为新建文件夹
-  if (!fileData.id) {
-    // 删除对应行数据
-    tableData.value.list.splice(index, 1)
-  }
-  showEditPanelIndex.value = -1
-  editPanelFileName.value = null
-  editing.value = false
-}
-
-/**
- * 按下提交新建文件夹或重命名请求按鈕
- */
-const submitEditPanelMouseDown = () => {
-  isClickSubmitEditPanel.value = true
-}
-
-/**
- * 抬起提交新建文件夹或重命名请求按鈕
- */
-const submitEditPanelMouseUp = () => {
-  isClickSubmitEditPanel.value = false
+  ElMessageBox.prompt('', message, {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    inputPattern:
+      /[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\w](?:[\w-]*[\w])?\.)+[\w](?:[\w-]*[\w])?/,
+    inputErrorMessage: 'Invalid Email'
+  })
+    .then(({ value }) => {
+      ElMessage({
+        type: 'success',
+        message: `Your email is:${value}`
+      })
+    })
+    .catch(() => {
+      ElMessage({
+        type: 'info',
+        message: 'Input canceled'
+      })
+    })
 }
 
 /**
@@ -868,6 +821,8 @@ const openUploadPopup = () => {
 const preview = (row: UserFileInfo) => {
   // 目录
   if (row.itemType == 0) {
+    dataTableRef.value.clearSelection()
+    selectedFileIds.value = []
     navigationRef.value.openFolder(row.name)
     return
   }
