@@ -733,6 +733,7 @@ const handleCopy = (targetPath: string) => {
     folderSelectRef.value.close()
 
     selectedFileIds.value = []
+    dataTableRef.value.clearSelection()
 
     // 更新用户存储空间
     userStore.handleGetUserSpaceUsage()
