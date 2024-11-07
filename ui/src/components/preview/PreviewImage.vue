@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { getImage } from '@/api/file';
-import Utils from '@/utils/Utils';
+import { ref } from 'vue'
+import { getImage } from '@/api/file'
+import Utils from '@/utils/Utils'
 
 const props = defineProps({
   // // 图像列表
