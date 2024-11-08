@@ -107,7 +107,7 @@ interface FileItem {
   // 任务ID
   taskId: string,
   // 回调方法
-  uploadedCallback: () => void
+  uploadedCallback: (uploadPath?: string) => void
 }
 
 // 定义STATUS对象
@@ -187,7 +187,7 @@ let uploadingNum = 0
 
 // TODO 确定delList的类型
 const delList = ref<string[]>([])
-const addUploadFile = async (file: File, uid: string, path: string | null, uploadedCallback: () => void) => {
+const addUploadFile = async (file: File, uid: string, path: string | null, uploadedCallback: (uploadPath?: string) => void) => {
   const fileItem: FileItem = {
     // 文件，文件大小，文件流，文件名。。。
     file: file,
@@ -308,7 +308,7 @@ const getFileByUid = (uid: string): FileItem | undefined => {
 /**
  * MD5并上传文件
  */
-const md5AndUploadFile = async (uid: string, chunkIndex: number, uploadedCallback: () => void) => {
+const md5AndUploadFile = async (uid: string, chunkIndex: number, uploadedCallback: (uploadPath?: string) => void) => {
 
   const file = getFileByUid(uid)
 
@@ -335,7 +335,7 @@ const md5AndUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
  * @param chunkIndex
  * @param uploadedCallback
  */
-const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallback: () => void) => {
+const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallback: (uploadPath?: string) => void) => {
   chunkIndex = chunkIndex ? chunkIndex : 0
   // 分片上传
   let currentFile = getFileByUid(uid)
@@ -415,7 +415,7 @@ const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallbac
             // emit("uploadCallback");
             shouldBreak = true
             // 执行回调
-            uploadedCallback()
+            uploadedCallback(uploadFileRequest.path)
             // 更新用户空间
             userStore.handleGetUserSpaceUsage()
           }
