@@ -82,7 +82,7 @@
               <!-- 如果是文件夹-->
               <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
               <!--              </template>-->
-              <span class="file-name" :title="row.name" v-if="showEditPanelIndex != index">
+              <span class="file-name" :title="row.name">
               <span @click="preview(row)">{{ row.name }}</span>
                 <!-- TODO 需要删除 -->
                 <!--              <span v-if="row.status == 0" class="transfer-status">转码中</span>-->
@@ -385,157 +385,79 @@ const hideActionBar = () => {
 }
 
 /**
- * 新建文件夹或重命名输入框
- */
-const editPanelRef = ref()
-
-/**
- * 新建文件夹或重命名输入框的文件名
- */
-const editPanelFileName = ref<string | null>(null)
-
-/**
- * 显示新建文件夹或重命名输入框的索引 -1 为不展示，其他为要展示行的索引
- */
-const showEditPanelIndex = ref<number>(-1)
-
-/**
  * 展示新建文件夹或重命名输入框
  * @param index 对应行索引，-1 为新建文件夹
  */
 const showEditPanel = (index: number) => {
-
   let message = '新建文件夹'
+  let inputValue
 
-  // 如果是新建文件夹
-  if (index === -1) {
-    // 将操作栏栏隐藏
-    hideActionBar()
-  } else {
+  // 如果是重命名
+  if (index !== -1) {
+    message = '重命名'
+
     let currentData = tableData.value.list[index]
-    // 展示重命名输入框
-    showEditPanelIndex.value = index
-    let selectEndIndex = 0
 
     if (currentData.name) {
-      selectEndIndex = currentData.name.length
-      editPanelFileName.value = currentData.name
-
-      // 编辑文件，如果是文件则处理后缀
-      if (currentData.itemType == 1) {
-        let lastIndex = currentData.name.lastIndexOf('.')
-        if (lastIndex != -1) {
-          selectEndIndex = lastIndex
-        }
-      }
+      inputValue = currentData.name
     }
-
-    nextTick(() => {
-      // 光标聚焦
-      if (editPanelRef.value) {
-        editPanelRef.value.focus()
-
-        const inputDOM = editPanelRef.value.$el.querySelector('input')
-        inputDOM.setSelectionRange(0, selectEndIndex)
-      }
-    })
   }
 
   ElMessageBox.prompt('', message, {
     confirmButtonText: '确认',
     cancelButtonText: '取消',
-    inputPattern:
-      /[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\w](?:[\w-]*[\w])?\.)+[\w](?:[\w-]*[\w])?/,
-    inputErrorMessage: 'Invalid Email'
+    closeOnClickModal: false,
+    inputValue: inputValue,
+    inputValidator: (value) => {
+      // 校验名称格式
+      const regex = new RegExp(RegexEnum.REGEX_FILE_NAME)
+      if (!value) {
+        return ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY
+      } else if (value.length > 255) {
+        return ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string
+      } else if (!regex.test(value)) {
+        return ResultErrorMsgEnum.ERROR_FILE_NAME_FORMAT
+      }
+
+      return true
+    }
+  }).then(({ value }) => {
+    // 如果index不为-1则为重命名，否则为新建文件夹
+    if (index !== -1) {
+      // 获取行数据
+      const fileData: UserFileInfo = tableData.value.list[index]
+
+      if (!fileData.id) {
+        return
+      }
+
+      // 重命名
+      const data: FileRenameRequest = {
+        id: fileData.id,
+        newName: value
+      }
+
+      rename(data).then(() => {
+        // 重新加载数据
+        reload()
+      })
+    }
+    // 新建文件夹
+    else {
+      const data: NewFolderRequest = {
+        folderName: value
+      }
+
+      if (currentPath.value != null) {
+        data.path = currentPath.value as string
+      }
+
+      newFolder(data).then(() => {
+        // 重新加载数据
+        reload()
+      })
+    }
   })
-    .then(({ value }) => {
-      ElMessage({
-        type: 'success',
-        message: `Your email is:${value}`
-      })
-    })
-    .catch(() => {
-      ElMessage({
-        type: 'info',
-        message: 'Input canceled'
-      })
-    })
-}
-
-/**
- * 提交新建文件夹或重命名请求
- */
-const submitEditPanel = (index: number) => {
-  // 校验名称格式
-  const regex = new RegExp(RegexEnum.REGEX_FILE_NAME)
-  let checkResult = true
-  let warnInfo = ''
-  if (!editPanelFileName.value) {
-    checkResult = false
-    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY
-  } else if ((editPanelFileName.value as string).length > 100) {
-    checkResult = false
-    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string
-  } else if (!regex.test((editPanelFileName.value as string))) {
-    checkResult = false
-    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_FORMAT
-  }
-
-  if (!checkResult) {
-    // 光标聚焦
-    if (editPanelRef.value) {
-      editPanelRef.value.focus()
-    }
-
-    ElMessage.warning(warnInfo)
-    return
-  }
-
-  // 获取行数据
-  const fileData: UserFileInfo = tableData.value.list[index]
-
-  // 如果id不为空则为重命名，否则为新建文件夹
-  if (fileData.id) {
-    // 重命名
-    const data: FileRenameRequest = {
-      id: fileData.id,
-      newName: editPanelFileName.value as string
-    }
-
-    rename(data).then(() => {
-      editing.value = false
-      hideEditPanel(index)
-      // 重新加载数据
-      reload()
-    }).catch(() => {
-      // 光标聚焦
-      if (editPanelRef.value) {
-        editPanelRef.value.focus()
-      }
-    })
-  }
-  // 新建文件夹
-  else {
-    const data: NewFolderRequest = {
-      folderName: editPanelFileName.value as string
-    }
-
-    if (currentPath.value != null) {
-      data.path = currentPath.value as string
-    }
-
-    newFolder(data).then(() => {
-      editing.value = false
-      hideEditPanel(0)
-      // 重新加载数据
-      reload()
-    }).catch(() => {
-      // 光标聚焦
-      if (editPanelRef.value) {
-        editPanelRef.value.focus()
-      }
-    })
-  }
 }
 
 /**
