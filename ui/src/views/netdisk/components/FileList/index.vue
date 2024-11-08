@@ -62,7 +62,10 @@
         <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
         <Navigation ref="navigationRef" />
       </div>
-      <div class="total_number">共 {{ tableData.total }} 项</div>
+      <div class="total_number">
+        <span>共 {{ tableData.total }} 项 </span>
+        <span v-show="selectedFileIds.length > 0">已选中 {{ selectedFileIds.length }} 个文件/文件夹</span>
+      </div>
     </div>
 
     <div ref="loadingRef">
