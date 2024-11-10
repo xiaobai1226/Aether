@@ -1,7 +1,11 @@
+<template>
+  <div ref="player" id="player"></div>
+</template>
+
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import DPlayer from 'dplayer'
-import { getVideo } from '@/api/file'
+import { onMounted, ref, onBeforeUnmount } from 'vue'
+import Artplayer from 'artplayer'
+import { getVideoUrl } from '@/api/file'
 import Utils from '@/utils/Utils'
 
 const props = defineProps({
@@ -13,53 +17,56 @@ const props = defineProps({
   fileId: Number
 })
 
-const videoInfo = ref({
-  video: null
-})
+// const videoInfo = ref({
+//   video: null
+// })
 
 const player = ref()
 
-const initPlayer = (videoUrl: string) => {
-  const dp = new DPlayer({
+let instance: Artplayer | null = null
+
+const initPlayer = () => {
+  if (!props.fileId) {
+    return
+  }
+
+  instance = new Artplayer({
     container: player.value,
     theme: 'b7daff',
     screenshot: true,
-    video: {
-      url: videoUrl,
-      type: 'auto'
-    }
+    fullscreen: true,
+    url: getVideoUrl(props.fileId),
+    type: 'mkv'
   })
 }
 
 onMounted(() => {
-  getFullVideo()
+  initPlayer()
 })
 
-const getFullVideo = () => {
-  if (props.fileId) {
-    getVideo(props.fileId).then(({ data }) => {
-      const videoUrl = URL.createObjectURL(new Blob([data]))
-      initPlayer(videoUrl)
-    })
+onBeforeUnmount(() => {
+  if (instance && instance.destroy) {
+    instance.destroy(false)
   }
-}
-</script>
+})
 
-<template>
-  <div ref="player" id="player"></div>
-</template>
+// const getFullVideo = () => {
+//   if (props.fileId) {
+//     getVideo(props.fileId).then(({ data }) => {
+//       const videoUrl = URL.createObjectURL(new Blob([data]))
+//       initPlayer(videoUrl)
+//     })
+//   }
+// }
+</script>
 
 <style scoped lang="scss">
 #player {
   width: 100%;
 
-  :deep .dplayer-video-wrap {
-    text-align: center;
-
-    .dplayer-video {
-      margin: 0 auto;
-      max-height: calc(100vh - 41px);
-    }
+  .artplayer-app {
+    margin: 0 auto;
+    max-height: calc(100vh - 41px);
   }
 }
 </style>

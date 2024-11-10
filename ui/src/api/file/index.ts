@@ -193,6 +193,20 @@ export const getVideo = (id: number): AxiosPromise<ArrayBuffer> => {
 }
 
 /**
+ * 获取视频Url
+ */
+export const getVideoUrl = (id: number): string => {
+  // 从pinia获取token数据
+  const accountStore = useAccountStore()
+  const { tokenName, tokenPrefix, token } = accountStore.accountInfo
+  // 按照后端要求拼接token数据
+  const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
+  const tokenBase64 = btoa(tokenString)
+
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getVideo?id=' + id + '&token=' + tokenBase64
+}
+
+/**
  * 获取文件
  */
 export const getFile = (id: number): AxiosPromise<ArrayBuffer> => {
