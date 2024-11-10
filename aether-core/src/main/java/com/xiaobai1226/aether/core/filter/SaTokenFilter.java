@@ -1,15 +1,19 @@
-package com.xiaobai1226.aether.core.handle;
+package com.xiaobai1226.aether.core.filter;
 
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.codec.Base64;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.Filter;
 import org.noear.solon.core.handle.FilterChain;
 
+import java.util.Set;
+
 /**
- * SaToken拦截器
+ * SaToken过滤器
  */
-public class SaTokenHandler implements Filter {
+public class SaTokenFilter implements Filter {
+
     /**
      * 无需登录即可访问的地址
      */
@@ -34,8 +38,24 @@ public class SaTokenHandler implements Filter {
             // 下载
             "/api/v1/file/download"};
 
+    /**
+     * token在URL中校验登录的接口
+     */
+    private final Set<String> urlCheckPathSet = Set.of("/api/v1/file/getImage");
+
     @Override
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {
+        if (urlCheckPathSet.contains(ctx.path())) {
+            String tokenBase64 = ctx.param("token");
+            if (tokenBase64 != null) {
+                String token = Base64.decodeStr(tokenBase64);
+                String[] tokenParam = token.split(":");
+                if (tokenParam.length == 2) {
+                    ctx.headerMap().add(tokenParam[0], tokenParam[1]);
+                }
+            }
+        }
+
         SaRouter.match("/**").notMatch(excludePathArray).check(StpUtil::checkLogin);
 
         chain.doFilter(ctx);

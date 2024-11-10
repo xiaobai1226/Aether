@@ -226,12 +226,17 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 分页对象
         Page<UserFileDTO> page = new Page<>(1, -1);
+        Integer sortFieldIndex = null;
+        Integer sortOrder = null;
+
         if (userFileVO != null) {
             page = new Page<>(userFileVO.getPageNum(), userFileVO.getPageSize());
+            sortFieldIndex = userFileVO.getSortField();
+            sortOrder = userFileVO.getSortOrder();
         }
 
         // 查询文件列表
-        var userFileDTOList = userFileMapper.getFileListByPage(page, userFileDO);
+        var userFileDTOList = userFileMapper.getFileListByPage(page, userFileDO, sortFieldIndex, sortOrder);
 
         // 判断结果是否为空
         if (CollUtil.isNotEmpty(userFileDTOList)) {

@@ -9,6 +9,7 @@ import type {
   GetFileListByPageResponse, GetFolderListByPageRequest, MoveRequest,
   NewFolderRequest, UploadFileRequest, UploadFileResponse
 } from '@/api/file/types'
+import { useAccountStore } from '@/stores/account'
 
 const baseUrl = '/file'
 
@@ -16,12 +17,14 @@ const baseUrl = '/file'
  * 分页获取文件列表
  * @param params
  * @param loadingTarget
+ * @param showLoading
  */
-export const getFileListByPage = (params: GetFileListByPageRequest, loadingTarget?: HTMLElement): AxiosPromise<GetFileListByPageResponse> => {
+export const getFileListByPage = (params: GetFileListByPageRequest, showLoading: Boolean, loadingTarget?: HTMLElement): AxiosPromise<GetFileListByPageResponse> => {
   const url = baseUrl + '/getFileListByPage'
   return httpInstance.get(url, {
     params: params,
     showSuccessMsg: false,
+    showLoading: showLoading,
     loadingTarget: loadingTarget
   } as NetdiskInternalAxiosRequestConfig)
 }
@@ -161,6 +164,20 @@ export const getImage = (id: number): AxiosPromise<ArrayBuffer> => {
     method: 'GET',
     responseType: 'arraybuffer'
   })
+}
+
+/**
+ * 获取图片Url
+ */
+export const getImageUrl = (id: number): string => {
+  // 从pinia获取token数据
+  const accountStore = useAccountStore()
+  const { tokenName, tokenPrefix, token } = accountStore.accountInfo
+  // 按照后端要求拼接token数据
+  const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
+  const tokenBase64 = btoa(tokenString)
+
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&token=' + tokenBase64
 }
 
 /**

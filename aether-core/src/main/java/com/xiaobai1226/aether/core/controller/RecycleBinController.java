@@ -48,6 +48,13 @@ public class RecycleBinController {
         // 获取当前会话账号id, 并转化为`int`类型
         final var userId = StpUtil.getLoginIdAsInt();
 
+        if (recycleBinVO.getSortField() == null) {
+            recycleBinVO.setSortField(1);
+        }
+        if (recycleBinVO.getSortOrder() == null) {
+            recycleBinVO.setSortOrder(1);
+        }
+
         return recycleBinService.getRecycleBinList(userId, recycleBinVO);
     }
 
