@@ -581,8 +581,47 @@ public class FileController {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
+        long start = 0;
+        long end = 0;
+        var part = false;
+
+        var file = FileUtil.file(fileFullPath);
+        var fileLength = file.length();
+        String range = ctx.header("Range");
+
+        if (null != range) {
+            end = fileLength - 1;
+            if (range.startsWith("bytes=")) {
+                String[] values = range.substring("bytes=".length()).split("-");
+
+                start = Long.parseLong(values[0]);
+                if (values.length > 1) {
+                    end = Long.parseLong(values[1]);
+                }
+            }
+        }
+
+        long contentLength;
+        part = (start != 0 || end != fileLength - 1);
+
+        if (part) {
+            contentLength = end - start + 1;
+            ctx.headerSet("Content-Range", "bytes " + start + "-" + end + "/" + fileLength);
+            ctx.status(206);
+        } else {
+            contentLength = fileLength;
+            ctx.status(200);
+        }
+
         ctx.contentType("video/" + FileNameUtil.extName(fileDO.getName()));
-        FileUtils.readFile(ctx, fileFullPath);
+        ctx.headerSet("Content-Length", String.valueOf(contentLength));
+
+        if (!ctx.method().equals("HEAD")) {
+            var resIn = FileUtils.fileInputStream(fileFullPath, start, contentLength);
+            ctx.output(resIn);
+        }
+
+//        FileUtils.readFile(ctx, fileFullPath);
     }
 
     /**
