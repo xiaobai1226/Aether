@@ -175,9 +175,9 @@ export const getImageUrl = (id: number): string => {
   const { tokenName, tokenPrefix, token } = accountStore.accountInfo
   // 按照后端要求拼接token数据
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
-  const tokenBase64 = btoa(tokenString)
+  const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&token=' + tokenBase64
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&sign=' + sign
 }
 
 /**
@@ -201,9 +201,9 @@ export const getVideoUrl = (id: number): string => {
   const { tokenName, tokenPrefix, token } = accountStore.accountInfo
   // 按照后端要求拼接token数据
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
-  const tokenBase64 = btoa(tokenString)
+  const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getVideo?id=' + id + '&token=' + tokenBase64
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getVideo?id=' + id + '&sign=' + sign
 }
 
 /**

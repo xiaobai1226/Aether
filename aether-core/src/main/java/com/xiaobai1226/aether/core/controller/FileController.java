@@ -22,6 +22,7 @@ import com.xiaobai1226.aether.core.util.FileUtils;
 import com.xiaobai1226.aether.core.util.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.*;
 
@@ -562,66 +563,38 @@ public class FileController {
         // 获取当前会话账号id, 并转化为`int`类型
         var userId = StpUtil.getLoginIdAsInt();
 
-        var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
+        try {
+            var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
 
-        if (userFileDO == null || !UserFileCategoryEnum.isVideo(userFileDO.getCategory())) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        var fileDO = fileService.getFileById(userFileDO.getFileId());
-
-        // 判断文件是否存在
-        if (fileDO == null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
-
-        if (!FileUtil.exist(fileFullPath)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        long start = 0;
-        long end = 0;
-        var part = false;
-
-        var file = FileUtil.file(fileFullPath);
-        var fileLength = file.length();
-        String range = ctx.header("Range");
-
-        if (null != range) {
-            end = fileLength - 1;
-            if (range.startsWith("bytes=")) {
-                String[] values = range.substring("bytes=".length()).split("-");
-
-                start = Long.parseLong(values[0]);
-                if (values.length > 1) {
-                    end = Long.parseLong(values[1]);
-                }
+            if (userFileDO == null || !UserFileCategoryEnum.isVideo(userFileDO.getCategory())) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
+
+            var fileDO = fileService.getFileById(userFileDO.getFileId());
+
+            // 判断文件是否存在
+            if (fileDO == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+
+            var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+
+            if (!FileUtil.exist(fileFullPath)) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+
+            var file = FileUtil.file(fileFullPath);
+
+            var downloadedFile = new DownloadedFile(file, userFileDO.getName());
+
+            //不做为附件下载（按需配置）
+            downloadedFile.asAttachment(false);
+
+            //也可用接口输出
+            ctx.outputAsFile(downloadedFile);
+        } catch (IOException e) {
+            throw new FailResultException(SYSTEM_ERROR);
         }
-
-        long contentLength;
-        part = (start != 0 || end != fileLength - 1);
-
-        if (part) {
-            contentLength = end - start + 1;
-            ctx.headerSet("Content-Range", "bytes " + start + "-" + end + "/" + fileLength);
-            ctx.status(206);
-        } else {
-            contentLength = fileLength;
-            ctx.status(200);
-        }
-
-        ctx.contentType("video/" + FileNameUtil.extName(fileDO.getName()));
-        ctx.headerSet("Content-Length", String.valueOf(contentLength));
-
-        if (!ctx.method().equals("HEAD")) {
-            var resIn = FileUtils.fileInputStream(fileFullPath, start, contentLength);
-            ctx.output(resIn);
-        }
-
-//        FileUtils.readFile(ctx, fileFullPath);
     }
 
     /**
@@ -713,9 +686,6 @@ public class FileController {
             userFileService.getSubUserFileTree(downloadFileDTO.getUserId(), userFileTreeDTOList);
 
             var downloadedFile = userFileService.download(userFileTreeDTOList, downloadFileDTO.getUserId());
-
-            //不做为附件下载（按需配置）
-            //file.asAttachment(false);
 
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
