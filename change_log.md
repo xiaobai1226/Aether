@@ -8,7 +8,6 @@
 2. 视频接口改为url sign模式
 3. 视频预览改为Http分块传输模式
 4. solon版本升级为3.0.3
-5. 底层http服务有jetty换为smarthttp
 
 ## 0.3.0
 
