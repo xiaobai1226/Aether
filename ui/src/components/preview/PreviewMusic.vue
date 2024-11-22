@@ -1,8 +1,19 @@
+<template>
+  <div class="music">
+    <div class="body-content">
+      <div class="cover">
+        <img src="@/assets/music_cover.png" />
+      </div>
+      <div ref="playerRef" class="music-player"></div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import APlayer from 'aplayer'
 import 'aplayer/dist/APlayer.min.css'
-import { getFile } from '@/api/file'
+import { getFileUrl } from '@/api/file'
 
 const props = defineProps({
   // 文件ID
@@ -17,19 +28,15 @@ const player = ref()
 
 onMounted(() => {
   if (props.fileId) {
-    getFile(props.fileId).then(({ data }) => {
-      const audioUrl = URL.createObjectURL(new Blob([data]))
+    player.value = new APlayer({
+      container: playerRef.value,
+      audio: {
+        url: getFileUrl(props.fileId),
+        name: props.fileName,
+        cover: new URL('@/assets/music_icon.png', import.meta.url).href,
+        artist: ''
+      }
 
-      player.value = new APlayer({
-        container: playerRef.value,
-        audio: {
-          url: audioUrl,
-          name: props.fileName,
-          cover: new URL('@/assets/music_icon.png', import.meta.url).href,
-          artist: ''
-        }
-
-      })
     })
   }
 })
@@ -38,17 +45,6 @@ onUnmounted(() => {
   player.value.destroy()
 })
 </script>
-
-<template>
-  <div class="music">
-    <div class="body-content">
-      <div class="cover">
-        <img src="@/assets/music_cover.png" />
-      </div>
-      <div ref="playerRef" class="music-player"></div>
-    </div>
-  </div>
-</template>
 
 <style scoped lang="scss">
 .music {
