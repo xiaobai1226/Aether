@@ -51,5 +51,12 @@ export default {
 
       reader.readAsDataURL(blob)
     })
+  },
+
+  extName: (name: string | undefined): string => {
+    if (!name) {
+      return ''
+    }
+    return name.split('.').pop() ?? ''
   }
 }

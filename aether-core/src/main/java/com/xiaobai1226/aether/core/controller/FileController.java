@@ -606,26 +606,38 @@ public class FileController {
         // 获取当前会话账号id, 并转化为`int`类型
         var userId = StpUtil.getLoginIdAsInt();
 
-        var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
+        try {
+            var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
 
-        if (userFileDO == null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            if (userFileDO == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+
+            var fileDO = fileService.getFileById(userFileDO.getFileId());
+
+            // 判断文件是否存在
+            if (fileDO == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+
+            var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+
+            if (!FileUtil.exist(fileFullPath)) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+
+            var file = FileUtil.file(fileFullPath);
+
+            var downloadedFile = new DownloadedFile(file, userFileDO.getName());
+
+            //不做为附件下载（按需配置）
+            downloadedFile.asAttachment(false);
+
+            //也可用接口输出
+            ctx.outputAsFile(downloadedFile);
+        } catch (IOException e) {
+            throw new FailResultException(SYSTEM_ERROR);
         }
-
-        var fileDO = fileService.getFileById(userFileDO.getFileId());
-
-        // 判断文件是否存在
-        if (fileDO == null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
-
-        if (!FileUtil.exist(fileFullPath)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        FileUtils.readFile(ctx, fileFullPath);
     }
 
     /**

@@ -219,6 +219,20 @@ export const getFile = (id: number): AxiosPromise<ArrayBuffer> => {
 }
 
 /**
+ * 获取文件Url
+ */
+export const getFileUrl = (id: number): string => {
+  // 从pinia获取token数据
+  const accountStore = useAccountStore()
+  const { tokenName, tokenPrefix, token } = accountStore.accountInfo
+  // 按照后端要求拼接token数据
+  const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
+  const sign = btoa(tokenString)
+
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getFile?id=' + id + '&sign=' + sign
+}
+
+/**
  * 获取下载链接
  * @param ids
  */

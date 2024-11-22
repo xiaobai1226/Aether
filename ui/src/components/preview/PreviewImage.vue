@@ -1,3 +1,11 @@
+<template>
+  <div class="image-viewer">
+    <el-image-viewer :initial-index="previewImgIndex" hide-on-click-modal :url-list="imageList" @close="closeImgViewer"
+                     v-if="previewImgIndex != null">
+    </el-image-viewer>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import { getImageUrl } from '@/api/file'
@@ -58,14 +66,6 @@ const closeImgViewer = () => {
 //   }
 // }
 </script>
-
-<template>
-  <div class="image-viewer">
-    <!-- TODO 解决这个警告 -->
-    <el-image-viewer :initial-index="previewImgIndex" hide-on-click-modal :url-list="imageList" @close="closeImgViewer"
-                     v-if="previewImgIndex != null"></el-image-viewer>
-  </div>
-</template>
 
 <style scoped lang="scss">
 .image-viewer {

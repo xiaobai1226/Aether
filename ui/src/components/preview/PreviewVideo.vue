@@ -14,7 +14,10 @@ const props = defineProps({
   // }
 
   // 文件ID
-  fileId: Number
+  fileId: Number,
+
+  // 文件名
+  name: String
 })
 
 // const videoInfo = ref({
@@ -29,14 +32,16 @@ const initPlayer = () => {
   if (!props.fileId) {
     return
   }
-
+  
   instance = new Artplayer({
     container: player.value,
-    theme: 'b7daff',
+    theme: '#b7daff',
     screenshot: true,
     fullscreen: true,
+    fullscreenWeb: true,
+    miniProgressBar: true,
     url: getVideoUrl(props.fileId),
-    type: 'mkv'
+    type: Utils.extName(props.name)
   })
 }
 
