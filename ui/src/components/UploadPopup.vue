@@ -77,6 +77,11 @@ const addWebkitdirectory = (isFolder: Boolean) => {
  */
 const addUploadFile = (fileData: any) => {
   uploaderStore.addUploadFile(fileData.file, fileData.file.uid, props.path, props.callbackFunction as () => void)
+
+  // 如果弹窗开启则关闭
+  if (popupVisible.value) {
+    close()
+  }
 }
 
 /**

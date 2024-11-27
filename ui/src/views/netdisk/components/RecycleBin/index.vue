@@ -22,15 +22,15 @@
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
-              <template v-if="row.category == 1 || row.category == 3">
-                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>
-              </template>
-              <template v-else>
-                <!-- 如果是文件-->
-                <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
-                <!-- 如果是文件夹-->
-                <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
-              </template>
+              <!--              <template v-if="row.category == 1 || row.category == 3">-->
+              <!--                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>-->
+              <!--              </template>-->
+              <!--              <template v-else>-->
+              <!-- 如果是文件-->
+              <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
+              <!-- 如果是文件夹-->
+              <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
+              <!--              </template>-->
 
               <span class="file-name" :title="row.name">{{ row.name }}</span>
               <span class="op">
