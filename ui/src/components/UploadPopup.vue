@@ -79,6 +79,12 @@ const addUploadFile = (fileData: any) => {
   uploaderStore.addUploadFile(fileData.file, fileData.file.uid, props.path, props.callbackFunction as () => void)
 }
 
+/**
+ * 关闭上传弹窗
+ */
+const close = () => {
+  popupVisible.value = false
+}
 </script>
 
 <style scoped lang="scss">

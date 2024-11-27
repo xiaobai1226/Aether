@@ -1,10 +1,10 @@
-#主配置文件指定
+# 主配置文件指定
 solon.env: dev
 
 solon:
   app:
     name: Aether
-    version: 0.3.0
+    version: @appVersion@
 
 server:
   # 监听端口
@@ -22,6 +22,8 @@ sa-token:
   isReadCookie: false
   # token前缀
   token-prefix: Bearer
+  # 最低活跃频率，单位/秒
+  active-timeout: 86400
 
 #默认
 mybatis.db1:

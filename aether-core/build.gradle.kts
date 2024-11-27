@@ -2,8 +2,10 @@ plugins {
     java
 }
 
+val appVersion by extra("0.4.0")
+
 group = "com.xiaobai1226"
-version = "0.3.0"
+version = appVersion
 
 repositories {
     mavenCentral()
@@ -36,7 +38,15 @@ tasks.withType<JavaCompile> {
     options.compilerArgs.add("-parameters")
 }
 
+/**
+ * 打jar包配置
+ */
 tasks.withType<Jar> {
+    // 设置Jar包的基本名称
+    archiveBaseName.set("aether")
+    // 禁用自动添加版本号到Jar包名称的行为
+    archiveVersion.set("")
+
     manifest {
         attributes.apply {
             set("Main-Class", "com.xiaobai1226.aether.core.AetherCoreApp")
@@ -51,4 +61,28 @@ tasks.withType<Jar> {
     })
 
     from(sourceSets.main.get().output)
+}
+
+/**
+ * 配置支持app.xml中读取ext的数据
+ */
+tasks.withType<ProcessResources> {
+    filesMatching("app.yml") {
+        val tokens = mutableMapOf<String, Any?>()
+        project.properties.forEach { key, value ->
+            if (value != null) {
+                tokens[key.toString()] = value.toString()
+            }
+        }
+        filter<org.apache.tools.ant.filters.ReplaceTokens>("tokens" to tokens)
+    }
+}
+
+/**
+ * 打印版本号
+ */
+tasks.register("printVersion") {
+    doLast {
+        println("$version")
+    }
 }
