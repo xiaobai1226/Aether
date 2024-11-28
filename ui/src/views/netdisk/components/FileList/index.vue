@@ -312,6 +312,10 @@ const reload = () => {
  * 上传完成后重新加载
  */
 const uploadFinishReload = (uploadPath?: string) => {
+  if (loading.value) {
+    return
+  }
+
   const path = uploadPath ? uploadPath : null
   if (currentPath.value !== path) {
     return
@@ -405,7 +409,8 @@ const hideActionBar = () => {
  */
 const showEditPanel = (index: number) => {
   let message = '新建文件夹'
-  let inputValue
+  let inputValue = '新建文件夹'
+  let selectEndIndex = inputValue.length
 
   // 如果是重命名
   if (index !== -1) {
@@ -415,6 +420,15 @@ const showEditPanel = (index: number) => {
 
     if (currentData.name) {
       inputValue = currentData.name
+    }
+
+    selectEndIndex = inputValue.length
+
+    if (currentData.itemType == 1) {
+      let lastIndex = inputValue.lastIndexOf('.')
+      if (lastIndex != -1) {
+        selectEndIndex = lastIndex
+      }
     }
   }
 
@@ -473,6 +487,17 @@ const showEditPanel = (index: number) => {
       })
     }
   })
+
+  nextTick().then(() => {
+    const inputElement = document.querySelector('.el-message-box__input input') as HTMLInputElement
+    if (inputElement) {
+      // 选择输入框中的文字
+      inputElement.select()
+      console.log('aaaaaaaaa', selectEndIndex)
+      inputElement.setSelectionRange(0, selectEndIndex)
+    }
+  })
+
 }
 
 /**

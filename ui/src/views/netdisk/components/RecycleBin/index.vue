@@ -13,7 +13,10 @@
         <span class="iconfont icon-delete"></span>
         删除
       </el-button>
-      <div class="total_number">共 {{ tableData.total }} 项</div>
+      <div class="total_number">
+        <span>共 {{ tableData.total }} 项 </span>
+        <span v-show="selectedRecycleIds.length > 0">已选中 {{ selectedRecycleIds.length }} 个文件/文件夹</span>
+      </div>
     </div>
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
@@ -297,6 +300,9 @@ const handleRestore = (currentRecycleIds: Array<string>, message: string) => {
     }
 
     restore(data).then(() => {
+      selectedRecycleIds.value = []
+      dataTableRef.value.clearSelection()
+
       reload()
     })
   })
@@ -360,6 +366,9 @@ const handleDelete = (currentRecycleIds: Array<string>, message: string) => {
     }
 
     del(data).then(() => {
+      selectedRecycleIds.value = []
+      dataTableRef.value.clearSelection()
+
       reload()
     })
   })
