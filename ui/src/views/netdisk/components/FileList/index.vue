@@ -8,7 +8,7 @@
             上传
           </el-button>
           <UploadPopup ref="uploadPopupRef" :category="currentCategory" :path="currentPath"
-                       :callbackFunction="uploadFinishReload"/>
+                       :callbackFunction="uploadFinishReload" />
         </div>
         <el-button type="success" v-show="selectedFileIds.length == 0" @click="showEditPanel(-1)">
           <span class="iconfont icon-folder-add"></span>
@@ -60,7 +60,7 @@
       <!-- 导航 -->
       <div>
         <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
-        <Navigation ref="navigationRef"/>
+        <Navigation ref="navigationRef" />
       </div>
       <div class="total_number">
         <span>共 {{ tableData.total }} 项 </span>
@@ -146,8 +146,8 @@
 </template>
 
 <script setup lang="ts">
-import {nextTick, ref, watch} from 'vue'
-import {getFileListByPage, newFolder, rename, del, move, copy, createDownloadSign} from '@/api/file'
+import { nextTick, ref, watch } from 'vue'
+import { getFileListByPage, newFolder, rename, del, move, copy, createDownloadSign } from '@/api/file'
 import type {
   GetFileListByPageRequest,
   GetFileListByPageResponse,
@@ -159,19 +159,19 @@ import type {
 } from '@/api/file/types'
 import Table from '@/components/Table.vue'
 import UploadPopup from '@/components/UploadPopup.vue'
-import type {Column} from '@/components/Table.vue'
+import type { Column } from '@/components/Table.vue'
 import Utils from '@/utils/Utils'
-import {ElMessage, ElMessageBox} from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Icon from '@/components/Icon.vue'
 import Confirm from '@/utils/Confirm'
 import FolderSelect from '@/components/FolderSelect.vue'
 import Navigation from '@/components/Navigation.vue'
-import {useRoute, useRouter} from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Preview from '@/components/preview/Preview.vue'
 import ShareFile from '@/views/netdisk/components/ShareFile/index.vue'
-import {useUserStore} from '@/stores/user'
-import {RegexEnum} from '@/enums/RegexEnum'
-import {ResultErrorMsgEnum} from '@/enums/ResultErrorMsgEnum'
+import { useUserStore } from '@/stores/user'
+import { RegexEnum } from '@/enums/RegexEnum'
+import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
 
 // 从pinia获取用户数据
 const userStore = useUserStore()
@@ -272,7 +272,7 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
   }
 
   // 请求后台获取文件列表
-  getFileListByPage(getFileListByPageRequest, getFileListByPageRequest.pageNum === 1, loadingRef.value).then(({data}) => {
+  getFileListByPage(getFileListByPageRequest, getFileListByPageRequest.pageNum === 1, loadingRef.value).then(({ data }) => {
     if (data == null) {
       if (tableData.value.pageNum === 1) {
         tableData.value = {
@@ -348,38 +348,38 @@ const sortChange = (sortMessage: any) => {
  * 监听路由中category，path参数的变化
  */
 watch(
-    () => route.query, (newQuery, oldQuery) => {
-      if (route.path !== '/netdisk/main') {
-        return
-      }
+  () => route.query, (newQuery, oldQuery) => {
+    if (route.path !== '/netdisk/main') {
+      return
+    }
 
-      const category = newQuery.category
-      const path = newQuery.path
+    const category = newQuery.category
+    const path = newQuery.path
 
-      if (Array.isArray(category)) {
-        currentCategory.value = Number(category[0])
-      } else if (category) {
-        currentCategory.value = Number(category)
-      } else {
-        currentCategory.value = null
-      }
+    if (Array.isArray(category)) {
+      currentCategory.value = Number(category[0])
+    } else if (category) {
+      currentCategory.value = Number(category)
+    } else {
+      currentCategory.value = null
+    }
 
-      if (Array.isArray(path)) {
-        currentPath.value = path[0]
-      } else if (path) {
-        currentPath.value = path as string
-      } else {
-        currentPath.value = null
-      }
+    if (Array.isArray(path)) {
+      currentPath.value = path[0]
+    } else if (path) {
+      currentPath.value = path as string
+    } else {
+      currentPath.value = null
+    }
 
-      nextTick().then(() => {
-        navigationRef.value && navigationRef.value.updateFolderList(currentPath.value)
-      })
+    nextTick().then(() => {
+      navigationRef.value && navigationRef.value.updateFolderList(currentPath.value)
+    })
 
-      // 加载数据
-      reload()
-    },
-    {immediate: true}
+    // 加载数据
+    reload()
+  },
+  { immediate: true }
 )
 
 /**
@@ -436,7 +436,7 @@ const showEditPanel = (index: number) => {
 
       return true
     }
-  }).then(({value}) => {
+  }).then(({ value }) => {
     // 如果index不为-1则为重命名，否则为新建文件夹
     if (index !== -1) {
       // 获取行数据
@@ -689,6 +689,9 @@ const handleDelete = (currentDelFileIds: Array<number>, message: string) => {
     }
 
     del(data).then(() => {
+      selectedFileIds.value = []
+      dataTableRef.value.clearSelection()
+
       reload()
     })
   })
@@ -811,12 +814,12 @@ const downloadBatch = (type: number) => {
 const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => {
   if (type === 1) {
     currentDownloadFileIds.forEach((id => {
-      createDownloadSign(id.toString()).then(({data}) => {
+      createDownloadSign(id.toString()).then(({ data }) => {
         window.open(import.meta.env.VITE_HTTP_BASE_URL + '/file/download?sign=' + data)
       })
     }))
   } else if (type === 2) {
-    createDownloadSign(currentDownloadFileIds.join(',')).then(({data}) => {
+    createDownloadSign(currentDownloadFileIds.join(',')).then(({ data }) => {
       window.open(import.meta.env.VITE_HTTP_BASE_URL + '/file/download?sign=' + data)
     })
   }
