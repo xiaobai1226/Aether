@@ -163,8 +163,9 @@ const close = () => {
 /**
  * 打开选择目录弹窗
  * @param type 0 移动 1 复制
+ * @param path 当前路径
  */
-const showFolderDialog = (type: number) => {
+const showFolderDialog = (type: number, path: string | null) => {
   dialogConfig.value.type = type
   if (type == 0) {
     dialogConfig.value.title = '移动到'
@@ -175,11 +176,11 @@ const showFolderDialog = (type: number) => {
   } else {
     return
   }
-  currentPath.value = null
+  currentPath.value = path
   dialogConfig.value.show = true
   nextTick(() => {
     if (navigationRef.value) {
-      navigationRef.value.updateFolderList(null)
+      navigationRef.value.updateFolderList(path)
     }
     reload()
   })

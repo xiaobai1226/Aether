@@ -513,7 +513,7 @@ const moveFile = (userFileInfo: UserFileInfo) => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value.push(userFileInfo.id)
-  folderSelectRef.value.showFolderDialog(0)
+  folderSelectRef.value.showFolderDialog(0, currentPath.value)
 }
 
 /**
@@ -526,7 +526,7 @@ const moveFileBatch = () => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedFileIds.value)
-  folderSelectRef.value.showFolderDialog(0)
+  folderSelectRef.value.showFolderDialog(0, currentPath.value)
 }
 
 /**
@@ -574,7 +574,7 @@ const copyFile = (userFileInfo: UserFileInfo) => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value.push(userFileInfo.id)
-  folderSelectRef.value.showFolderDialog(1)
+  folderSelectRef.value.showFolderDialog(1, currentPath.value)
 }
 
 /**
@@ -587,7 +587,7 @@ const copyFileBatch = () => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedFileIds.value)
-  folderSelectRef.value.showFolderDialog(1)
+  folderSelectRef.value.showFolderDialog(1, currentPath.value)
 }
 
 /**
