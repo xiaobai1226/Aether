@@ -21,6 +21,16 @@ export interface GetFileListByPageRequest {
    * 每页元素数
    */
   pageSize: number;
+
+  /**
+   * 排序字段 1 文件名 2 文件修改日期 3 文件大小
+   */
+  sortField?: number;
+
+  /**
+   * 排序顺序 1 升序 2 降序
+   */
+  sortOrder?: number;
 }
 
 /**

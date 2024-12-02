@@ -13,6 +13,7 @@ import com.xiaobai1226.aether.core.domain.entity.FileDO;
 import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.web.webdav.impl.ShardingInputStream;
 
 import java.io.*;
 import java.util.Arrays;
@@ -133,6 +134,15 @@ public class FileUtils {
             }
         } catch (IOException e) {
             throw new IORuntimeException(e);
+        }
+    }
+
+    public static InputStream fileInputStream(String filePath, long start, long length) {
+        InputStream in = FileUtil.getInputStream(filePath);
+        if (length == 0) {
+            return in;
+        } else {
+            return new ShardingInputStream(in, start, length);
         }
     }
 

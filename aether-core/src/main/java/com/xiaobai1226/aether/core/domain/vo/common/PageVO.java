@@ -18,4 +18,14 @@ public class PageVO {
      * 每页元素数
      */
     private Integer pageSize;
+
+    /**
+     * 排序字段
+     */
+    private Integer sortField;
+
+    /**
+     * 排序顺序 1 升序 2 降序
+     */
+    private Integer sortOrder;
 }

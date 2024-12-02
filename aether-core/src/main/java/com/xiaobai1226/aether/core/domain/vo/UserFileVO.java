@@ -30,4 +30,14 @@ public class UserFileVO {
      * 每页元素数
      */
     private Integer pageSize;
+
+    /**
+     * 排序字段 1 文件名 2 文件修改日期 3 文件大小
+     */
+    private Integer sortField;
+
+    /**
+     * 排序顺序 1 升序 2 降序
+     */
+    private Integer sortOrder;
 }

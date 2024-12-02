@@ -8,7 +8,7 @@
             上传
           </el-button>
           <UploadPopup ref="uploadPopupRef" :category="currentCategory" :path="currentPath"
-                       :callbackFunction="loadDataList" />
+                       :callbackFunction="uploadFinishReload" />
         </div>
         <el-button type="success" v-show="selectedFileIds.length == 0" @click="showEditPanel(-1)">
           <span class="iconfont icon-folder-add"></span>
@@ -55,19 +55,24 @@
         <!--            </template>-->
         <!--          </el-input>-->
         <!--        </div>-->
-        <div class="iconfont icon-refresh" @click="loadDataList"></div>
+        <div class="iconfont icon-refresh" @click="reload"></div>
       </div>
       <!-- 导航 -->
       <div>
         <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
-        <Navigation ref="navigationRef" />
+        <Navigation ref="navigationRef" class="navigation" />
+      </div>
+      <div class="total_number">
+        <span>共 {{ tableData.total }} 项 </span>
+        <span v-show="selectedFileIds.length > 0">已选中 {{ selectedFileIds.length }} 个文件/文件夹</span>
       </div>
     </div>
 
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList"
-               :initFetch="false" :options="tableOptions" @rowSelected="rowSelected">
+               :initFetch="false" :options="tableOptions" :loading="loading" :sortChange="sortChange"
+               @rowSelected="rowSelected">
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
@@ -80,22 +85,21 @@
               <!-- 如果是文件夹-->
               <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
               <!--              </template>-->
-              <span class="file-name" :title="row.name" v-if="showEditPanelIndex != index">
+              <span class="file-name" :title="row.name">
               <span @click="preview(row)">{{ row.name }}</span>
                 <!-- TODO 需要删除 -->
                 <!--              <span v-if="row.status == 0" class="transfer-status">转码中</span>-->
                 <!--              <span v-if="row.status == 1" class="transfer-status transfer-fail">转码失败</span>-->
             </span>
               <!-- 新建文件夹或重命名输入栏 -->
-              <div class="edit-panel" v-if="showEditPanelIndex == index">
-                <el-input v-model.trim="editPanelFileName" ref="editPanelRef" @blur="hideEditPanel(index)"
-                          @keyup.enter="submitEditPanel(index)">
-                </el-input>
-                <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"
-                      @click="submitEditPanel(index)" @mousedown="submitEditPanelMouseDown"
-                      @mouseup="submitEditPanelMouseUp"></span>
-                <span class="iconfont icon-error"></span>
-              </div>
+              <!--              <div class="edit-panel" v-if="showEditPanelIndex == index">-->
+              <!--                <el-input v-model.trim="editPanelFileName" ref="editPanelRef"-->
+              <!--                          @keyup.enter="submitEditPanel(index)">-->
+              <!--                </el-input>-->
+              <!--                <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"-->
+              <!--                      @click="submitEditPanel(index)" />-->
+              <!--                <span class="iconfont icon-error" @click="hideEditPanel(index)" />-->
+              <!--              </div>-->
               <!-- 操作栏 -->
               <span class="op">
               <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
@@ -157,7 +161,7 @@ import Table from '@/components/Table.vue'
 import UploadPopup from '@/components/UploadPopup.vue'
 import type { Column } from '@/components/Table.vue'
 import Utils from '@/utils/Utils'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Icon from '@/components/Icon.vue'
 import Confirm from '@/utils/Confirm'
 import FolderSelect from '@/components/FolderSelect.vue'
@@ -182,18 +186,21 @@ const columns: Column[] = [
   {
     label: '文件名',
     prop: 'fileName',
-    scopedSlots: 'fileName'
+    scopedSlots: 'fileName',
+    sortable: 'custom'
   },
   {
     label: '修改时间',
     prop: 'updateTime',
-    width: 200
+    width: 200,
+    sortable: 'custom'
   },
   {
     label: '文件大小',
     prop: 'fileSize',
     scopedSlots: 'fileSize',
-    width: 200
+    width: 200,
+    sortable: 'custom'
   }
 ]
 
@@ -203,7 +210,7 @@ const columns: Column[] = [
 const tableData = ref<GetFileListByPageResponse>({
   list: [],
   pageNum: 1,
-  pageSize: 15,
+  pageSize: 50,
   total: 0,
   totalPage: 0
 })
@@ -233,10 +240,19 @@ const navigationRef = ref()
  */
 const loadingRef = ref()
 
+const dataTableRef = ref()
+
+/**
+ * 正在加载标识
+ */
+const loading = ref(false)
+
 /**
  * 加载文件列表
  */
-const loadDataList = () => {
+const loadDataList = (sortField?: number, sortOrder?: number) => {
+  loading.value = true
+
   const getFileListByPageRequest: GetFileListByPageRequest = {
     pageNum: tableData.value.pageNum,
     pageSize: tableData.value.pageSize,
@@ -247,20 +263,89 @@ const loadDataList = () => {
     getFileListByPageRequest.path = currentPath.value as string
   }
 
+  if (sortField) {
+    getFileListByPageRequest.sortField = sortField
+  }
+
+  if (sortOrder) {
+    getFileListByPageRequest.sortOrder = sortOrder
+  }
+
   // 请求后台获取文件列表
-  getFileListByPage(getFileListByPageRequest, loadingRef.value).then(({ data }) => {
+  getFileListByPage(getFileListByPageRequest, getFileListByPageRequest.pageNum === 1, loadingRef.value).then(({ data }) => {
     if (data == null) {
-      tableData.value = {
-        list: [],
-        pageNum: 1,
-        pageSize: 15,
-        total: 0,
-        totalPage: 0
+      if (tableData.value.pageNum === 1) {
+        tableData.value = {
+          list: [],
+          pageNum: 1,
+          pageSize: 30,
+          total: 0,
+          totalPage: 0
+        }
       }
     } else {
-      tableData.value = data
+      if (tableData.value.pageNum === 1) {
+        tableData.value = data
+      } else if (tableData.value.pageNum > 1) {
+        tableData.value.totalPage = data.totalPage
+        tableData.value.total = data.total
+        tableData.value.list = tableData.value.list.concat(data.list)
+      }
     }
+
+    loading.value = false
+  }).catch(() => {
+    loading.value = false
   })
+}
+
+/**
+ * 重新加载
+ */
+const reload = () => {
+  tableData.value.pageNum = 1
+  dataTableRef.value && dataTableRef.value.clearSort()
+  loadDataList()
+}
+
+/**
+ * 上传完成后重新加载
+ */
+const uploadFinishReload = (uploadPath?: string) => {
+  if (loading.value) {
+    return
+  }
+
+  const path = uploadPath ? uploadPath : null
+  if (currentPath.value !== path) {
+    return
+  }
+
+  reload()
+}
+
+/**
+ * 排序查询
+ */
+const sortChange = (sortMessage: any) => {
+  let sortField = undefined
+  if (sortMessage.prop === 'fileName') {
+    sortField = 1
+  } else if (sortMessage.prop === 'updateTime') {
+    sortField = 2
+  } else if (sortMessage.prop === 'fileSize') {
+    sortField = 3
+  }
+
+  let sortOrder = undefined
+  if (sortMessage.order === 'ascending') {
+    sortOrder = 1
+  } else if (sortMessage.order === 'descending') {
+    sortOrder = 2
+  }
+
+  tableData.value.pageNum = 1
+  loadDataList(sortField, sortOrder)
 }
 
 /**
@@ -292,13 +377,11 @@ watch(
     }
 
     nextTick().then(() => {
-      if (navigationRef.value) {
-        navigationRef.value.updateFolderList(currentPath.value)
-      }
+      navigationRef.value && navigationRef.value.updateFolderList(currentPath.value)
     })
 
     // 加载数据
-    loadDataList()
+    reload()
   },
   { immediate: true }
 )
@@ -321,203 +404,100 @@ const hideActionBar = () => {
 }
 
 /**
- * 编辑行状态 true 为正在编辑
- */
-const editing = ref<boolean>(false)
-
-/**
- * 新建文件夹或重命名输入框
- */
-const editPanelRef = ref()
-
-/**
- * 新建文件夹或重命名输入框的文件名
- */
-const editPanelFileName = ref<string | null>(null)
-
-/**
- * 显示新建文件夹或重命名输入框的索引 -1 为不展示，其他为要展示行的索引
- */
-const showEditPanelIndex = ref<number>(-1)
-
-/**
  * 展示新建文件夹或重命名输入框
  * @param index 对应行索引，-1 为新建文件夹
  */
 const showEditPanel = (index: number) => {
-  // 如果是新建文件夹
-  if (index === -1) {
-    // 如果已经处于编辑行状态，则直接return，否则改为正在编辑状态
-    if (editing.value) {
-      return
-    } else {
-      editing.value = true
-    }
+  let message = '新建文件夹'
+  let inputValue = '新建文件夹'
+  let selectEndIndex = inputValue.length
 
-    // 将操作栏栏隐藏
-    hideActionBar()
-
-    // 向数组开头添加一个新元素，并返回数组长度
-    tableData.value.list.unshift({ itemType: 0, path: currentPath.value || '/' })
-    // 展示新建文件夹输入框
-    showEditPanelIndex.value = 0
-    nextTick(() => {
-      // 光标聚焦
-      if (editPanelRef.value) {
-        editPanelRef.value.focus()
-      }
-    })
-  } else {
-    // 如果目前存在新建文件夹，则删除第一个元素
-    if (!tableData.value.list[0].id) {
-      tableData.value.list.splice(0, 1)
-      index = index - 1
-      // 隐藏原本的EditPanel
-      hideEditPanel(0)
-    }
+  // 如果是重命名
+  if (index !== -1) {
+    message = '重命名'
 
     let currentData = tableData.value.list[index]
-    // 展示重命名输入框
-    showEditPanelIndex.value = index
-    let selectEndIndex = 0
 
     if (currentData.name) {
-      selectEndIndex = currentData.name.length
-      editPanelFileName.value = currentData.name
+      inputValue = currentData.name
+    }
 
-      // 编辑文件，如果是文件则处理后缀
-      if (currentData.itemType == 1) {
-        let lastIndex = currentData.name.lastIndexOf('.')
-        if (lastIndex != -1) {
-          selectEndIndex = lastIndex
-        }
+    selectEndIndex = inputValue.length
+
+    if (currentData.itemType == 1) {
+      let lastIndex = inputValue.lastIndexOf('.')
+      if (lastIndex != -1) {
+        selectEndIndex = lastIndex
       }
     }
+  }
 
-    editing.value = true
-    nextTick(() => {
-      // 光标聚焦
-      if (editPanelRef.value) {
-        editPanelRef.value.focus()
-
-        const inputDOM = editPanelRef.value.$el.querySelector('input')
-        inputDOM.setSelectionRange(0, selectEndIndex)
+  ElMessageBox.prompt('', message, {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    closeOnClickModal: false,
+    inputValue: inputValue,
+    inputValidator: (value) => {
+      // 校验名称格式
+      const regex = new RegExp(RegexEnum.REGEX_FILE_NAME)
+      if (!value) {
+        return ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY
+      } else if (value.length > 255) {
+        return ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string
+      } else if (!regex.test(value)) {
+        return ResultErrorMsgEnum.ERROR_FILE_NAME_FORMAT
       }
-    })
-  }
-}
 
-const isClickSubmitEditPanel = ref(false)
-
-/**
- * 隐藏新建文件夹或重命名输入框
- * @param index 对应行索引
- */
-const hideEditPanel = (index: number) => {
-  if (isClickSubmitEditPanel.value) {
-    return
-  }
-
-  // 获取对应行的数据
-  const fileData: UserFileInfo = tableData.value.list[index]
-  // 如果id不为空则为重命名，否则为新建文件夹
-  if (!fileData.id) {
-    // 删除对应行数据
-    tableData.value.list.splice(index, 1)
-  }
-  showEditPanelIndex.value = -1
-  editPanelFileName.value = null
-  editing.value = false
-}
-
-/**
- * 按下提交新建文件夹或重命名请求按鈕
- */
-const submitEditPanelMouseDown = () => {
-  isClickSubmitEditPanel.value = true
-}
-
-/**
- * 抬起提交新建文件夹或重命名请求按鈕
- */
-const submitEditPanelMouseUp = () => {
-  isClickSubmitEditPanel.value = false
-}
-
-/**
- * 提交新建文件夹或重命名请求
- */
-const submitEditPanel = (index: number) => {
-  // 校验名称格式
-  const regex = new RegExp(RegexEnum.REGEX_FILE_NAME)
-  let checkResult = true
-  let warnInfo = ''
-  if (!editPanelFileName.value) {
-    checkResult = false
-    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY
-  } else if ((editPanelFileName.value as string).length > 100) {
-    checkResult = false
-    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string
-  } else if (!regex.test((editPanelFileName.value as string))) {
-    checkResult = false
-    warnInfo = ResultErrorMsgEnum.ERROR_FILE_NAME_FORMAT
-  }
-
-  if (!checkResult) {
-    // 光标聚焦
-    if (editPanelRef.value) {
-      editPanelRef.value.focus()
+      return true
     }
+  }).then(({ value }) => {
+    // 如果index不为-1则为重命名，否则为新建文件夹
+    if (index !== -1) {
+      // 获取行数据
+      const fileData: UserFileInfo = tableData.value.list[index]
 
-    ElMessage.warning(warnInfo)
-    return
-  }
-
-  // 获取行数据
-  const fileData: UserFileInfo = tableData.value.list[index]
-
-  // 如果id不为空则为重命名，否则为新建文件夹
-  if (fileData.id) {
-    // 重命名
-    const data: FileRenameRequest = {
-      id: fileData.id,
-      newName: editPanelFileName.value as string
-    }
-
-    rename(data).then(() => {
-      editing.value = false
-      hideEditPanel(index)
-      // 重新加载数据
-      loadDataList()
-    }).catch(() => {
-      // 光标聚焦
-      if (editPanelRef.value) {
-        editPanelRef.value.focus()
+      if (!fileData.id) {
+        return
       }
-    })
-  }
-  // 新建文件夹
-  else {
-    const data: NewFolderRequest = {
-      folderName: editPanelFileName.value as string
-    }
 
-    if (currentPath.value != null) {
-      data.path = currentPath.value as string
-    }
-
-    newFolder(data).then(() => {
-      editing.value = false
-      hideEditPanel(0)
-      // 重新加载数据
-      loadDataList()
-    }).catch(() => {
-      // 光标聚焦
-      if (editPanelRef.value) {
-        editPanelRef.value.focus()
+      // 重命名
+      const data: FileRenameRequest = {
+        id: fileData.id,
+        newName: value
       }
-    })
-  }
+
+      rename(data).then(() => {
+        // 重新加载数据
+        reload()
+      })
+    }
+    // 新建文件夹
+    else {
+      const data: NewFolderRequest = {
+        folderName: value
+      }
+
+      if (currentPath.value != null) {
+        data.path = currentPath.value as string
+      }
+
+      newFolder(data).then(() => {
+        // 重新加载数据
+        reload()
+      })
+    }
+  })
+
+  nextTick().then(() => {
+    const inputElement = document.querySelector('.el-message-box__input input') as HTMLInputElement
+    if (inputElement) {
+      // 选择输入框中的文字
+      inputElement.select()
+      console.log('aaaaaaaaa', selectEndIndex)
+      inputElement.setSelectionRange(0, selectEndIndex)
+    }
+  })
+
 }
 
 /**
@@ -558,7 +538,7 @@ const moveFile = (userFileInfo: UserFileInfo) => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value.push(userFileInfo.id)
-  folderSelectRef.value.showFolderDialog(0)
+  folderSelectRef.value.showFolderDialog(0, currentPath.value)
 }
 
 /**
@@ -571,7 +551,7 @@ const moveFileBatch = () => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedFileIds.value)
-  folderSelectRef.value.showFolderDialog(0)
+  folderSelectRef.value.showFolderDialog(0, currentPath.value)
 }
 
 /**
@@ -600,7 +580,7 @@ const handleMove = (targetPath: string) => {
 
   move(data).then(() => {
     // 重新加载数据
-    loadDataList()
+    reload()
 
     // 关闭选择文件夹弹窗
     folderSelectRef.value.close()
@@ -619,7 +599,7 @@ const copyFile = (userFileInfo: UserFileInfo) => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value.push(userFileInfo.id)
-  folderSelectRef.value.showFolderDialog(1)
+  folderSelectRef.value.showFolderDialog(1, currentPath.value)
 }
 
 /**
@@ -632,7 +612,7 @@ const copyFileBatch = () => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedFileIds.value)
-  folderSelectRef.value.showFolderDialog(1)
+  folderSelectRef.value.showFolderDialog(1, currentPath.value)
 }
 
 /**
@@ -668,6 +648,7 @@ const handleCopy = (targetPath: string) => {
     folderSelectRef.value.close()
 
     selectedFileIds.value = []
+    dataTableRef.value.clearSelection()
 
     // 更新用户存储空间
     userStore.handleGetUserSpaceUsage()
@@ -733,7 +714,10 @@ const handleDelete = (currentDelFileIds: Array<number>, message: string) => {
     }
 
     del(data).then(() => {
-      loadDataList()
+      selectedFileIds.value = []
+      dataTableRef.value.clearSelection()
+
+      reload()
     })
   })
 }
@@ -802,6 +786,8 @@ const openUploadPopup = () => {
 const preview = (row: UserFileInfo) => {
   // 目录
   if (row.itemType == 0) {
+    dataTableRef.value.clearSelection()
+    selectedFileIds.value = []
     navigationRef.value.openFolder(row.name)
     return
   }
@@ -813,7 +799,7 @@ const fileNameFuzzy = ref()
 
 // 搜素
 const search = () => {
-  loadDataList()
+  reload()
 }
 
 // 下载文件
@@ -870,5 +856,16 @@ const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => 
 
 .dropdown_download {
   margin-right: 12px;
+}
+
+.total_number {
+  font-size: 12px;
+  color: #25262BB8;
+  margin-bottom: 5px;
+}
+
+.navigation {
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 </style>

@@ -47,7 +47,7 @@ defineExpose({ showPreview })
   <PreviewImage v-if="fileInfo.category == 3" ref="imageViewRef" :fileId="fileInfo.id" />
   <Window :show="windowShow" @close="closeWindow" :width="fileInfo.category == 1 ? 1500 : 900"
           :title="fileInfo.name" :align="fileInfo.category == 1 ? 'center' : 'top'" v-else>
-    <PreviewVideo :fileId="fileInfo.id" v-if="fileInfo.category == 1" />
+    <PreviewVideo :fileId="fileInfo.id" :name="fileInfo.name" v-if="fileInfo.category == 1" />
     <PreviewDoc :fileId="fileInfo.id" v-else-if="fileInfo.fileType == 5" />
     <PreviewExcel :fileId="fileInfo.id" v-else-if="fileInfo.fileType == 6" />
     <PreviewPdf :fileId="fileInfo.id" v-else-if="fileInfo.fileType == 4" />

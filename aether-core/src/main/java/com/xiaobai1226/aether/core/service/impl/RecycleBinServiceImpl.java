@@ -73,8 +73,30 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
     @Override
     public PageResultDataDTO<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO) {
-        var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
-        var recycleBinListPage = lambdaQuery.eq(RecycleBinDO::getUserId, userId).eq(RecycleBinDO::getRoot, 1).orderByDesc(RecycleBinDO::getCreateTime).page(new Page<>(recycleBinVO.getPageNum(), recycleBinVO.getPageSize()));
+        var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper).eq(RecycleBinDO::getUserId, userId).eq(RecycleBinDO::getRoot, 1);
+
+        // 1 文件名 2 删除时间 3 文件大小 4 有效时间
+//        if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() == 1) {
+//            lambdaQuery.orderByDesc(RecycleBinDO::get);
+//        } else if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() == 2) {
+//            lambdaQuery.orderByDesc(RecycleBinDO::get);
+//        } else
+
+        if (recycleBinVO.getSortField() == 2 && recycleBinVO.getSortOrder() == 1) {
+            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+        } else if (recycleBinVO.getSortField() == 2 && recycleBinVO.getSortOrder() == 2) {
+            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+        }
+//            else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() == 1) {
+//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+//        } else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() == 2) {
+//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+//        } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() == 1) {
+//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+//        } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() == 2) {
+//            lambdaQuery.orderByDesc(RecycleBinDO::get);
+//        }
+        var recycleBinListPage = lambdaQuery.page(new Page<>(recycleBinVO.getPageNum(), recycleBinVO.getPageSize()));
 
         // 判断结果是否为空
         if (recycleBinListPage == null || CollUtil.isEmpty(recycleBinListPage.getRecords())) {
