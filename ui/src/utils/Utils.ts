@@ -1,38 +1,41 @@
+import { ByteConversionFators } from '@/enums/ByteConversionFators'
+
 export default {
   sizeToStr: (limit: number): string => {
-    let size: string = ''
-    // 如果小于0.1KB转化成B
-    if (limit < 0.1 * 1024) {
-      size = limit.toFixed(2) + 'B'
-    }
-    // 如果小于0.1MB转化成KB
-    else if (limit < 0.1 * 1024 * 1024) {
-      size = (limit / 1024).toFixed(2) + 'KB'
-    }
-    // 如果小于0.1GB转化成MB
-    else if (limit < 0.1 * 1024 * 1024 * 1024) {
-      size = (limit / (1024 * 1024)).toFixed(2) + 'MB'
-    }
-    // 如果小于0.1TB转化成GB
-    else if (limit < 0.1 * 1024 * 1024 * 1024 * 1024) {
-      size = (limit / (1024 * 1024 * 1024)).toFixed(2) + 'GB'
-    }
-    // 其他转化成TB
-    else {
-      size = (limit / (1024 * 1024 * 1024 * 1024)).toFixed(2) + 'TB'
+
+    // 处理负数情况，先取绝对值进行换算，最后再根据原数正负添加符号
+    const absLimit = Math.abs(limit)
+    let size
+    let unit
+
+    if (absLimit < ByteConversionFators.KB) {
+      size = absLimit.toFixed(2)
+      unit = 'B'
+    } else if (absLimit < ByteConversionFators.MB) {
+      size = (absLimit / ByteConversionFators.KB).toFixed(2)
+      unit = 'KB'
+    } else if (absLimit < ByteConversionFators.GB) {
+      size = (absLimit / ByteConversionFators.MB).toFixed(2)
+      unit = 'MB'
+    } else if (absLimit < ByteConversionFators.TB) {
+      size = (absLimit / ByteConversionFators.GB).toFixed(2)
+      unit = 'GB'
+    } else {
+      size = (absLimit / ByteConversionFators.TB).toFixed(2)
+      unit = 'TB'
     }
 
-    // 转化成字符串
-    const sizeStr = size + ''
-    // 获取小数点处的索引
-    const index = sizeStr.indexOf('.')
-    // 获取小数点后两位的值
-    const dou = sizeStr.substr(index + 1, 2)
-    // 当小数点后为00时 去掉小数部分
-    if (dou == '00') {
-      return sizeStr.substring(0, index) + sizeStr.substr(index + 3, 2)
+    // 根据原数正负添加符号
+    if (limit < 0) {
+      size = '-' + size
     }
-    return size
+
+    // 当小数部分为0时，去掉小数部分
+    if (Number(size) % 1 === 0) {
+      size = size.split('.')[0]
+    }
+
+    return size + unit
   },
 
   blobToBase64: (blob: Blob): Promise<string> => {
@@ -51,5 +54,12 @@ export default {
 
       reader.readAsDataURL(blob)
     })
+  },
+
+  extName: (name: string | undefined): string => {
+    if (!name) {
+      return ''
+    }
+    return name.split('.').pop() ?? ''
   }
 }

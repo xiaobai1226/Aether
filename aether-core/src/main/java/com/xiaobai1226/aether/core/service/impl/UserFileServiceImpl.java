@@ -217,23 +217,25 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Override
     public PageResultDataDTO<UserFileDTO> getFileList(Integer userId, Integer parentId, UserFileVO userFileVO) {
-        var userFileDO = new UserFileDO().setUserId(userId).setParentId(parentId).setFileStatus(NORMAL.flag());
+        var userFileDO = new UserFileDO().setUserId(userId).setFileStatus(NORMAL.flag());
+
+        if (userFileVO == null) {
+            userFileVO = new UserFileVO();
+            userFileVO.setPageNum(1);
+            userFileVO.setPageSize(-1);
+        }
 
         // 如果分类为全部分类，则不设置分类条件
-        if (userFileVO != null && userFileVO.getCategory() != null) {
+        if (userFileVO.getCategory() != null) {
             userFileDO.setCategory(userFileVO.getCategory());
+        } else {
+            userFileDO.setParentId(parentId);
         }
 
         // 分页对象
-        Page<UserFileDTO> page = new Page<>(1, -1);
-        Integer sortFieldIndex = null;
-        Integer sortOrder = null;
-
-        if (userFileVO != null) {
-            page = new Page<>(userFileVO.getPageNum(), userFileVO.getPageSize());
-            sortFieldIndex = userFileVO.getSortField();
-            sortOrder = userFileVO.getSortOrder();
-        }
+        Page<UserFileDTO> page = new Page<>(userFileVO.getPageNum(), userFileVO.getPageSize());
+        Integer sortFieldIndex = userFileVO.getSortField();
+        Integer sortOrder = userFileVO.getSortOrder();
 
         // 查询文件列表
         var userFileDTOList = userFileMapper.getFileListByPage(page, userFileDO, sortFieldIndex, sortOrder);

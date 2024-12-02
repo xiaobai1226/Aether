@@ -12,7 +12,7 @@ version: "3"
 
 services:
   aether:
-    image: xiaobai1226/aether:0.3.0
+    image: xiaobai1226/aether:latest
     container_name: aether
     restart: always
     depends_on:

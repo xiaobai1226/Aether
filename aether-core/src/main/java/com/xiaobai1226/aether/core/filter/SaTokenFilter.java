@@ -41,14 +41,18 @@ public class SaTokenFilter implements Filter {
     /**
      * token在URL中校验登录的接口
      */
-    private final Set<String> urlCheckPathSet = Set.of("/api/v1/file/getImage");
+    private final Set<String> urlCheckPathSet = Set.of(
+            "/api/v1/file/getImage",
+            "/api/v1/file/getVideo",
+            "/api/v1/file/getFile"
+    );
 
     @Override
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {
         if (urlCheckPathSet.contains(ctx.path())) {
-            String tokenBase64 = ctx.param("token");
-            if (tokenBase64 != null) {
-                String token = Base64.decodeStr(tokenBase64);
+            String sign = ctx.param("sign");
+            if (sign != null) {
+                String token = Base64.decodeStr(sign);
                 String[] tokenParam = token.split(":");
                 if (tokenParam.length == 2) {
                     ctx.headerMap().add(tokenParam[0], tokenParam[1]);

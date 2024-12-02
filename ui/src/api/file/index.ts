@@ -175,9 +175,9 @@ export const getImageUrl = (id: number): string => {
   const { tokenName, tokenPrefix, token } = accountStore.accountInfo
   // 按照后端要求拼接token数据
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
-  const tokenBase64 = btoa(tokenString)
+  const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&token=' + tokenBase64
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&sign=' + sign
 }
 
 /**
@@ -193,6 +193,20 @@ export const getVideo = (id: number): AxiosPromise<ArrayBuffer> => {
 }
 
 /**
+ * 获取视频Url
+ */
+export const getVideoUrl = (id: number): string => {
+  // 从pinia获取token数据
+  const accountStore = useAccountStore()
+  const { tokenName, tokenPrefix, token } = accountStore.accountInfo
+  // 按照后端要求拼接token数据
+  const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
+  const sign = btoa(tokenString)
+
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getVideo?id=' + id + '&sign=' + sign
+}
+
+/**
  * 获取文件
  */
 export const getFile = (id: number): AxiosPromise<ArrayBuffer> => {
@@ -202,6 +216,20 @@ export const getFile = (id: number): AxiosPromise<ArrayBuffer> => {
     method: 'GET',
     responseType: 'arraybuffer'
   })
+}
+
+/**
+ * 获取文件Url
+ */
+export const getFileUrl = (id: number): string => {
+  // 从pinia获取token数据
+  const accountStore = useAccountStore()
+  const { tokenName, tokenPrefix, token } = accountStore.accountInfo
+  // 按照后端要求拼接token数据
+  const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
+  const sign = btoa(tokenString)
+
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getFile?id=' + id + '&sign=' + sign
 }
 
 /**

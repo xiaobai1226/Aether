@@ -13,7 +13,10 @@
         <span class="iconfont icon-delete"></span>
         删除
       </el-button>
-      <div class="total_number">共 {{ tableData.total }} 项</div>
+      <div class="total_number">
+        <span>共 {{ tableData.total }} 项 </span>
+        <span v-show="selectedRecycleIds.length > 0">已选中 {{ selectedRecycleIds.length }} 个文件/文件夹</span>
+      </div>
     </div>
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
@@ -22,15 +25,15 @@
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
-              <template v-if="row.category == 1 || row.category == 3">
-                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>
-              </template>
-              <template v-else>
-                <!-- 如果是文件-->
-                <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
-                <!-- 如果是文件夹-->
-                <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
-              </template>
+              <!--              <template v-if="row.category == 1 || row.category == 3">-->
+              <!--                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>-->
+              <!--              </template>-->
+              <!--              <template v-else>-->
+              <!-- 如果是文件-->
+              <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
+              <!-- 如果是文件夹-->
+              <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
+              <!--              </template>-->
 
               <span class="file-name" :title="row.name">{{ row.name }}</span>
               <span class="op">
@@ -297,6 +300,9 @@ const handleRestore = (currentRecycleIds: Array<string>, message: string) => {
     }
 
     restore(data).then(() => {
+      selectedRecycleIds.value = []
+      dataTableRef.value.clearSelection()
+
       reload()
     })
   })
@@ -360,6 +366,9 @@ const handleDelete = (currentRecycleIds: Array<string>, message: string) => {
     }
 
     del(data).then(() => {
+      selectedRecycleIds.value = []
+      dataTableRef.value.clearSelection()
+
       reload()
     })
   })
