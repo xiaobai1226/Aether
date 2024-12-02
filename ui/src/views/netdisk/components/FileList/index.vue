@@ -60,7 +60,7 @@
       <!-- 导航 -->
       <div>
         <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
-        <Navigation ref="navigationRef" />
+        <Navigation ref="navigationRef" class="navigation" />
       </div>
       <div class="total_number">
         <span>共 {{ tableData.total }} 项 </span>
@@ -862,5 +862,10 @@ const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => 
   font-size: 12px;
   color: #25262BB8;
   margin-bottom: 5px;
+}
+
+.navigation {
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 </style>

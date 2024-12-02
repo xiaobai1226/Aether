@@ -2,7 +2,7 @@ plugins {
     java
 }
 
-val appVersion by extra("0.4.0")
+val appVersion by extra("0.4.1")
 
 group = "com.xiaobai1226"
 version = appVersion

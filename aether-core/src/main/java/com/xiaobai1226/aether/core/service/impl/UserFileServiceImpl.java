@@ -219,6 +219,12 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     public PageResultDataDTO<UserFileDTO> getFileList(Integer userId, Integer parentId, UserFileVO userFileVO) {
         var userFileDO = new UserFileDO().setUserId(userId).setFileStatus(NORMAL.flag());
 
+        if (userFileVO == null) {
+            userFileVO = new UserFileVO();
+            userFileVO.setPageNum(1);
+            userFileVO.setPageSize(-1);
+        }
+
         // 如果分类为全部分类，则不设置分类条件
         if (userFileVO.getCategory() != null) {
             userFileDO.setCategory(userFileVO.getCategory());

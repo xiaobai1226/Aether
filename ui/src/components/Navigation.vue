@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {ref} from "vue";
-import {useRoute, useRouter} from "vue-router";
+import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 
 const props = defineProps({
   // 是否监听路由
@@ -11,18 +11,18 @@ const props = defineProps({
     type: Boolean,
     default: true
   }
-});
+})
 
 /**
  * 目录集合
  */
-const folderList = ref<Array<string>>([]);
+const folderList = ref<Array<string>>([])
 
 // 打开文件夹
 const openFolder = (name: string) => {
-  folderList.value.push(name);
-  setPath();
-};
+  folderList.value.push(name)
+  setPath()
+}
 
 /**
  * 更新目录集合
@@ -30,37 +30,37 @@ const openFolder = (name: string) => {
  */
 const updateFolderList = (path: string | null) => {
   if (!path) {
-    folderList.value = [];
+    folderList.value = []
   } else {
-    folderList.value = path.split("/").filter(Boolean);
+    folderList.value = path.split('/').filter(Boolean)
   }
-};
+}
 
-defineExpose({openFolder, updateFolderList});
+defineExpose({ openFolder, updateFolderList })
 
 // 返回上一级
 const backParent = () => {
-  setCurrentFolder(folderList.value.length - 2);
-};
+  setCurrentFolder(folderList.value.length - 2)
+}
 
 // 点击导航，设置当前目录
 const setCurrentFolder = (index: number) => {
   if (index == -1) {
     // 返回全部
-    folderList.value = [];
+    folderList.value = []
   } else {
-    folderList.value.splice(index + 1);
+    folderList.value.splice(index + 1)
   }
-  setPath();
-};
+  setPath()
+}
 
-const emit = defineEmits(["navChange"]);
+const emit = defineEmits(['navChange'])
 const doCallback = () => {
-  let path = null;
+  let path = null
   if (folderList.value.length > 0) {
-    path = "/" + folderList.value.join("/");
+    path = '/' + folderList.value.join('/')
   }
-  emit("navChange", path);
+  emit('navChange', path)
 }
 
 /**
@@ -68,39 +68,19 @@ const doCallback = () => {
  */
 const setPath = () => {
   if (!props.watchPath) {
-    doCallback();
-    return;
+    doCallback()
+    return
   }
 
   if (folderList.value.length == 0) {
-    router.push({path: route.path});
+    router.push({ path: route.path })
   } else {
     router.push({
       path: route.path,
-      query: {path: "/" + folderList.value.join("/")}
-    });
+      query: { path: '/' + folderList.value.join('/') }
+    })
   }
-};
-
-// 监听路由中path参数的变化
-// TODO 要确定加不加 {immediate: true}
-// watch(
-//     () => route.query.path, (path, prevPath) => {
-//       if (!path) {
-//         folderList.value = [];
-//
-//       } else if (typeof path === 'string') {
-//         folderList.value = path.split("/").filter(Boolean);
-//
-//         // doCallback();
-//         // router.push({
-//         //   path: route.path,
-//         //   query: pathArray.length == 0 ? "" : {path: "/" + pathArray.join("/")}
-//         // });
-//       }
-//     },
-//     {immediate: true}
-// );
+}
 </script>
 
 <template>
@@ -126,7 +106,8 @@ const setPath = () => {
   font-size: 13px;
   display: flex;
   align-items: center;
-  line-height: 40px;
+  line-height: 25px;
+  flex-wrap: wrap;
 
   .all-file {
     font-weight: bold;
@@ -135,6 +116,19 @@ const setPath = () => {
   .link {
     color: #06a7ff;
     cursor: pointer;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 120px;
+    box-sizing: border-box;
+  }
+
+  .text {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 120px;
+    box-sizing: border-box;
   }
 
   .icon-right-arrow {
