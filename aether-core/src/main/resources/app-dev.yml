@@ -1,6 +1,7 @@
 project:
   path:
-    root: D:\programme\test\aether
+    #    root: D:\programme\test\aether
+    root: /Users/baipengfei/programme/tools/aether
 
 solon.logging.appender:
   console:

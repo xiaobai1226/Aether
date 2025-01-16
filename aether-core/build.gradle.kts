@@ -1,15 +1,7 @@
-plugins {
-    java
-}
-
-val appVersion by extra("0.4.1")
-
-group = "com.xiaobai1226"
-version = appVersion
-
-repositories {
-    mavenCentral()
-}
+//val appVersion by extra("0.4.1")
+//
+//group = "com.xiaobai1226"
+//version = appVersion
 
 dependencies {
     implementation(platform("org.noear:solon-parent:3.0.3"))
@@ -29,6 +21,9 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.30")
     implementation("com.mysql:mysql-connector-j:8.2.0")
     implementation("com.github.kokorin.jaffree:jaffree:2023.09.10")
+
+    // 内部模块
+    implementation(project(":aether-admin"))
 
     testImplementation("org.noear:solon-test")
 }
