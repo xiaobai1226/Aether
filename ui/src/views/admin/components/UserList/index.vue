@@ -60,6 +60,25 @@ const loadDataList = () => {
 loadDataList()
 
 /**
+ * 切换每页的大小
+ * @param size
+ */
+const handlePageSizeChange = (size: number) => {
+  tableData.value.pageSize = size
+  tableData.value.pageNum = 1
+  loadDataList()
+}
+
+/**
+ * 切换页码
+ * @param pageNum
+ */
+const handlePageNoChange = (pageNum: number) => {
+  tableData.value.pageNum = pageNum
+  loadDataList()
+}
+
+/**
  * 新增用户表单对象
  */
 const addOrUpdateUserForm = ref({
@@ -335,7 +354,7 @@ const updateUserStatus = (userInfo: UserInfo) => {
         <el-pagination v-if="tableData.total" background :total="tableData.total"
                        :page-sizes="[15, 30, 50, 100]"
                        :page-size="tableData.pageSize" v-model:current-page="tableData.pageNum"
-                       :layout="layout"
+                       :layout="layout" @current-change="handlePageNoChange" @size-change="handlePageSizeChange"
                        style="text-align: right" />
       </div>
     </div>
