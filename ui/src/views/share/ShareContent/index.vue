@@ -5,12 +5,12 @@ import Navigation from "@/components/Navigation.vue";
 import Table, {type Column} from "@/components/Table.vue";
 import Utils from "@/utils/Utils";
 import FolderSelect from "@/components/FolderSelect.vue";
-import {getShareLoginInfo, getShareFileListByShareIdPagination} from "@/api/share";
+import {getShareLoginInfo, getShareFileListByShareIdPagination} from "@/api/v1/share";
 import type {
   ShareInfoResponse,
   GetShareFileListByShareIdPageRequest, ShareFileInfo
-} from "@/api/share/types";
-import type {GetFileListByPageResponse} from "@/api/file/types";
+} from "@/api/v1/share/types";
+import type {GetFileListByPageResponse} from "@/api/v1/file/types";
 
 const router = useRouter();
 const route = useRoute();

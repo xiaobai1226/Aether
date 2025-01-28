@@ -6,10 +6,10 @@ import org.noear.solon.validation.annotation.NotBlank;
 import org.noear.solon.validation.annotation.NotNull;
 import org.noear.solon.validation.annotation.Pattern;
 
-import static com.xiaobai1226.aether.core.constant.RegexConsts.REGEX_FILE_NAME;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.*;
-import static com.xiaobai1226.aether.core.constant.VerifyConsts.FILE_NAME_MAX_LENGTH;
-import static com.xiaobai1226.aether.core.constant.VerifyConsts.FILE_NAME_MIN_LENGTH;
+import static com.xiaobai1226.aether.common.constant.RegexConsts.REGEX_FILE_NAME;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
+import static com.xiaobai1226.aether.common.constant.VerifyConsts.FILE_NAME_MAX_LENGTH;
+import static com.xiaobai1226.aether.common.constant.VerifyConsts.FILE_NAME_MIN_LENGTH;
 
 /**
  * 上传文件实体类VO

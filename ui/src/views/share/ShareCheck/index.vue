@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {ref} from "vue";
 import {useRouter, useRoute} from "vue-router";
-import {getShareInfo, checkExtractionCode} from "@/api/share";
-import type {ShareInfoResponse, CheckExtractionCodeRequest} from "@/api/share/types";
+import {getShareInfo, checkExtractionCode} from "@/api/v1/share";
+import type {ShareInfoResponse, CheckExtractionCodeRequest} from "@/api/v1/share/types";
 
 const router = useRouter();
 const route = useRoute();

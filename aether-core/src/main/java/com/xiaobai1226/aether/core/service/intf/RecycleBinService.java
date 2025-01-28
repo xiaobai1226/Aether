@@ -1,9 +1,9 @@
 package com.xiaobai1226.aether.core.service.intf;
 
 import com.baomidou.mybatisplus.solon.service.IService;
-import com.xiaobai1226.aether.core.domain.dto.PageResultDataDTO;
+import com.xiaobai1226.aether.domain.dto.common.PageResult;
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
-import com.xiaobai1226.aether.core.domain.entity.RecycleBinDO;
+import com.xiaobai1226.aether.domain.entity.RecycleBinDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
 
 import java.util.List;
@@ -31,7 +31,7 @@ public interface RecycleBinService extends IService<RecycleBinDO> {
      * @return 获取到的用户文件数据
      * @author bai
      */
-    PageResultDataDTO<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO);
+    PageResult<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO);
 
     /**
      * 清空回收站

@@ -2,8 +2,9 @@ package com.xiaobai1226.aether.core.service.intf;
 
 import com.baomidou.mybatisplus.solon.service.IService;
 import com.xiaobai1226.aether.core.domain.dto.*;
-import com.xiaobai1226.aether.core.domain.entity.FileDO;
-import com.xiaobai1226.aether.core.domain.entity.UserFileDO;
+import com.xiaobai1226.aether.domain.dto.common.PageResult;
+import com.xiaobai1226.aether.domain.entity.FileDO;
+import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.UploadFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFolderVO;
@@ -63,7 +64,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 获取到的用户文件数据
      * @author bai
      */
-    PageResultDataDTO<UserFileDTO> getFileList(Integer userId, Integer parentId, UserFileVO userFileVO);
+    PageResult<UserFileDTO> getFileList(Integer userId, Integer parentId, UserFileVO userFileVO);
 
     /**
      * 根据文件名称获取文件数据
@@ -178,7 +179,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 查询到结果
      * @author bai
      */
-    PageResultDataDTO<UserFileDO> getFolderList(Integer userId, Integer parentId, UserFolderVO userFolderVO);
+    PageResult<UserFileDO> getFolderList(Integer userId, Integer parentId, UserFolderVO userFolderVO);
 
     /**
      * 根据文件ID集合获取文件数据

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import PreviewImage from '@/components/preview/PreviewImage.vue'
-import type { UserFileInfo } from '@/api/file/types'
+import type { UserFileInfo } from '@/api/v1/file/types'
 import PreviewVideo from '@/components/preview/PreviewVideo.vue'
 import PreviewDoc from '@/components/preview/PreviewDoc.vue'
 import PreviewExcel from '@/components/preview/PreviewExcel.vue'

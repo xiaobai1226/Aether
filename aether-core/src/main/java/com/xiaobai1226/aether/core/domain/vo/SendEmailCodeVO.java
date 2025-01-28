@@ -8,9 +8,9 @@ import org.noear.solon.validation.annotation.Length;
 import org.noear.solon.validation.annotation.NotBlank;
 import org.noear.solon.validation.annotation.NotNull;
 
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.*;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_EMAIL_LENGTH;
-import static com.xiaobai1226.aether.core.constant.VerifyConsts.EMAIL_LENGTH;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_EMAIL_LENGTH;
+import static com.xiaobai1226.aether.common.constant.VerifyConsts.EMAIL_LENGTH;
 
 /**
  * 发送邮箱验证码VO

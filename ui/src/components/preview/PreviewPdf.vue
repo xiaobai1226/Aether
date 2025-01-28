@@ -48,7 +48,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import VuePdfEmbed from 'vue-pdf-embed'
-import { getFileUrl } from '@/api/file'
+import { getFileUrl } from '@/api/v1/file'
 import { useMagicKeys } from '@vueuse/core'
 
 /**

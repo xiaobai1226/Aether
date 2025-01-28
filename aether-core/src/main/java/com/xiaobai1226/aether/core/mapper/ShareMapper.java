@@ -3,7 +3,7 @@ package com.xiaobai1226.aether.core.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.xiaobai1226.aether.core.domain.dto.ShareFileDTO;
-import com.xiaobai1226.aether.core.domain.entity.ShareDO;
+import com.xiaobai1226.aether.domain.entity.ShareDO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;

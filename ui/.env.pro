@@ -5,4 +5,4 @@ VITE_ENV = 'production'
 VITE_NODE_FLAG = 'pro'
 
 # 线上环境接口地址
-VITE_HTTP_BASE_URL = '/api/v1'
+VITE_HTTP_BASE_URL = '/api'

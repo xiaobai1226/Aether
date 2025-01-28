@@ -58,14 +58,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { LoginInfo } from '@/api/account/types'
-import { getImageCaptcha } from '@/api/captcha'
+import type { LoginInfo } from '@/api/v1/account/types'
+import { getImageCaptcha } from '@/api/v1/captcha'
 import { useRouter } from 'vue-router'
 import { useAccountStore } from '@/stores/account'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
 import Verify from '@/utils/Verify'
 import { VerifyEnum } from '@/enums/VerifyEnum'
-import { ElLoading } from 'element-plus'
 
 const router = useRouter()
 

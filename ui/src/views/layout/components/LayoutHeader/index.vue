@@ -1,63 +1,67 @@
 <script setup lang="ts">
-import {ref} from "vue";
-import {useRouter} from "vue-router";
-import {useAccountStore} from "@/stores/account";
-import {useUploaderStore} from "@/stores/uploader";
-import Avatar from "@/components/Avatar.vue";
-import UpdateAvatar from "@/views/layout/components/LayoutHeader/UpdateAvatar.vue";
-import UpdatePassword from "@/views/layout/components/LayoutHeader/UpdatePassword.vue";
-import Uploader from "@/views/netdisk/components/Uploader/index.vue";
-import {logout} from "@/api/account";
-import Confirm from "@/utils/Confirm";
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAccountStore } from '@/stores/account'
+import { useUploaderStore } from '@/stores/uploader'
+import Avatar from '@/components/Avatar.vue'
+import UpdateAvatar from '@/views/layout/components/LayoutHeader/UpdateAvatar.vue'
+import UpdatePassword from '@/views/layout/components/LayoutHeader/UpdatePassword.vue'
+import Uploader from '@/views/netdisk/components/Uploader/index.vue'
+import { logout } from '@/api/v1/account'
+import Confirm from '@/utils/Confirm'
 
-const router = useRouter();
+const router = useRouter()
 
 // 从pinia获取用户数据
-const accountStore = useAccountStore();
+const accountStore = useAccountStore()
 
 // 从pinia获取Uploader数据
-const uploaderStore = useUploaderStore();
+const uploaderStore = useUploaderStore()
 
 /**
  * 退出登录方法
  */
 const handleLogout = () => {
-  Confirm("确定要退出吗", () => {
+  Confirm('确定要退出吗', () => {
     logout().then(() => {
       // 清除用户数据
-      accountStore.clearAccountInfo();
+      accountStore.clearAccountInfo()
 
       // 跳转登录页面
-      router.push('/login');
+      router.push('/login')
     }).catch(() => {
-    });
+    })
   })
-};
-
-// 修改头像
-const updateAvatarRef = ref();
-const updateAvatar = () => {
-  // 显示修改头像弹窗
-  updateAvatarRef.value.show(accountStore.accountInfo.nickname);
 }
 
-const avatarRef = ref();
+// 修改头像
+const updateAvatarRef = ref()
+const updateAvatar = () => {
+  // 显示修改头像弹窗
+  updateAvatarRef.value.show(accountStore.accountInfo.nickname)
+}
+
+const avatarRef = ref()
 
 /**
  * 重载头像
  */
 const reloadAvatar = () => {
-  avatarRef.value.updateAvatarImage();
+  avatarRef.value.updateAvatarImage()
 }
 
 // 修改密码
-const updatePasswordRef = ref();
+const updatePasswordRef = ref()
 const updatePassword = () => {
   // 显示修改密码弹窗
-  updatePasswordRef.value.show();
+  updatePasswordRef.value.show()
 }
 
-const uploaderRef = ref();
+const uploaderRef = ref()
+
+const toAdmin = () => {
+  router.push('/admin')
+}
 
 </script>
 
@@ -68,6 +72,8 @@ const uploaderRef = ref();
       <div class="name">Aether</div>
     </div>
     <div class="right-panel">
+      <span v-if="accountStore.accountInfo.roleId === 1" class="iconfont icon-kongzhitai" @click="toAdmin"></span>
+
       <el-popover :width="800" trigger="click" v-model:visible="uploaderStore.isShowUploader" :offset="20"
                   transition="none"
                   :hide-after="0"
@@ -76,7 +82,7 @@ const uploaderRef = ref();
           <span class="iconfont icon-transfer"></span>
         </template>
         <template #default>
-          <Uploader ref="uploaderRef"/>
+          <Uploader ref="uploaderRef" />
         </template>
       </el-popover>
 
@@ -84,7 +90,7 @@ const uploaderRef = ref();
         <div class="user-info">
           <!-- 头像 -->
           <div class="avatar">
-            <Avatar ref="avatarRef" :width="46"/>
+            <Avatar ref="avatarRef" :width="46" />
           </div>
           <span class="nick-name">{{ accountStore.accountInfo.nickname }}</span>
         </div>
@@ -98,8 +104,8 @@ const uploaderRef = ref();
       </el-dropdown>
     </div>
   </div>
-  <UpdateAvatar ref="updateAvatarRef" @updateAvatar="reloadAvatar"/>
-  <UpdatePassword ref="updatePasswordRef"/>
+  <UpdateAvatar ref="updateAvatarRef" @updateAvatar="reloadAvatar" />
+  <UpdatePassword ref="updatePasswordRef" />
 </template>
 
 <style scoped lang="scss">
@@ -126,7 +132,7 @@ const uploaderRef = ref();
     .name {
       font-weight: bold;
       margin-left: 5px;
-      font-size: 25px;
+      font-size: 20px;
       color: #05a1f5;
     }
   }
@@ -135,7 +141,13 @@ const uploaderRef = ref();
     display: flex;
     align-items: center;
 
+    .icon-kongzhitai {
+      font-size: 17px;
+      cursor: pointer;
+    }
+
     .icon-transfer {
+      margin-left: 24px;
       cursor: pointer;
     }
 
