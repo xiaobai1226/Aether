@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {ref, onMounted} from "vue";
 
-import {getAvatar} from "@/api/user";
+import {getAvatar} from "@/api/v1/user";
 
 const props = defineProps({
   modelValue: {

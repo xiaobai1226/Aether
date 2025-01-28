@@ -1,7 +1,7 @@
 package com.xiaobai1226.aether.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.xiaobai1226.aether.core.domain.entity.RecycleBinDO;
+import com.xiaobai1226.aether.domain.entity.RecycleBinDO;
 
 /**
  * 回收站表Mapper

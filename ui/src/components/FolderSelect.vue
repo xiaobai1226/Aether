@@ -25,11 +25,11 @@
 import { computed, nextTick, ref } from 'vue'
 import Dialog from '@/components/Dialog.vue'
 import Icon from '@/components/Icon.vue'
-import { getFolderListByPage } from '@/api/file'
+import { getFolderListByPage } from '@/api/v1/file'
 import type {
   GetFileListByPageResponse, GetFolderListByPageRequest,
   UserFileInfo
-} from '@/api/file/types'
+} from '@/api/v1/file/types'
 import Navigation from '@/components/Navigation.vue'
 
 /**

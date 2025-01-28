@@ -5,7 +5,7 @@ import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Mapping;
 import org.noear.solon.core.handle.Gateway;
 
-import static com.xiaobai1226.aether.core.constant.GateWayTagConsts.API_V1;
+import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
 
 /**
  * Api V1版本 Gateway

@@ -2,15 +2,12 @@ package com.xiaobai1226.aether.core.service.intf;
 
 import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
 import com.baomidou.mybatisplus.solon.service.IService;
-import com.xiaobai1226.aether.core.domain.dto.PageResultDataDTO;
+import com.xiaobai1226.aether.domain.dto.common.PageResult;
 import com.xiaobai1226.aether.core.domain.dto.ShareFileDTO;
 import com.xiaobai1226.aether.core.domain.dto.ShareInfoDTO;
-import com.xiaobai1226.aether.core.domain.dto.UserFileDTO;
-import com.xiaobai1226.aether.core.domain.entity.ShareDO;
-import com.xiaobai1226.aether.core.domain.entity.ShareUserFileDO;
-import com.xiaobai1226.aether.core.domain.vo.share.CheckExtractionCodeVO;
+import com.xiaobai1226.aether.domain.entity.ShareDO;
+import com.xiaobai1226.aether.domain.entity.ShareUserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
-import com.xiaobai1226.aether.core.domain.vo.share.GetShareFileInfoListVO;
 
 import java.util.List;
 
@@ -61,7 +58,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 获取到的分享文件数据
      * @author bai
      */
-    PageResultDataDTO<ShareFileDTO> getShareFileList(Integer userId, PageVO shareFileVO);
+    PageResult<ShareFileDTO> getShareFileList(Integer userId, PageVO shareFileVO);
 
     /**
      * 取消分享文件

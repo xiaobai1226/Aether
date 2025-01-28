@@ -8,8 +8,8 @@ import type {
   GetShareListByPageRequest,
   GetShareListByPageResponse,
   ShareFileInfo
-} from "@/api/share/types";
-import {cancel, getShareListByPage} from "@/api/share";
+} from "@/api/v1/share/types";
+import {cancel, getShareListByPage} from "@/api/v1/share";
 import Confirm from "@/utils/Confirm";
 
 /**

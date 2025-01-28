@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import * as XLSX from 'xlsx'
-import { getFile } from '@/api/file'
+import { getFile } from '@/api/v1/file'
 
 const props = defineProps({
   // 文件ID

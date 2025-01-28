@@ -3,7 +3,7 @@ package com.xiaobai1226.aether.core.domain.vo;
 import lombok.Data;
 import org.noear.solon.validation.annotation.NotBlank;
 
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_DEL_CONTENT_EMPTY;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_DEL_CONTENT_EMPTY;
 
 /**
  * 删除回收站文件实体类VO

@@ -5,18 +5,18 @@ import com.xiaobai1226.aether.core.annotation.ImageCaptchaVerify;
 import com.xiaobai1226.aether.core.domain.dto.LoginUserInfoDTO;
 import com.xiaobai1226.aether.core.domain.vo.LoginVO;
 import com.xiaobai1226.aether.core.domain.vo.RegisterVO;
-import com.xiaobai1226.aether.core.exception.FailResultException;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.AccountService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
-import com.xiaobai1226.aether.core.util.Result;
+import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
-import static com.xiaobai1226.aether.core.constant.GateWayTagConsts.API_V1;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.*;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
-import static com.xiaobai1226.aether.core.enums.ResultSuccessMsgEnum.SUCCESS_MSG_LOGIN;
+import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
+import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.SUCCESS_MSG_LOGIN;
 
 /**
  * 账户Controller

@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { getImageUrl } from '@/api/file'
+import { getImageUrl } from '@/api/v1/file'
 
 const props = defineProps({
   // // 图像列表

@@ -4,7 +4,7 @@ import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
 import com.xiaobai1226.aether.core.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
-import com.xiaobai1226.aether.core.domain.entity.FileDO;
+import com.xiaobai1226.aether.domain.entity.FileDO;
 import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 import com.xiaobai1226.aether.core.mapper.FileMapper;
 import com.xiaobai1226.aether.core.service.intf.FileService;

@@ -6,9 +6,9 @@ import org.noear.solon.validation.annotation.Length;
 import org.noear.solon.validation.annotation.NotBlank;
 import org.noear.solon.validation.annotation.Pattern;
 
-import static com.xiaobai1226.aether.core.constant.RegexConsts.REGEX_PASSWARD;
-import static com.xiaobai1226.aether.core.constant.RegexConsts.REGEX_USERNAME;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.*;
+import static com.xiaobai1226.aether.common.constant.RegexConsts.REGEX_PASSWARD;
+import static com.xiaobai1226.aether.common.constant.RegexConsts.REGEX_USERNAME;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
 
 /**
  * 登录VO

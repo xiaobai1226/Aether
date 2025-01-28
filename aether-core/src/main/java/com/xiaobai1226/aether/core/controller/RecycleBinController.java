@@ -3,14 +3,14 @@ package com.xiaobai1226.aether.core.controller;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.core.domain.dto.PageResultDataDTO;
+import com.xiaobai1226.aether.domain.dto.common.PageResult;
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
 import com.xiaobai1226.aether.core.domain.vo.DeleteRecycleBinVO;
 import com.xiaobai1226.aether.core.domain.vo.RestoreRecycleBinVO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
-import com.xiaobai1226.aether.core.exception.FailResultException;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
-import com.xiaobai1226.aether.core.util.Result;
+import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
@@ -18,11 +18,11 @@ import org.noear.solon.validation.annotation.Validated;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.xiaobai1226.aether.core.constant.GateWayTagConsts.API_V1;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_DEL_CONTENT_EMPTY;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_RESTORE_CONTENT_EMPTY;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.PARAM_IS_INVALID;
-import static com.xiaobai1226.aether.core.enums.ResultSuccessMsgEnum.*;
+import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_DEL_CONTENT_EMPTY;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_RESTORE_CONTENT_EMPTY;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.PARAM_IS_INVALID;
+import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.*;
 
 /**
  * 回收站Controller
@@ -44,7 +44,7 @@ public class RecycleBinController {
      */
     @Get
     @Mapping("/getRecycleBinListByPage")
-    public PageResultDataDTO<RecycleBinFileDTO> getRecycleBinListByPage(PageVO recycleBinVO) {
+    public PageResult<RecycleBinFileDTO> getRecycleBinListByPage(PageVO recycleBinVO) {
         // 获取当前会话账号id, 并转化为`int`类型
         final var userId = StpUtil.getLoginIdAsInt();
 

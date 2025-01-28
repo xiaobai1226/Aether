@@ -12,8 +12,8 @@ import org.noear.solon.validation.Validator;
 import java.io.IOException;
 
 import static com.xiaobai1226.aether.core.constant.CaptchaConsts.IMAGE_CAPTCHA_LENGTH;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_IMAGE_CAPTCHA_EMPTY;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_IMAGE_CAPTCHA_ID_EMPTY;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_IMAGE_CAPTCHA_EMPTY;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_IMAGE_CAPTCHA_ID_EMPTY;
 
 /**
  * 图片验证验证码是否正确 验证器

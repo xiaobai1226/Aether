@@ -2,7 +2,7 @@
 import {ref} from "vue";
 import AvatarUpload from "@/components/AvatarUpload.vue";
 import Dialog from "@/components/Dialog.vue";
-import {updateUserAvatar} from "@/api/user";
+import {updateUserAvatar} from "@/api/v1/user";
 
 const emit = defineEmits(["updateAvatar"]);
 

@@ -10,19 +10,19 @@ import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
 import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
 import com.xiaobai1226.aether.core.dao.redis.ShareRedisDAO;
-import com.xiaobai1226.aether.core.domain.dto.PageResultDataDTO;
+import com.xiaobai1226.aether.domain.dto.common.PageResult;
 import com.xiaobai1226.aether.core.domain.dto.ShareFileDTO;
 import com.xiaobai1226.aether.core.domain.dto.ShareInfoDTO;
-import com.xiaobai1226.aether.core.domain.entity.ShareDO;
-import com.xiaobai1226.aether.core.domain.entity.ShareUserFileDO;
+import com.xiaobai1226.aether.domain.entity.ShareDO;
+import com.xiaobai1226.aether.domain.entity.ShareUserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
 import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
-import com.xiaobai1226.aether.core.exception.FailResultException;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.mapper.ShareMapper;
 import com.xiaobai1226.aether.core.mapper.ShareUserFileMapper;
 import com.xiaobai1226.aether.core.mapper.UserFileMapper;
-import com.xiaobai1226.aether.core.mapper.UserMapper;
+import com.xiaobai1226.aether.dao.mapper.UserMapper;
 import com.xiaobai1226.aether.core.service.intf.ShareFileService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import org.apache.ibatis.solon.annotation.Db;
@@ -36,7 +36,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.SYSTEM_ERROR;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
 import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 
 /**
@@ -116,7 +116,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
     }
 
     @Override
-    public PageResultDataDTO<ShareFileDTO> getShareFileList(Integer userId, PageVO shareFileVO) {
+    public PageResult<ShareFileDTO> getShareFileList(Integer userId, PageVO shareFileVO) {
         var shareDOListPage = getShareDOListByPage(userId, shareFileVO);
 
         if (shareDOListPage == null || CollUtil.isEmpty(shareDOListPage.getRecords())) {
@@ -197,7 +197,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
         IPage<ShareFileDTO> shareFileDTOIPage = new Page<>(shareDOListPage.getCurrent(), shareDOListPage.getSize(), shareDOListPage.getTotal());
         shareFileDTOIPage.setPages(shareDOListPage.getPages());
         shareFileDTOIPage.setRecords(finalShareFileDTOList);
-        return new PageResultDataDTO<>(shareFileDTOIPage);
+        return new PageResult<>(shareFileDTOIPage);
     }
 
     @Override

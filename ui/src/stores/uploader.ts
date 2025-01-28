@@ -6,8 +6,8 @@ import { ref } from 'vue'
 import type { UploadFileItem } from '@/views/netdisk/components/Uploader/types'
 import { STATUS } from '@/views/netdisk/components/Uploader/types'
 import SparkMD5 from 'spark-md5'
-import type { UploadFileRequest } from '@/api/file/types'
-import { uploadFile, cancelUploadFile } from '@/api/file'
+import type { UploadFileRequest } from '@/api/v1/file/types'
+import { uploadFile, cancelUploadFile } from '@/api/v1/file'
 import { useUserStore } from '@/stores/user'
 
 export const useUploaderStore = defineStore('uploader', () => {

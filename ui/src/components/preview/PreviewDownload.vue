@@ -2,7 +2,7 @@
 
 import Utils from '@/utils/Utils'
 import Icon from '@/components/Icon.vue'
-import { createDownloadSign } from '@/api/file'
+import { createDownloadSign } from '@/api/v1/file'
 
 const props = defineProps({
   fileInfo: {

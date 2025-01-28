@@ -1,6 +1,6 @@
 package com.xiaobai1226.aether.core.service.intf;
 
-import com.xiaobai1226.aether.core.domain.entity.FileDO;
+import com.xiaobai1226.aether.domain.entity.FileDO;
 import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 
 /**

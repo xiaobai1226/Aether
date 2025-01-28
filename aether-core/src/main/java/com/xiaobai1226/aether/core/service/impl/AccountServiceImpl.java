@@ -4,16 +4,16 @@ import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import com.xiaobai1226.aether.core.domain.dto.LoginUserInfoDTO;
-import com.xiaobai1226.aether.core.exception.FailResultException;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.AccountService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_ACCOUNT_BAN;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_ACCOUNT_OR_PASSWORD;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.PARAM_IS_INVALID;
-import static com.xiaobai1226.aether.core.enums.UserStatusEnum.BAN;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_ACCOUNT_BAN;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_ACCOUNT_OR_PASSWORD;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.PARAM_IS_INVALID;
+import static com.xiaobai1226.aether.common.enums.UserStatusEnum.BAN;
 
 /**
  * 账户Service实现类
@@ -35,12 +35,12 @@ public class AccountServiceImpl implements AccountService {
         var userDO = userService.getUserByUsername(username);
 
         // 用户名密码错误
-        if (userDO == null || !BCrypt.checkpw(password, userDO.getUserPassword())) {
+        if (userDO == null || !BCrypt.checkpw(password, userDO.getPassword())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_ACCOUNT_OR_PASSWORD);
         }
 
         // 账号状态错误
-        if (BAN.flag().equals(userDO.getUserStatus())) {
+        if (BAN.flag().equals(userDO.getStatus())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_ACCOUNT_BAN);
         }
 

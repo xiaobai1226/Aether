@@ -3,8 +3,8 @@ import {ref, nextTick} from "vue";
 import Dialog from "@/components/Dialog.vue";
 import {ElMessage} from "element-plus";
 import Verify from "@/utils/Verify";
-import type {CreateShareFileRequest, CreateShareFileResponse} from "@/api/share/types";
-import {create} from "@/api/share";
+import type {CreateShareFileRequest, CreateShareFileResponse} from "@/api/v1/share/types";
+import {create} from "@/api/v1/share";
 import {ResultErrorMsgEnum} from "@/enums/ResultErrorMsgEnum";
 
 const shareUrl = ref(document.location.origin + '/share/');

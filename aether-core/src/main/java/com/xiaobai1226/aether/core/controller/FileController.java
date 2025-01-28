@@ -9,16 +9,17 @@ import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.core.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.DownloadRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
-import com.xiaobai1226.aether.core.domain.entity.UserFileDO;
+import com.xiaobai1226.aether.domain.dto.common.PageResult;
+import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.*;
 import com.xiaobai1226.aether.core.enums.UserFileCategoryEnum;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
-import com.xiaobai1226.aether.core.exception.FailResultException;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.core.util.FileUtils;
-import com.xiaobai1226.aether.core.util.Result;
+import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.DownloadedFile;
@@ -30,10 +31,10 @@ import java.util.*;
 import java.util.Date;
 import java.util.stream.Collectors;
 
-import static com.xiaobai1226.aether.core.constant.GateWayTagConsts.API_V1;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.*;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.*;
-import static com.xiaobai1226.aether.core.enums.ResultSuccessMsgEnum.*;
+import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.*;
+import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.*;
 import static com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.FILE;
 import static com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.FOLDER;
 import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
@@ -70,7 +71,7 @@ public class FileController {
      */
     @Get
     @Mapping("/getFileListByPage")
-    public PageResultDataDTO<UserFileDTO> getFileListByPage(UserFileVO userFileVO) {
+    public PageResult<UserFileDTO> getFileListByPage(UserFileVO userFileVO) {
         // 获取当前会话账号id, 并转化为`int`类型
         final var userId = StpUtil.getLoginIdAsInt();
 
@@ -256,7 +257,7 @@ public class FileController {
      */
     @Get
     @Mapping("/getFolderListByPage")
-    public PageResultDataDTO<UserFileDO> getFolderListByPage(@Validated UserFolderVO userFolderVO) {
+    public PageResult<UserFileDO> getFolderListByPage(@Validated UserFolderVO userFolderVO) {
         // 获取当前会话账号id, 并转化为`long`类型
         var userId = StpUtil.getLoginIdAsInt();
 

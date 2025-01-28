@@ -4,9 +4,9 @@ import Layout from '@/views/layout/index.vue'
 import Netdisk from '@/views/netdisk/index.vue'
 import FileList from '@/views/netdisk/components/FileList/index.vue'
 import RecycleBin from '@/views/netdisk/components/RecycleBin/index.vue'
-import ShareList from '@/views/netdisk/components/ShareList/index.vue'
-import ShareCheck from '@/views/share/ShareCheck/index.vue'
-import ShareContent from '@/views/share/ShareContent/index.vue'
+import AdminLayout from '@/views/admin/layout/index.vue'
+import UserList from '@/views/admin/components/UserList/index.vue'
+import AdminFileList from '@/views/admin/components/FileList/index.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -52,6 +52,23 @@ const router = createRouter({
     {
       path: '/login',
       component: Login
+    },
+    // 管理页
+    {
+      path: '/admin',
+      component: AdminLayout,
+      children: [
+        {
+          path: 'userlist',
+          name: '用户列表',
+          component: UserList
+        },
+        {
+          path: 'filelist',
+          name: '文件列表',
+          component: AdminFileList
+        }
+      ]
     }
     // {
     //     path: "/shareCheck/:shareId",

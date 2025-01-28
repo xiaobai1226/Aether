@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { onMounted, ref, onBeforeUnmount } from 'vue'
 import Artplayer from 'artplayer'
-import { getVideoUrl } from '@/api/file'
+import { getVideoUrl } from '@/api/v1/file'
 import Utils from '@/utils/Utils'
 
 const props = defineProps({

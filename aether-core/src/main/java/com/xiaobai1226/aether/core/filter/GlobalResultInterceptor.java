@@ -1,6 +1,6 @@
 package com.xiaobai1226.aether.core.filter;
 
-import com.xiaobai1226.aether.core.util.Result;
+import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.Handler;

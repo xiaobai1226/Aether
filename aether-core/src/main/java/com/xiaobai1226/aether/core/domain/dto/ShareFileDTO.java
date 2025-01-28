@@ -1,6 +1,6 @@
 package com.xiaobai1226.aether.core.domain.dto;
 
-import com.xiaobai1226.aether.core.domain.entity.ShareDO;
+import com.xiaobai1226.aether.domain.entity.ShareDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

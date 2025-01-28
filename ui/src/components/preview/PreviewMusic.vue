@@ -13,7 +13,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import APlayer from 'aplayer'
 import 'aplayer/dist/APlayer.min.css'
-import { getFileUrl } from '@/api/file'
+import { getFileUrl } from '@/api/v1/file'
 
 const props = defineProps({
   // 文件ID

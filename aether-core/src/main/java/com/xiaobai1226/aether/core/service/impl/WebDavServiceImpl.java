@@ -6,7 +6,7 @@ import com.xiaobai1226.aether.core.service.intf.UserService;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
-import static com.xiaobai1226.aether.core.enums.UserStatusEnum.BAN;
+import static com.xiaobai1226.aether.common.enums.UserStatusEnum.BAN;
 
 /**
  * 账户Service实现类
@@ -28,12 +28,12 @@ public class WebDavServiceImpl implements WebDavService {
         var userDO = userService.getUserByUsername(username);
 
         // 用户名不存在或密码错误
-        if (userDO == null || !BCrypt.checkpw(password, userDO.getUserPassword())) {
+        if (userDO == null || !BCrypt.checkpw(password, userDO.getPassword())) {
             return null;
         }
 
         // 账号状态错误
-        if (BAN.flag().equals(userDO.getUserStatus())) {
+        if (BAN.flag().equals(userDO.getStatus())) {
             return null;
         }
 
