@@ -2,11 +2,9 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAccountStore } from '@/stores/account'
-import { useUploaderStore } from '@/stores/uploader'
 import Avatar from '@/components/Avatar.vue'
 import UpdateAvatar from '@/views/layout/components/LayoutHeader/UpdateAvatar.vue'
 import UpdatePassword from '@/views/layout/components/LayoutHeader/UpdatePassword.vue'
-import Uploader from '@/views/netdisk/components/Uploader/index.vue'
 import { logout } from '@/api/v1/account'
 import Confirm from '@/utils/Confirm'
 
@@ -14,9 +12,6 @@ const router = useRouter()
 
 // 从pinia获取用户数据
 const accountStore = useAccountStore()
-
-// 从pinia获取Uploader数据
-const uploaderStore = useUploaderStore()
 
 /**
  * 退出登录方法
@@ -57,8 +52,6 @@ const updatePassword = () => {
   updatePasswordRef.value.show()
 }
 
-const uploaderRef = ref()
-
 const toMain = () => {
   router.push('/')
 }
@@ -72,18 +65,6 @@ const toMain = () => {
     </div>
     <div class="right-panel">
       <span class="iconfont icon-main" @click="toMain"></span>
-
-      <el-popover :width="800" trigger="click" v-model:visible="uploaderStore.isShowUploader" :offset="20"
-                  transition="none"
-                  :hide-after="0"
-                  :popper-style="{ padding: '0px' }">
-        <template #reference>
-          <span class="iconfont icon-transfer"></span>
-        </template>
-        <template #default>
-          <Uploader ref="uploaderRef" />
-        </template>
-      </el-popover>
 
       <el-dropdown>
         <div class="user-info">
@@ -143,11 +124,6 @@ const toMain = () => {
     .icon-main {
       font-size: 18px;
       font-weight: bold;
-      cursor: pointer;
-    }
-
-    .icon-transfer {
-      margin-left: 24px;
       cursor: pointer;
     }
 
