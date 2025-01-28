@@ -6,10 +6,10 @@ import com.xiaobai1226.aether.core.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.constant.SystemConsts;
 import com.xiaobai1226.aether.core.domain.dto.UserSpaceUsageDTO;
 import com.xiaobai1226.aether.core.domain.vo.UpdatePasswordVO;
-import com.xiaobai1226.aether.core.exception.FailResultException;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.core.util.FileUtils;
-import com.xiaobai1226.aether.core.util.Result;
+import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.UploadedFile;
@@ -19,12 +19,12 @@ import org.noear.solon.validation.annotation.Validated;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import static com.xiaobai1226.aether.core.constant.GateWayTagConsts.API_V1;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_UPDATE_PASSWORD;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.SYSTEM_ERROR;
-import static com.xiaobai1226.aether.core.enums.ResultSuccessMsgEnum.SUCCESS_MSG_UPDATE_AVATAR;
-import static com.xiaobai1226.aether.core.enums.ResultSuccessMsgEnum.SUCCESS_MSG_UPDATE_PASSWORD;
+import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_UPDATE_PASSWORD;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
+import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.SUCCESS_MSG_UPDATE_AVATAR;
+import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.SUCCESS_MSG_UPDATE_PASSWORD;
 
 /**
  * 用户Controller

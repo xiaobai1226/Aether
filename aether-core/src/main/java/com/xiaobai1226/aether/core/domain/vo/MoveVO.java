@@ -3,7 +3,7 @@ package com.xiaobai1226.aether.core.domain.vo;
 import lombok.Data;
 import org.noear.solon.validation.annotation.NotNull;
 
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_MOVE_CONTENT_EMPTY;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_MOVE_CONTENT_EMPTY;
 
 /**
  * 移动文件实体类VO

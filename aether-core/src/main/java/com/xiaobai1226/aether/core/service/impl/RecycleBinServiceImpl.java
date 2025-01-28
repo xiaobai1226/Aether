@@ -5,16 +5,16 @@ import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
 import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
-import com.xiaobai1226.aether.core.domain.dto.PageResultDataDTO;
+import com.xiaobai1226.aether.domain.dto.common.PageResult;
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
 import com.xiaobai1226.aether.core.domain.dto.UserFileDTO;
-import com.xiaobai1226.aether.core.domain.entity.FileDO;
-import com.xiaobai1226.aether.core.domain.entity.RecycleBinDO;
-import com.xiaobai1226.aether.core.domain.entity.UserDO;
-import com.xiaobai1226.aether.core.domain.entity.UserFileDO;
+import com.xiaobai1226.aether.domain.entity.FileDO;
+import com.xiaobai1226.aether.domain.entity.RecycleBinDO;
+import com.xiaobai1226.aether.domain.entity.UserDO;
+import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
-import com.xiaobai1226.aether.core.exception.FailResultException;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.mapper.FileMapper;
 import com.xiaobai1226.aether.core.mapper.RecycleBinMapper;
 import com.xiaobai1226.aether.core.mapper.UserFileMapper;
@@ -29,10 +29,10 @@ import org.noear.solon.data.annotation.Tran;
 
 import java.util.*;
 
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_DEL_CONTENT_EMPTY;
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.ERROR_RESTORE_CONTENT_EMPTY;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.SYSTEM_ERROR;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_DEL_CONTENT_EMPTY;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_RESTORE_CONTENT_EMPTY;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
 import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.DEL;
 import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 
@@ -72,7 +72,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
     }
 
     @Override
-    public PageResultDataDTO<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO) {
+    public PageResult<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper).eq(RecycleBinDO::getUserId, userId).eq(RecycleBinDO::getRoot, 1);
 
         // 1 文件名 2 删除时间 3 文件大小 4 有效时间
@@ -133,7 +133,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         var recycleBinFileIPage = new Page<RecycleBinFileDTO>(recycleBinListPage.getCurrent(), recycleBinListPage.getSize(), recycleBinListPage.getTotal());
         recycleBinFileIPage.setPages(recycleBinListPage.getPages());
         recycleBinFileIPage.setRecords(recycleBinDTOList);
-        return new PageResultDataDTO<>(recycleBinFileIPage);
+        return new PageResult<>(recycleBinFileIPage);
     }
 
     @Tran

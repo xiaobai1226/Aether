@@ -5,7 +5,7 @@ import org.noear.solon.validation.annotation.NotBlank;
 import org.noear.solon.validation.annotation.NotNull;
 import org.noear.solon.validation.annotation.Pattern;
 
-import static com.xiaobai1226.aether.core.constant.RegexConsts.REGEX_EXTRACTION_CODE;
+import static com.xiaobai1226.aether.common.constant.RegexConsts.REGEX_EXTRACTION_CODE;
 import static com.xiaobai1226.aether.core.constant.result.error.ResultShareErrMsgConsts.*;
 
 /**

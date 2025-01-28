@@ -72,8 +72,8 @@ import type {
   GetRecycleBinListByPageRequest,
   GetRecycleBinListByPageResponse,
   RecycleBinFileInfo
-} from '@/api/recycleBin/types'
-import { getRecycleBinListByPage, del, restore } from '@/api/recycleBin'
+} from '@/api/v1/recycleBin/types'
+import { getRecycleBinListByPage, del, restore } from '@/api/v1/recycleBin'
 import Icon from '@/components/Icon.vue'
 import Confirm from '@/utils/Confirm'
 import { ElMessage } from 'element-plus'

@@ -13,17 +13,18 @@ import com.xiaobai1226.aether.core.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
 import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
-import com.xiaobai1226.aether.core.domain.entity.FileDO;
-import com.xiaobai1226.aether.core.domain.entity.RecycleBinDO;
-import com.xiaobai1226.aether.core.domain.entity.UserDO;
-import com.xiaobai1226.aether.core.domain.entity.UserFileDO;
+import com.xiaobai1226.aether.domain.dto.common.PageResult;
+import com.xiaobai1226.aether.domain.entity.FileDO;
+import com.xiaobai1226.aether.domain.entity.RecycleBinDO;
+import com.xiaobai1226.aether.domain.entity.UserDO;
+import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.UploadFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFolderVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
 import com.xiaobai1226.aether.core.enums.FileTypeEnum;
-import com.xiaobai1226.aether.core.exception.FailResultException;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.mapper.UserFileMapper;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
@@ -46,9 +47,9 @@ import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import static com.xiaobai1226.aether.core.constant.ResultErrorMsgConsts.*;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
-import static com.xiaobai1226.aether.core.enums.ResultCodeEnum.SYSTEM_ERROR;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
 import static com.xiaobai1226.aether.core.enums.UploadStatusEnum.*;
 import static com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.FILE;
 import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
@@ -216,7 +217,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public PageResultDataDTO<UserFileDTO> getFileList(Integer userId, Integer parentId, UserFileVO userFileVO) {
+    public PageResult<UserFileDTO> getFileList(Integer userId, Integer parentId, UserFileVO userFileVO) {
         var userFileDO = new UserFileDO().setUserId(userId).setFileStatus(NORMAL.flag());
 
         if (userFileVO == null) {
@@ -243,7 +244,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         // 判断结果是否为空
         if (CollUtil.isNotEmpty(userFileDTOList)) {
             page.setRecords(userFileDTOList);
-            return new PageResultDataDTO<>(page);
+            return new PageResult<>(page);
         }
 
         return null;
@@ -466,13 +467,13 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public PageResultDataDTO<UserFileDO> getFolderList(Integer userId, Integer parentId, UserFolderVO userFolderVO) {
+    public PageResult<UserFileDO> getFolderList(Integer userId, Integer parentId, UserFolderVO userFolderVO) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         var userFolderListPage = lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getItemType, UserFileItemTypeEnum.FOLDER.flag()).eq(UserFileDO::getFileStatus, NORMAL.flag()).eq(UserFileDO::getParentId, parentId).orderByDesc(UserFileDO::getUpdateTime).page(new Page<>(userFolderVO.getPageNum(), userFolderVO.getPageSize()));
 
         // 判断结果是否为空
         if (CollUtil.isNotEmpty(userFolderListPage.getRecords())) {
-            return new PageResultDataDTO<>(userFolderListPage);
+            return new PageResult<>(userFolderListPage);
         }
 
         return null;

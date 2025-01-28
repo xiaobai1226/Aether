@@ -9,7 +9,7 @@ import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.core.constant.FolderNameConsts;
-import com.xiaobai1226.aether.core.domain.entity.FileDO;
+import com.xiaobai1226.aether.domain.entity.FileDO;
 import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.core.handle.Context;

@@ -2,7 +2,7 @@
 import {nextTick, ref} from "vue";
 import Verify from "@/utils/Verify";
 import {ResultErrorMsgEnum} from "@/enums/ResultErrorMsgEnum";
-import {updateUserPassword} from "@/api/user";
+import {updateUserPassword} from "@/api/v1/user";
 
 // 校验确认密码
 const checkRePassword = (rule: any, value: string, callback: any) => {

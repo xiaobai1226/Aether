@@ -147,7 +147,7 @@
 
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import { getFileListByPage, newFolder, rename, del, move, copy, createDownloadSign } from '@/api/file'
+import { getFileListByPage, newFolder, rename, del, move, copy, createDownloadSign } from '@/api/v1/file'
 import type {
   GetFileListByPageRequest,
   GetFileListByPageResponse,
@@ -156,7 +156,7 @@ import type {
   FileRenameRequest,
   MoveRequest,
   CopyRequest, DeleteRequest
-} from '@/api/file/types'
+} from '@/api/v1/file/types'
 import Table from '@/components/Table.vue'
 import UploadPopup from '@/components/UploadPopup.vue'
 import type { Column } from '@/components/Table.vue'

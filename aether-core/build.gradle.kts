@@ -4,7 +4,7 @@
 //version = appVersion
 
 dependencies {
-    implementation(platform("org.noear:solon-parent:3.0.3"))
+    implementation(platform("org.noear:solon-parent:${DependenciesVersion.solonVersion}"))
     implementation("org.noear:solon-web")
     implementation("org.noear:solon-boot-jetty")
     implementation("org.noear:solon-view-thymeleaf")
@@ -16,14 +16,17 @@ dependencies {
     implementation("org.noear:redisson-solon-plugin")
 
     implementation("com.zaxxer:HikariCP:5.1.0")
-    implementation("cn.hutool:hutool-all:5.8.25")
-    implementation("org.projectlombok:lombok:1.18.30")
-    annotationProcessor("org.projectlombok:lombok:1.18.30")
+    implementation("cn.hutool:hutool-all:${DependenciesVersion.hutoolVersion}")
+    implementation("org.projectlombok:lombok:${DependenciesVersion.lombokVersion}")
+    annotationProcessor("org.projectlombok:lombok:${DependenciesVersion.lombokVersion}")
     implementation("com.mysql:mysql-connector-j:8.2.0")
     implementation("com.github.kokorin.jaffree:jaffree:2023.09.10")
 
     // 内部模块
+    implementation(project(":aether-common"))
     implementation(project(":aether-admin"))
+    implementation(project(":aether-domain"))
+    implementation(project(":aether-dao"))
 
     testImplementation("org.noear:solon-test")
 }

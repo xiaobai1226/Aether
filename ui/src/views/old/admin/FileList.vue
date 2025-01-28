@@ -6,7 +6,7 @@ import Table from "@/components/Table.vue";
 import Icon from "@/components/Icon.vue";
 import Preview from "@/components/preview/Preview.vue";
 import {ref} from "vue";
-import type {GetFileListByPaginationResponse} from "@/api/file/types";
+import type {GetFileListByPaginationResponse} from "@/api/v1/file/types";
 
 const api = {
   loadDataList: "admin/loadFileList",

@@ -7,16 +7,16 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
 import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.UserSpaceUsageDTO;
-import com.xiaobai1226.aether.core.domain.entity.UserDO;
+import com.xiaobai1226.aether.domain.entity.UserDO;
 import com.xiaobai1226.aether.core.domain.vo.RegisterVO;
-import com.xiaobai1226.aether.core.mapper.UserMapper;
+import com.xiaobai1226.aether.dao.mapper.UserMapper;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
 import static com.xiaobai1226.aether.core.constant.SystemConsts.DEFAULT_USER_TOTAL_SPACE;
-import static com.xiaobai1226.aether.core.enums.UserStatusEnum.NORMAL;
+import static com.xiaobai1226.aether.common.enums.UserStatusEnum.NORMAL;
 
 /**
  * 用户service实现类
@@ -62,7 +62,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public Integer updatePasswordById(Integer id, String password) {
         var lambdaUpdate = new LambdaUpdateWrapper<UserDO>();
-        lambdaUpdate.eq(UserDO::getId, id).set(UserDO::getUserPassword, BCrypt.hashpw(password));
+        lambdaUpdate.eq(UserDO::getId, id).set(UserDO::getPassword, BCrypt.hashpw(password));
         return userMapper.update(null, lambdaUpdate);
     }
 
@@ -87,8 +87,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public Integer addUser(RegisterVO registerVO) {
         var userDO = BeanUtil.toBean(registerVO, UserDO.class);
-        userDO.setUserPassword(BCrypt.hashpw(registerVO.getPassword()));
-        userDO.setUserStatus(NORMAL.flag());
+        userDO.setPassword(BCrypt.hashpw(registerVO.getPassword()));
+        userDO.setStatus(NORMAL.flag());
         // TODO 改为从数据库或缓存中获取
         userDO.setTotalStorage(DEFAULT_USER_TOTAL_SPACE);
         // TODO 改为从数据库获取

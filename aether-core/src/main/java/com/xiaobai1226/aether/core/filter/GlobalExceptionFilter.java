@@ -1,10 +1,11 @@
 package com.xiaobai1226.aether.core.filter;
 
 import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotRoleException;
 import cn.hutool.http.HttpStatus;
-import com.xiaobai1226.aether.core.enums.ResultCodeEnum;
-import com.xiaobai1226.aether.core.exception.FailResultException;
-import com.xiaobai1226.aether.core.util.Result;
+import com.xiaobai1226.aether.common.enums.ResultCodeEnum;
+import com.xiaobai1226.aether.common.exception.FailResultException;
+import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.core.exception.StatusException;
 import org.noear.solon.core.handle.Context;
@@ -42,6 +43,9 @@ public class GlobalExceptionFilter implements Filter {
             } else { // 未登录
                 ctx.render(Result.fail(ResultCodeEnum.UNAUTHORIZED_ERROR));
             }
+        } catch (NotRoleException e) {
+            ctx.status(HttpStatus.HTTP_FORBIDDEN);
+            ctx.render(Result.fail(ResultCodeEnum.FORBIDDEN_ERROR));
         } catch (StatusException e) {
             // 如果是404交给前端处理
             if (e.getCode() == HttpStatus.HTTP_NOT_FOUND) {

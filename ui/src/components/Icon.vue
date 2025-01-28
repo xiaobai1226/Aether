@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {ref, watch} from "vue";
-import {getThumbnail} from "@/api/file";
+import {getThumbnail} from "@/api/v1/file";
 
 const props = defineProps({
   // 文件类型

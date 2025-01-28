@@ -4,7 +4,7 @@ import com.xiaobai1226.aether.core.domain.dto.ImageCaptchaDTO;
 import com.xiaobai1226.aether.core.service.intf.CaptchaService;
 import org.noear.solon.annotation.*;
 
-import static com.xiaobai1226.aether.core.constant.GateWayTagConsts.API_V1;
+import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
 
 /**
  * 验证码Controller
