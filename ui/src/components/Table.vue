@@ -26,7 +26,7 @@
         </template>
       </template>
       <template v-slot:append>
-        <div v-if="loadingStatus" class="loading" v-loading="loadingStatus" element-loading-text="加载中..."></div>
+        <div v-if="loadingStatus" class="loading" v-loading="loadingStatus" element-loading-text="加载中..." />
         <div v-if="noMore" class="no_more">没有更多了</div>
       </template>
     </el-table>

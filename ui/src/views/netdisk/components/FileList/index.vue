@@ -57,10 +57,35 @@
         <!--        </div>-->
         <div class="iconfont icon-refresh" @click="reload"></div>
       </div>
-      <!-- 导航 -->
-      <div>
+      <div class="second-op">
+        <!-- 导航 -->
         <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
         <Navigation ref="navigationRef" class="navigation" />
+        <el-dropdown>
+          <span class="iconfont icon-xianshimoshi" />
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="systemStore.changeDisplayMode(DisplayModeEnum.List)">
+                <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
+                  'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.List }" />
+                <span
+                  :class="{ 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.List }">列表模式</span>
+              </el-dropdown-item>
+              <el-dropdown-item @click="systemStore.changeDisplayMode(DisplayModeEnum.Thumbnail)">
+                  <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
+                  'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Thumbnail }" />
+                <span
+                  :class="{ 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Thumbnail }">缩略模式</span>
+              </el-dropdown-item>
+              <el-dropdown-item @click="systemStore.changeDisplayMode(DisplayModeEnum.Large)">
+                 <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
+                 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Large }" />
+                <span
+                  :class="{ 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Large }">大图模式</span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
       <div class="total_number">
         <span>共 {{ tableData.total }} 项 </span>
@@ -70,9 +95,9 @@
 
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
-        <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList"
-               :initFetch="false" :options="tableOptions" :loading="loading" :sortChange="sortChange"
-               @rowSelected="rowSelected">
+        <Table v-if="systemStore.displayMode === DisplayModeEnum.List" ref="dataTableRef" :columns="columns"
+               :dataSource="tableData" :fetch="loadDataList" :initFetch="false" :options="tableOptions"
+               :loading="loading" :sortChange="sortChange" @rowSelected="rowSelected">
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
@@ -90,7 +115,7 @@
                 <!-- TODO 需要删除 -->
                 <!--              <span v-if="row.status == 0" class="transfer-status">转码中</span>-->
                 <!--              <span v-if="row.status == 1" class="transfer-status transfer-fail">转码失败</span>-->
-            </span>
+              </span>
               <!-- 新建文件夹或重命名输入栏 -->
               <!--              <div class="edit-panel" v-if="showEditPanelIndex == index">-->
               <!--                <el-input v-model.trim="editPanelFileName" ref="editPanelRef"-->
@@ -102,15 +127,15 @@
               <!--              </div>-->
               <!-- 操作栏 -->
               <span class="op">
-              <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
-<!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
-                <span class="iconfont icon-download" @click="download(row)">下载</span>
-                <span class="iconfont icon-delete" @click="delFile(row)">删除</span>
-                <span class="iconfont icon-edit" @click="showEditPanel(index)">重命名</span>
-                <span class="iconfont icon-move" @click="moveFile(row)">移动</span>
-                <span class="iconfont icon-copy" @click="copyFile(row)">复制</span>
-              </template>
-            </span>
+                <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
+  <!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
+                  <span class="iconfont icon-download" @click="download(row)">下载</span>
+                  <span class="iconfont icon-delete" @click="delFile(row)">删除</span>
+                  <span class="iconfont icon-edit" @click="showEditPanel(index)">重命名</span>
+                  <span class="iconfont icon-move" @click="moveFile(row)">移动</span>
+                  <span class="iconfont icon-copy" @click="copyFile(row)">复制</span>
+                </template>
+              </span>
             </div>
           </template>
           <template #fileSize="{ index, row }">
@@ -118,6 +143,14 @@
             <span v-else>-</span>
           </template>
         </Table>
+        <ThumbnailAndLargeMode
+          v-if="systemStore.displayMode === DisplayModeEnum.Thumbnail" :dataSource="tableData" :fetch="loadDataList"
+          :config="thumbnailModeConfig" :options="tableOptions" :loading="loading" @rowSelected="selectionChange"
+          @rowClick="preview" />
+        <ThumbnailAndLargeMode
+          v-if="systemStore.displayMode === DisplayModeEnum.Large" :dataSource="tableData" :fetch="loadDataList"
+          :config="largeModeConfig" :options="tableOptions" :loading="loading" @rowSelected="selectionChange"
+          @rowClick="preview" />
       </div>
       <div class="no-data" v-else>
         <div class="no-data-inner">
@@ -169,12 +202,19 @@ import Navigation from '@/components/Navigation.vue'
 import { useRoute, useRouter } from 'vue-router'
 import Preview from '@/components/preview/Preview.vue'
 import ShareFile from '@/views/netdisk/components/ShareFile/index.vue'
+import ThumbnailAndLargeMode from '@/views/netdisk/components/FileDisplayMode/ThumbnailAndLargeMode/index.vue'
+import type { Config } from '@/views/netdisk/components/FileDisplayMode/ThumbnailAndLargeMode/index.vue'
 import { useUserStore } from '@/stores/user'
 import { RegexEnum } from '@/enums/RegexEnum'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
+import { useSystemStore } from '@/stores/system'
+import { DisplayModeEnum } from '@/enums/DisplayModeEnum'
 
 // 从pinia获取用户数据
 const userStore = useUserStore()
+
+// 获取系统配置
+const systemStore = useSystemStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -203,6 +243,24 @@ const columns: Column[] = [
     sortable: 'custom'
   }
 ]
+
+/**
+ * 缩略图显示模式配置
+ */
+const thumbnailModeConfig: Config = {
+  width: 128,
+  height: 170,
+  iconWidth: 60
+}
+
+/**
+ * 大图显示模式配置
+ */
+const largeModeConfig: Config = {
+  width: 168,
+  height: 234,
+  iconWidth: 128
+}
 
 /**
  * 初始化列表数据
@@ -274,11 +332,12 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
   // 请求后台获取文件列表
   getFileListByPage(getFileListByPageRequest, getFileListByPageRequest.pageNum === 1, loadingRef.value).then(({ data }) => {
     if (data == null) {
+      console.log('dasdasdasdasdas')
       if (tableData.value.pageNum === 1) {
         tableData.value = {
           list: [],
           pageNum: 1,
-          pageSize: 30,
+          pageSize: 50,
           total: 0,
           totalPage: 0
         }
@@ -516,6 +575,17 @@ const rowSelected = (rows: UserFileInfo[]) => {
       selectedFileIds.value.push(item.id)
     }
   })
+}
+
+/**
+ * 选中修改
+ * @param userFile 选中的数据项
+ */
+const selectionChange = (userFile: UserFileInfo) => {
+  if (userFile && userFile.id) {
+    const index = selectedFileIds.value.indexOf(userFile.id)
+    index !== -1 ? selectedFileIds.value.splice(index, 1) : selectedFileIds.value.push(userFile.id)
+  }
 }
 
 /**
@@ -854,6 +924,19 @@ const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => 
 <style scoped lang="scss">
 @import "@/styles/file.list.scss";
 
+.second-op {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .icon-xianshimoshi {
+    font-size: 20px;
+    margin-right: 20px;
+    cursor: pointer;
+  }
+
+}
+
 .dropdown_download {
   margin-right: 12px;
 }
@@ -867,5 +950,16 @@ const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => 
 .navigation {
   margin-top: 10px;
   margin-bottom: 10px;
+}
+
+.display-mode-item {
+  margin-right: 3px;
+  font-weight: bold;
+  visibility: hidden;
+}
+
+.display-mode-item-selected {
+  visibility: visible;
+  color: #5b9df8;
 }
 </style>
