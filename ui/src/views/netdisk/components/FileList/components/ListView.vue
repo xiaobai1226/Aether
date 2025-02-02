@@ -102,8 +102,15 @@ const props = defineProps({
   // },
 })
 
+// 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
+const topHeight = 60 + 20 + 30 + 46
+
+const tableHeight = ref(
+  window.innerHeight - topHeight - 50
+)
+
 const tableOptions = ref({
-  extHeight: 50,
+  tableHeight: tableHeight.value,
   selectType: 'checkbox'
 })
 

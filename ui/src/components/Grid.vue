@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import type { PropType } from 'vue'
 
 export interface Config {
@@ -35,7 +35,7 @@ const props = defineProps({
     type: Object,
     default: function() {
       return {
-        extHeight: 0,
+        tableHeight: 0,
         showIndex: false
       }
     }
@@ -53,13 +53,6 @@ const props = defineProps({
 
   click: Function
 })
-
-// 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
-const topHeight = 60 + 20 + 30 + 46
-
-const tableHeight = ref(
-  props.options.tableHeight ? props.options.tableHeight : window.innerHeight - topHeight - props.options.extHeight
-)
 
 /**
  * 加载下一页
@@ -87,7 +80,7 @@ const loadingStatus = computed(() => props.loading && props.dataSource.pageNum !
 
 <template>
   <div class="container" v-infinite-scroll="loadNextPage" :infinite-scroll-disabled="disabled"
-       :style="{height: tableHeight + 'px'}">
+       :style="{height: options.tableHeight + 'px'}">
     <div class="file-items-container">
       <template v-for="(item, index) in dataSource.list">
         <slot name="content" :item="item" :index="index" @click="click"></slot>

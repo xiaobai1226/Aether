@@ -165,7 +165,6 @@ import FolderSelect from '@/components/FolderSelect.vue'
 import Navigation from '@/components/Navigation.vue'
 import { useRoute } from 'vue-router'
 import Preview from '@/components/preview/Preview.vue'
-import type { Config } from '@/views/netdisk/components/FileDisplayMode/ThumbnailAndLargeMode/index.vue'
 import { useUserStore } from '@/stores/user'
 import { RegexEnum } from '@/enums/RegexEnum'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
@@ -191,11 +190,6 @@ const tableData = ref<GetFileListByPageResponse>({
   pageSize: 50,
   total: 0,
   totalPage: 0
-})
-
-const tableOptions = ref({
-  extHeight: 50,
-  selectType: 'checkbox'
 })
 
 /**
@@ -331,44 +325,6 @@ const sortChange = (sortMessage: any) => {
   tableData.value.pageNum = 1
   loadDataList(sortField, sortOrder)
 }
-
-/**
- * 监听路由中category，path参数的变化
- */
-watch(
-  () => route.query, (newQuery, oldQuery) => {
-    if (route.path !== '/netdisk/main') {
-      return
-    }
-
-    const category = newQuery.category
-    const path = newQuery.path
-
-    if (Array.isArray(category)) {
-      currentCategory.value = Number(category[0])
-    } else if (category) {
-      currentCategory.value = Number(category)
-    } else {
-      currentCategory.value = null
-    }
-
-    if (Array.isArray(path)) {
-      currentPath.value = path[0]
-    } else if (path) {
-      currentPath.value = path as string
-    } else {
-      currentPath.value = null
-    }
-
-    nextTick().then(() => {
-      navigationRef.value && navigationRef.value.updateFolderList(currentPath.value)
-    })
-
-    // 加载数据
-    reload()
-  },
-  { immediate: true }
-)
 
 /**
  * 展示新建文件夹或重命名输入框
@@ -761,11 +717,11 @@ const largeViewRef = ref()
  */
 const clearSelection = () => {
   if (systemStore.displayMode === DisplayModeEnum.List) {
-    listViewRef.value.clearSelection()
+    listViewRef.value && listViewRef.value.clearSelection()
   } else if (systemStore.displayMode === DisplayModeEnum.Thumbnail) {
-    thumbnailViewRef.value.clearSelection()
+    thumbnailViewRef.value && thumbnailViewRef.value.clearSelection()
   } else if (systemStore.displayMode === DisplayModeEnum.Large) {
-    largeViewRef.value.clearSelection()
+    largeViewRef.value && largeViewRef.value.clearSelection()
   }
 }
 
@@ -791,6 +747,46 @@ const clearSort = () => {
   }
 }
 
+/**
+ * 监听路由中category，path参数的变化
+ */
+watch(
+  () => route.query, (newQuery, oldQuery) => {
+    if (route.path !== '/netdisk/main') {
+      return
+    }
+
+    const category = newQuery.category
+    const path = newQuery.path
+
+    if (Array.isArray(category)) {
+      currentCategory.value = Number(category[0])
+    } else if (category) {
+      currentCategory.value = Number(category)
+    } else {
+      currentCategory.value = null
+    }
+
+    if (Array.isArray(path)) {
+      currentPath.value = path[0]
+    } else if (path) {
+      currentPath.value = path as string
+    } else {
+      currentPath.value = null
+    }
+
+    nextTick().then(() => {
+      navigationRef.value && navigationRef.value.updateFolderList(currentPath.value)
+    })
+
+    clearSelection()
+
+    // 加载数据
+    reload()
+  },
+  { immediate: true }
+)
+
 // const fileNameFuzzy = ref()
 //
 // // 搜素
@@ -801,7 +797,7 @@ const clearSort = () => {
 /**
  * 分享文件Ref
  */
-const shareFileRef = ref()
+// const shareFileRef = ref()
 
 /**
  * 分享文件

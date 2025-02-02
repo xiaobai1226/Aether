@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-table ref="dataTable" :data="dataSource.list || []" :height="tableHeight" @sort-change="sortChange"
+    <el-table ref="dataTable" :data="dataSource.list || []" :height="options.tableHeight" @sort-change="sortChange"
               :stripe="options.stripe" v-el-table-infinite-scroll="loadNextPage" :infinite-scroll-disabled="disabled"
               :border="options.border" header-row-class-name="table-header-row" highlight-current-row
               @row-click="rowClick" @selection-change="selectionChange">
@@ -102,7 +102,7 @@ const props = defineProps({
     type: Object,
     default: function() {
       return {
-        extHeight: 0,
+        tableHeight: 0,
         showIndex: false
       }
     }
@@ -143,13 +143,6 @@ const props = defineProps({
 // const layout = computed(() => {
 //   return `total, ${props.showPageSize ? 'sizes' : ''}, prev, pager, next, jumper`
 // })
-
-// 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
-const topHeight = 60 + 20 + 30 + 46
-
-const tableHeight = ref(
-  props.options.tableHeight ? props.options.tableHeight : window.innerHeight - topHeight - props.options.extHeight
-)
 
 // 初始化
 // const init = () => {
