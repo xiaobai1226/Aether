@@ -52,6 +52,7 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     FolderSelect: typeof import('./src/components/FolderSelect.vue')['default']
+    Grid: typeof import('./src/components/Grid.vue')['default']
     Icon: typeof import('./src/components/Icon.vue')['default']
     Navigation: typeof import('./src/components/Navigation.vue')['default']
     NoData: typeof import('./src/components/NoData.vue')['default']

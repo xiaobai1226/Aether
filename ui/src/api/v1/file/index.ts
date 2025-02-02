@@ -245,3 +245,10 @@ export const createDownloadSign = (ids: string): AxiosPromise => {
     showSuccessMsg: false
   } as NetdiskInternalAxiosRequestConfig)
 }
+
+/**
+ * 获取下载URL
+ */
+export const getDownloadUrl = (sign: string): string => {
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/download?sign=' + sign
+}

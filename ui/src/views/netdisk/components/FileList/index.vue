@@ -2,7 +2,7 @@
   <div>
     <div class="top">
       <div class="top-op">
-        <div class="btn" v-show="selectedFileIds.length == 0">
+        <div class="btn" v-show="selectedIds.length == 0">
           <el-button type="primary" @click="openUploadPopup">
             <span class="iconfont icon-upload"></span>
             上传
@@ -10,12 +10,12 @@
           <UploadPopup ref="uploadPopupRef" :category="currentCategory" :path="currentPath"
                        :callbackFunction="uploadFinishReload" />
         </div>
-        <el-button type="success" v-show="selectedFileIds.length == 0" @click="showEditPanel(-1)">
+        <el-button type="success" v-show="selectedIds.length == 0" @click="showEditPanel(-1)">
           <span class="iconfont icon-folder-add"></span>
           新建文件夹
         </el-button>
 
-        <el-dropdown class="dropdown_download" placement="bottom" v-show="selectedFileIds.length > 0">
+        <el-dropdown class="dropdown_download" placement="bottom" v-show="selectedIds.length > 0">
           <el-button type="success">
             <span class="iconfont icon-download"></span>
             下载
@@ -36,15 +36,15 @@
         <!--          <span class="iconfont icon-share"></span>-->
         <!--          分享-->
         <!--        </el-button>-->
-        <el-button type="danger" v-show="selectedFileIds.length > 0" @click="delFileBatch">
+        <el-button type="danger" v-show="selectedIds.length > 0" @click="delFileBatch">
           <span class="iconfont icon-delete"></span>
           删除
         </el-button>
-        <el-button type="warning" v-show="selectedFileIds.length > 0" @click="moveFileBatch">
+        <el-button type="warning" v-show="selectedIds.length > 0" @click="moveFileBatch">
           <span class="iconfont icon-move"></span>
           移动
         </el-button>
-        <el-button type="warning" v-show="selectedFileIds.length > 0" @click="copyFileBatch">
+        <el-button type="warning" v-show="selectedIds.length > 0" @click="copyFileBatch">
           <span class="iconfont icon-copy"></span>
           复制
         </el-button>
@@ -65,19 +65,19 @@
           <span class="iconfont icon-xianshimoshi" />
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item @click="systemStore.changeDisplayMode(DisplayModeEnum.List)">
+              <el-dropdown-item @click="changeDisplayMode(DisplayModeEnum.List)">
                 <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
                   'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.List }" />
                 <span
                   :class="{ 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.List }">列表模式</span>
               </el-dropdown-item>
-              <el-dropdown-item @click="systemStore.changeDisplayMode(DisplayModeEnum.Thumbnail)">
+              <el-dropdown-item @click="changeDisplayMode(DisplayModeEnum.Thumbnail)">
                   <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
                   'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Thumbnail }" />
                 <span
                   :class="{ 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Thumbnail }">缩略模式</span>
               </el-dropdown-item>
-              <el-dropdown-item @click="systemStore.changeDisplayMode(DisplayModeEnum.Large)">
+              <el-dropdown-item @click="changeDisplayMode(DisplayModeEnum.Large)">
                  <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
                  'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Large }" />
                 <span
@@ -87,70 +87,30 @@
           </template>
         </el-dropdown>
       </div>
-      <div class="total_number">
-        <span>共 {{ tableData.total }} 项 </span>
-        <span v-show="selectedFileIds.length > 0">已选中 {{ selectedFileIds.length }} 个文件/文件夹</span>
-      </div>
     </div>
 
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
-        <Table v-if="systemStore.displayMode === DisplayModeEnum.List" ref="dataTableRef" :columns="columns"
-               :dataSource="tableData" :fetch="loadDataList" :initFetch="false" :options="tableOptions"
-               :loading="loading" :sortChange="sortChange" @rowSelected="rowSelected">
-          <template #fileName="{index, row}">
-            <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
-              <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
-              <!--              <template v-if="row.category == 1 || row.category == 3">-->
-              <!--                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>-->
-              <!--              </template>-->
-              <!--              <template v-else>-->
-              <!-- 如果是文件-->
-              <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
-              <!-- 如果是文件夹-->
-              <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
-              <!--              </template>-->
-              <span class="file-name" :title="row.name">
-              <span @click="preview(row)">{{ row.name }}</span>
-                <!-- TODO 需要删除 -->
-                <!--              <span v-if="row.status == 0" class="transfer-status">转码中</span>-->
-                <!--              <span v-if="row.status == 1" class="transfer-status transfer-fail">转码失败</span>-->
-              </span>
-              <!-- 新建文件夹或重命名输入栏 -->
-              <!--              <div class="edit-panel" v-if="showEditPanelIndex == index">-->
-              <!--                <el-input v-model.trim="editPanelFileName" ref="editPanelRef"-->
-              <!--                          @keyup.enter="submitEditPanel(index)">-->
-              <!--                </el-input>-->
-              <!--                <span :class="['iconfont icon-right', editPanelFileName ? '' : 'not-allow']"-->
-              <!--                      @click="submitEditPanel(index)" />-->
-              <!--                <span class="iconfont icon-error" @click="hideEditPanel(index)" />-->
-              <!--              </div>-->
-              <!-- 操作栏 -->
-              <span class="op">
-                <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
-  <!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
-                  <span class="iconfont icon-download" @click="download(row)">下载</span>
-                  <span class="iconfont icon-delete" @click="delFile(row)">删除</span>
-                  <span class="iconfont icon-edit" @click="showEditPanel(index)">重命名</span>
-                  <span class="iconfont icon-move" @click="moveFile(row)">移动</span>
-                  <span class="iconfont icon-copy" @click="copyFile(row)">复制</span>
-                </template>
-              </span>
-            </div>
-          </template>
-          <template #fileSize="{ index, row }">
-            <span v-if="row.size">{{ Utils.sizeToStr(row.size) }}</span>
-            <span v-else>-</span>
-          </template>
-        </Table>
+        <!-- 列表模式 -->
+        <ListView ref="listViewRef" v-if="systemStore.displayMode === DisplayModeEnum.List" :dataSource="tableData"
+                  :fetch="loadDataList" :initFetch="false" :loading="loading" :sortChange="sortChange"
+                  :selectedIds="selectedIds"
+                  @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
+        <!-- 缩略模式 -->
+        <GridView ref="thumbnailViewRef" v-else-if="systemStore.displayMode === DisplayModeEnum.Thumbnail"
+                  :dataSource="tableData" :fetch="loadDataList" :loading="loading"
+                  @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
+        <!--        <ThumbnailAndLargeMode-->
+        <!--          v-else-if="systemStore.displayMode === DisplayModeEnum.Thumbnail" :dataSource="tableData"-->
+        <!--          :fetch="loadDataList"-->
+        <!--          :config="thumbnailModeConfig" :options="tableOptions" :loading="loading" @rowSelected="selectionChange"-->
+        <!--          @rowClick="click" />-->
         <ThumbnailAndLargeMode
-          v-if="systemStore.displayMode === DisplayModeEnum.Thumbnail" :dataSource="tableData" :fetch="loadDataList"
-          :config="thumbnailModeConfig" :options="tableOptions" :loading="loading" @rowSelected="selectionChange"
-          @rowClick="preview" />
-        <ThumbnailAndLargeMode
-          v-if="systemStore.displayMode === DisplayModeEnum.Large" :dataSource="tableData" :fetch="loadDataList"
+          v-else-if="systemStore.displayMode === DisplayModeEnum.Large" :dataSource="tableData" :fetch="loadDataList"
           :config="largeModeConfig" :options="tableOptions" :loading="loading" @rowSelected="selectionChange"
-          @rowClick="preview" />
+          @rowClick="click" />
       </div>
       <div class="no-data" v-else>
         <div class="no-data-inner">
@@ -170,17 +130,26 @@
       </div>
     </div>
 
-    <FolderSelect ref="folderSelectRef" @folderSelect="handleMoveOrCopyCallback"></FolderSelect>
+    <FolderSelect ref="folderSelectRef" @folderSelect="handleMoveOrCopyCallback" />
     <!-- 预览 -->
-    <Preview ref="previewRef"></Preview>
+    <Preview ref="previewRef" />
     <!-- 分享 -->
-    <ShareFile ref="shareFileRef"></ShareFile>
+    <!--    <ShareFile ref="shareFileRef"></ShareFile>-->
   </div>
 </template>
 
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import { getFileListByPage, newFolder, rename, del, move, copy, createDownloadSign } from '@/api/v1/file'
+import {
+  getFileListByPage,
+  newFolder,
+  rename,
+  del,
+  move,
+  copy,
+  createDownloadSign,
+  getDownloadUrl
+} from '@/api/v1/file'
 import type {
   GetFileListByPageRequest,
   GetFileListByPageResponse,
@@ -190,18 +159,14 @@ import type {
   MoveRequest,
   CopyRequest, DeleteRequest
 } from '@/api/v1/file/types'
-import Table from '@/components/Table.vue'
 import UploadPopup from '@/components/UploadPopup.vue'
-import type { Column } from '@/components/Table.vue'
-import Utils from '@/utils/Utils'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Icon from '@/components/Icon.vue'
 import Confirm from '@/utils/Confirm'
 import FolderSelect from '@/components/FolderSelect.vue'
 import Navigation from '@/components/Navigation.vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import Preview from '@/components/preview/Preview.vue'
-import ShareFile from '@/views/netdisk/components/ShareFile/index.vue'
 import ThumbnailAndLargeMode from '@/views/netdisk/components/FileDisplayMode/ThumbnailAndLargeMode/index.vue'
 import type { Config } from '@/views/netdisk/components/FileDisplayMode/ThumbnailAndLargeMode/index.vue'
 import { useUserStore } from '@/stores/user'
@@ -209,6 +174,8 @@ import { RegexEnum } from '@/enums/RegexEnum'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
 import { useSystemStore } from '@/stores/system'
 import { DisplayModeEnum } from '@/enums/DisplayModeEnum'
+import ListView from '@/views/netdisk/components/FileList/components/ListView.vue'
+import GridView from '@/views/netdisk/components/FileList/components/GridView.vue'
 
 // 从pinia获取用户数据
 const userStore = useUserStore()
@@ -217,41 +184,6 @@ const userStore = useUserStore()
 const systemStore = useSystemStore()
 
 const route = useRoute()
-const router = useRouter()
-
-/**
- * 列表列定义
- */
-const columns: Column[] = [
-  {
-    label: '文件名',
-    prop: 'fileName',
-    scopedSlots: 'fileName',
-    sortable: 'custom'
-  },
-  {
-    label: '修改时间',
-    prop: 'updateTime',
-    width: 200,
-    sortable: 'custom'
-  },
-  {
-    label: '文件大小',
-    prop: 'fileSize',
-    scopedSlots: 'fileSize',
-    width: 200,
-    sortable: 'custom'
-  }
-]
-
-/**
- * 缩略图显示模式配置
- */
-const thumbnailModeConfig: Config = {
-  width: 128,
-  height: 170,
-  iconWidth: 60
-}
 
 /**
  * 大图显示模式配置
@@ -298,8 +230,6 @@ const navigationRef = ref()
  */
 const loadingRef = ref()
 
-const dataTableRef = ref()
-
 /**
  * 正在加载标识
  */
@@ -332,7 +262,6 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
   // 请求后台获取文件列表
   getFileListByPage(getFileListByPageRequest, getFileListByPageRequest.pageNum === 1, loadingRef.value).then(({ data }) => {
     if (data == null) {
-      console.log('dasdasdasdasdas')
       if (tableData.value.pageNum === 1) {
         tableData.value = {
           list: [],
@@ -352,6 +281,15 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
       }
     }
 
+    // 如果是列表形式，加载数据完成后，恢复点击状态
+    if (systemStore.displayMode === DisplayModeEnum.List) {
+      nextTick(() => {
+        listViewRef.value.restoreSelection()
+        loading.value = false
+      })
+      return
+    }
+
     loading.value = false
   }).catch(() => {
     loading.value = false
@@ -363,7 +301,6 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
  */
 const reload = () => {
   tableData.value.pageNum = 1
-  dataTableRef.value && dataTableRef.value.clearSort()
   loadDataList()
 }
 
@@ -444,23 +381,6 @@ watch(
   },
   { immediate: true }
 )
-
-/**
- * 显示操作栏的索引 -1 为不展示，其他为要展示行的索引
- */
-const showActionBarIndex = ref<number>(-1)
-/**
- * 展示操作栏
- */
-const showActionBar = (index: number) => {
-  showActionBarIndex.value = index
-}
-/**
- * 隐藏操作栏
- */
-const hideActionBar = () => {
-  showActionBarIndex.value = -1
-}
 
 /**
  * 展示新建文件夹或重命名输入框
@@ -552,7 +472,6 @@ const showEditPanel = (index: number) => {
     if (inputElement) {
       // 选择输入框中的文字
       inputElement.select()
-      console.log('aaaaaaaaa', selectEndIndex)
       inputElement.setSelectionRange(0, selectEndIndex)
     }
   })
@@ -562,19 +481,13 @@ const showEditPanel = (index: number) => {
 /**
  * 选中的项ID
  */
-const selectedFileIds = ref<number[]>([])
+const selectedIds = ref<number[]>([])
 
 /**
- * 选中行方法
- * @param rows 选中的数据项
+ * 更新selectedIds
  */
-const rowSelected = (rows: UserFileInfo[]) => {
-  selectedFileIds.value = []
-  rows.forEach((item) => {
-    if (item.id) {
-      selectedFileIds.value.push(item.id)
-    }
-  })
+const updateSelected = (selectIds: number[]) => {
+  selectedIds.value = selectIds
 }
 
 /**
@@ -583,8 +496,8 @@ const rowSelected = (rows: UserFileInfo[]) => {
  */
 const selectionChange = (userFile: UserFileInfo) => {
   if (userFile && userFile.id) {
-    const index = selectedFileIds.value.indexOf(userFile.id)
-    index !== -1 ? selectedFileIds.value.splice(index, 1) : selectedFileIds.value.push(userFile.id)
+    const index = selectedIds.value.indexOf(userFile.id)
+    index !== -1 ? selectedIds.value.splice(index, 1) : selectedIds.value.push(userFile.id)
   }
 }
 
@@ -615,12 +528,12 @@ const moveFile = (userFileInfo: UserFileInfo) => {
  * 批量移动文件
  */
 const moveFileBatch = () => {
-  if (selectedFileIds.value.length == 0) {
+  if (selectedIds.value.length == 0) {
     ElMessage.warning(ResultErrorMsgEnum.ERROR_MOVE_CONTENT_EMPTY)
     return
   }
   currentMoveOrCopyFileIds.value = []
-  currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedFileIds.value)
+  currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedIds.value)
   folderSelectRef.value.showFolderDialog(0, currentPath.value)
 }
 
@@ -649,13 +562,13 @@ const handleMove = (targetPath: string) => {
   }
 
   move(data).then(() => {
+    clearSelection()
+
     // 重新加载数据
     reload()
 
     // 关闭选择文件夹弹窗
     folderSelectRef.value.close()
-
-    selectedFileIds.value = []
   })
 }
 
@@ -676,12 +589,12 @@ const copyFile = (userFileInfo: UserFileInfo) => {
  * 批量复制文件
  */
 const copyFileBatch = () => {
-  if (selectedFileIds.value.length == 0) {
+  if (selectedIds.value.length == 0) {
     ElMessage.warning(ResultErrorMsgEnum.ERROR_COPY_CONTENT_EMPTY)
     return
   }
   currentMoveOrCopyFileIds.value = []
-  currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedFileIds.value)
+  currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedIds.value)
   folderSelectRef.value.showFolderDialog(1, currentPath.value)
 }
 
@@ -717,8 +630,7 @@ const handleCopy = (targetPath: string) => {
     // 关闭选择文件夹弹窗
     folderSelectRef.value.close()
 
-    selectedFileIds.value = []
-    dataTableRef.value.clearSelection()
+    clearSelection()
 
     // 更新用户存储空间
     userStore.handleGetUserSpaceUsage()
@@ -759,12 +671,12 @@ const delFile = (userFileInfo: UserFileInfo) => {
  * 批量删除选中的文件
  */
 const delFileBatch = () => {
-  if (selectedFileIds.value.length == 0) {
+  if (selectedIds.value.length == 0) {
     ElMessage.warning(ResultErrorMsgEnum.ERROR_DEL_CONTENT_EMPTY)
     return
   }
   let currentDelFileIds: Array<number> = []
-  currentDelFileIds = currentDelFileIds.concat(selectedFileIds.value)
+  currentDelFileIds = currentDelFileIds.concat(selectedIds.value)
 
   const message = '你确定要删除所选的文件吗？删除的文件可在10天内通过回收站还原'
 
@@ -784,61 +696,11 @@ const handleDelete = (currentDelFileIds: Array<number>, message: string) => {
     }
 
     del(data).then(() => {
-      selectedFileIds.value = []
-      dataTableRef.value.clearSelection()
+      clearSelection()
 
       reload()
     })
   })
-}
-
-/**
- * 分享文件Ref
- */
-const shareFileRef = ref()
-
-/**
- * 分享文件
- * @param userFileInfo
- */
-const shareFile = (userFileInfo: UserFileInfo) => {
-  if (!userFileInfo || !userFileInfo.id || !userFileInfo.name) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_SHARE_CONTENT_EMPTY)
-    return
-  }
-  const currentShareFileIds: Array<number> = []
-  currentShareFileIds.push(userFileInfo.id)
-  openShareDialog(currentShareFileIds, userFileInfo.name)
-}
-
-/**
- * 批量分享文件
- */
-const shareFileBatch = () => {
-  if (selectedFileIds.value.length == 0) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_SHARE_CONTENT_EMPTY)
-    return
-  }
-  let currentShareFileIds: Array<number> = []
-  currentShareFileIds = currentShareFileIds.concat(selectedFileIds.value)
-
-  let title = ''
-  tableData.value.list.forEach((item) => {
-    if (selectedFileIds.value[0] == item.id) {
-      title = item.name + '等'
-    }
-  })
-
-  openShareDialog(currentShareFileIds, title)
-}
-
-/**
- * 打开分享弹窗
- * @param ids
- * @param title
- */
-const openShareDialog = (ids: Array<number>, title: string) => {
-  shareFileRef.value.show(ids, title)
 }
 
 const previewRef = ref()
@@ -850,26 +712,18 @@ const openUploadPopup = () => {
 }
 
 /**
- * 预览
- * @param row
+ * 点击
+ * @param userFile 用户文件信息
  */
-const preview = (row: UserFileInfo) => {
+const click = (userFile: UserFileInfo) => {
   // 目录
-  if (row.itemType == 0) {
-    dataTableRef.value.clearSelection()
-    selectedFileIds.value = []
-    navigationRef.value.openFolder(row.name)
+  if (userFile.itemType == 0) {
+    clearSelection()
+    navigationRef.value.openFolder(userFile.name)
     return
   }
 
-  previewRef.value.showPreview(row, 0)
-}
-
-const fileNameFuzzy = ref()
-
-// 搜素
-const search = () => {
-  reload()
+  previewRef.value.showPreview(userFile, 0)
 }
 
 // 下载文件
@@ -881,7 +735,6 @@ const download = (userFileInfo: UserFileInfo) => {
 
   const currentDownloadFileIds: Array<number> = []
   currentDownloadFileIds.push(userFileInfo.id)
-
   handleDownload(currentDownloadFileIds, 1)
 }
 
@@ -890,18 +743,18 @@ const download = (userFileInfo: UserFileInfo) => {
  * @param type 下载类型 1 批量下载 2 打包下载
  */
 const downloadBatch = (type: number) => {
-  if (selectedFileIds.value.length == 0) {
+  if (selectedIds.value.length == 0) {
     ElMessage.warning(ResultErrorMsgEnum.ERROR_DOWNLOAD_CONTENT_EMPTY)
     return
   }
   let currentDownloadFileIds: Array<number> = []
-  currentDownloadFileIds = currentDownloadFileIds.concat(selectedFileIds.value)
+  currentDownloadFileIds = currentDownloadFileIds.concat(selectedIds.value)
 
   handleDownload(currentDownloadFileIds, type)
 }
 
 /**
- * 删除文件
+ * 下载文件
  *
  * @param currentDownloadFileIds 要下载的文件ID集合
  * @param type 下载类型 1 批量下载 2 打包下载
@@ -910,15 +763,112 @@ const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => 
   if (type === 1) {
     currentDownloadFileIds.forEach((id => {
       createDownloadSign(id.toString()).then(({ data }) => {
-        window.open(import.meta.env.VITE_HTTP_BASE_URL + '/file/download?sign=' + data)
+        window.open(getDownloadUrl(data))
       })
     }))
   } else if (type === 2) {
     createDownloadSign(currentDownloadFileIds.join(',')).then(({ data }) => {
-      window.open(import.meta.env.VITE_HTTP_BASE_URL + '/file/download?sign=' + data)
+      window.open(getDownloadUrl(data))
     })
   }
 }
+
+const listViewRef = ref()
+
+const thumbnailViewRef = ref()
+
+/**
+ * 清除选中
+ */
+const clearSelection = () => {
+  if (systemStore.displayMode === DisplayModeEnum.List) {
+    listViewRef.value.clearSelection()
+  } else if (systemStore.displayMode === DisplayModeEnum.Thumbnail) {
+    thumbnailViewRef.value.clearSelection()
+  }
+}
+
+/**
+ * 修改显示模式
+ */
+const changeDisplayMode = (mode: DisplayModeEnum) => {
+  systemStore.changeDisplayMode(mode)
+
+  if (systemStore.displayMode === DisplayModeEnum.List) {
+    nextTick(() => {
+      listViewRef.value.restoreSelection()
+    })
+  } else if (systemStore.displayMode === DisplayModeEnum.Thumbnail) {
+    nextTick(() => {
+      thumbnailViewRef.value.restoreSelection(selectedIds.value)
+    })
+  }
+}
+
+/**
+ * 清除排序
+ */
+const clearSort = () => {
+  if (systemStore.displayMode === DisplayModeEnum.List) {
+    listViewRef.value.clearSort()
+  }
+}
+
+// const fileNameFuzzy = ref()
+//
+// // 搜素
+// const search = () => {
+//   reload()
+// }
+
+/**
+ * 分享文件Ref
+ */
+const shareFileRef = ref()
+
+/**
+ * 分享文件
+ * @param userFileInfo
+ */
+// const shareFile = (userFileInfo: UserFileInfo) => {
+//   if (!userFileInfo || !userFileInfo.id || !userFileInfo.name) {
+//     ElMessage.warning(ResultErrorMsgEnum.ERROR_SHARE_CONTENT_EMPTY)
+//     return
+//   }
+//   const currentShareFileIds: Array<number> = []
+//   currentShareFileIds.push(userFileInfo.id)
+//   openShareDialog(currentShareFileIds, userFileInfo.name)
+// }
+
+/**
+ * 批量分享文件
+ */
+// const shareFileBatch = () => {
+//   if (selectedIds.value.length == 0) {
+//     ElMessage.warning(ResultErrorMsgEnum.ERROR_SHARE_CONTENT_EMPTY)
+//     return
+//   }
+//   let currentShareFileIds: Array<number> = []
+//   currentShareFileIds = currentShareFileIds.concat(selectedIds.value)
+//
+//   let title = ''
+//   tableData.value.list.forEach((item) => {
+//     if (selectedIds.value[0] == item.id) {
+//       title = item.name + '等'
+//     }
+//   })
+//
+//   openShareDialog(currentShareFileIds, title)
+// }
+
+/**
+ * 打开分享弹窗
+ * @param ids
+ * @param title
+ */
+// const openShareDialog = (ids: Array<number>, title: string) => {
+//   shareFileRef.value.show(ids, title)
+// }
 </script>
 
 <style scoped lang="scss">
@@ -939,12 +889,6 @@ const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => 
 
 .dropdown_download {
   margin-right: 12px;
-}
-
-.total_number {
-  font-size: 12px;
-  color: #25262BB8;
-  margin-bottom: 5px;
 }
 
 .navigation {

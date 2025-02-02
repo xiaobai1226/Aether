@@ -3,7 +3,7 @@
     <el-table ref="dataTable" :data="dataSource.list || []" :height="tableHeight" @sort-change="sortChange"
               :stripe="options.stripe" v-el-table-infinite-scroll="loadNextPage" :infinite-scroll-disabled="disabled"
               :border="options.border" header-row-class-name="table-header-row" highlight-current-row
-              @row-click="handleRowClick" @selection-change="handleSelectionChange">
+              @row-click="rowClick" @selection-change="selectionChange">
       <!-- selection选择框 -->
       <el-table-column v-if="options.selectType && options.selectType == 'checkbox'" type="selection" width="50"
                        align="center" />
@@ -45,6 +45,9 @@
 import { ref, computed } from 'vue'
 import { default as vElTableInfiniteScroll } from 'el-table-infinite-scroll'
 
+/**
+ * 列定义
+ */
 export interface Column {
   label: string;
   prop: string;
@@ -55,8 +58,15 @@ export interface Column {
   sortable?: string | boolean;
 }
 
-const emit = defineEmits(['rowSelected', 'rowClick'])
+/**
+ * 父类回调方法
+ */
+const emit = defineEmits(['selection-change', 'row-click'])
+
 const props = defineProps({
+  /**
+   * 展示数据
+   */
   dataSource: {
     type: Object,
     default: () => {
@@ -68,14 +78,26 @@ const props = defineProps({
       }
     }
   },
+
+  /**
+   * 是否展示分页
+   */
   showPagination: {
     type: Boolean,
     default: true
   },
+
+  /**
+   * 是否显示页码
+   */
   showPageSize: {
     type: Boolean,
     default: true
   },
+
+  /**
+   * 选项
+   */
   options: {
     type: Object,
     default: function() {
@@ -85,16 +107,36 @@ const props = defineProps({
       }
     }
   },
+
+  /**
+   * 列定义
+   */
   columns: Array<Column>,
+
+  /**
+   * 加载方法
+   */
   fetch: Function,
+
+  /**
+   * 是否初始加载
+   */
   initFetch: {
     type: Boolean,
     default: true
   },
+
+  /**
+   * 加载
+   */
   loading: {
     type: Boolean,
     default: false
   },
+
+  /**
+   * 排序改变
+   */
   sortChange: Function
 })
 
@@ -136,11 +178,6 @@ const disabled = computed(() => props.loading || noMore.value)
  */
 const loadingStatus = computed(() => props.loading && props.dataSource.pageNum !== 1)
 
-// 清除选中
-const clearSelection = () => {
-  dataTable.value.clearSelection()
-}
-
 // 设置行选中
 const setCurrentRow = (rowKey, rowValue) => {
   let row = props.dataSource.list.find((item) => {
@@ -149,21 +186,20 @@ const setCurrentRow = (rowKey, rowValue) => {
   dataTable.value.setCurrentRow(row)
 }
 
-const clearSort = () => {
-  dataTable.value.clearSort()
+/**
+ * 行点击
+ * @param row
+ */
+const rowClick = (row: any) => {
+  emit('row-click', row)
 }
 
-// 将子组件暴露出去，否则父组件无法调用
-defineExpose({ setCurrentRow, clearSelection, clearSort })
-
-// 行点击
-const handleRowClick = (row: any) => {
-  emit('rowClick', row)
-}
-
-// 多选
-const handleSelectionChange = (row: any) => {
-  emit('rowSelected', row)
+/**
+ * 已选中的选项数组
+ * @param selection
+ */
+const selectionChange = (selection: []) => {
+  emit('selection-change', selection)
 }
 
 /**
@@ -172,6 +208,27 @@ const handleSelectionChange = (row: any) => {
 const loadNextPage = () => {
   props.dataSource.pageNum = props.dataSource.pageNum + 1
   props.fetch()
+}
+
+/**
+ * 清除排序
+ */
+const clearSort = () => {
+  dataTable.value.clearSort()
+}
+
+/**
+ * 清除选中
+ */
+const clearSelection = () => {
+  dataTable.value.clearSelection()
+}
+
+/**
+ * 用于多选表格，切换某一行的选中状态
+ */
+const toggleRowSelection = (row: any, selected: boolean) => {
+  dataTable.value.toggleRowSelection(row, selected)
 }
 
 // 切换每页的大小
@@ -186,6 +243,11 @@ const loadNextPage = () => {
 //   props.dataSource.pageNum = pageNum
 //   props.fetch()
 // }
+
+/**
+ * 将子组件暴露出去，否则父组件无法调用
+ */
+defineExpose({ setCurrentRow, clearSelection, clearSort, toggleRowSelection })
 </script>
 
 <style scoped lang="scss">
