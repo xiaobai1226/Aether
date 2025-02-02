@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref } from 'vue'
 import Utils from '@/utils/Utils'
 import Icon from '@/components/Icon.vue'
 import type { Column } from '@/components/Table.vue'

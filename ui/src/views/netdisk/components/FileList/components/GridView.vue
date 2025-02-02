@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Utils from '@/utils/Utils'
 import Grid from '@/components/Grid.vue'
 import type { UserFileInfo } from '@/api/v1/file/types'
@@ -38,6 +38,38 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+
+  /**
+   * 已选择的ID
+   */
+  selectedIds: {
+    type: Array<number>,
+    default: []
+  },
+
+  /**
+   * 宽度
+   */
+  width: {
+    type: Number,
+    default: 0
+  },
+
+  /**
+   * 高度
+   */
+  height: {
+    type: Number,
+    default: 0
+  },
+
+  /**
+   * icon宽度
+   */
+  iconWidth: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -49,7 +81,14 @@ const tableOptions = ref({
 /**
  * 已选择项ID集合
  */
-const selectedIds: Ref<number[]> = ref([])
+const localSelectedIds: Ref<number[]> = ref([...props.selectedIds])
+
+/**
+ * 处理本地变量变化并通知父组件
+ */
+watch(localSelectedIds, (newValue) => {
+  emit('update-selected', newValue)
+})
 
 /**
  * 鼠标所在的索引
@@ -85,82 +124,57 @@ const download = (userFile: UserFileInfo) => {
 }
 
 /**
- * 更新已选中项
- */
-const updateSelected = (selectedIds: number[]) => {
-  emit('update-selected', selectedIds)
-}
-
-/**
- * 当选择项发生变化时会触发该方法
- */
-const selectionChange = (newSelectedIds: number[]) => {
-  updateSelected(newSelectedIds)
-}
-
-/**
  * 是否全选
  */
 const isSelectAll = computed({
   get() {
-    return selectedIds.value.length === props.dataSource.list.length
+    return localSelectedIds.value.length === props.dataSource.list.length
   },
   set(val: boolean) {
     if (val) {
-      selectedIds.value = props.dataSource.list
+      localSelectedIds.value = props.dataSource.list
         .filter((userFile) => userFile.id)
         .map((userFile) => userFile.id as number)
     } else {
-      selectedIds.value = []
+      clearSelection()
     }
-
-    updateSelected(selectedIds.value)
   }
 })
 
 /**
  * 是否已选择，但未全部选择
  */
-const isIndeterminate = computed(() => selectedIds.value.length > 0 && selectedIds.value.length < props.dataSource.list.length)
+const isIndeterminate = computed(() => localSelectedIds.value.length > 0 && localSelectedIds.value.length < props.dataSource.list.length)
 
 /**
  * 清除选中
  */
 const clearSelection = () => {
-  selectedIds.value = []
-  updateSelected(selectedIds.value)
-}
-
-/**
- * 恢复选中状态
- */
-const restoreSelection = (parentSelectedIds: number[]) => {
-  if (parentSelectedIds.length > 0) {
-    selectedIds.value = parentSelectedIds
-  }
+  localSelectedIds.value = []
 }
 
 /**
  * 将子组件暴露出去，否则父组件无法调用
  */
-defineExpose({ clearSelection, restoreSelection })
+defineExpose({ clearSelection })
 </script>
 
 <template>
   <div class="op">
     <el-checkbox v-model="isSelectAll" :indeterminate="isIndeterminate" />
-    <span v-if="selectedIds.length === 0">全选</span>
+    <span v-if="localSelectedIds.length === 0">全选</span>
     <span>共 {{ dataSource.total }} 项 </span>
-    <span v-show="selectedIds.length > 0">已选中 {{ selectedIds.length }} 个文件/文件夹</span>
+    <span v-show="localSelectedIds.length > 0">已选中 {{ localSelectedIds.length }} 个文件/文件夹</span>
   </div>
-  <el-checkbox-group class="reset-checkbox-group" v-model="selectedIds" @change="selectionChange">
+  <el-checkbox-group class="reset-checkbox-group" v-model="localSelectedIds">
     <Grid :dataSource="dataSource" :fetch="fetch" :loading="loading" :options="tableOptions">
       <template #content="{item: userFile, index}">
         <div class="file-item" @click="emit('click', userFile)"
-             :style="{'background-color': selectedIds.indexOf(userFile.id) !== -1 ? '#f3fafe' : isBackgroundShow(index) ? '#f7f9fc' : ''}">
+             :style="{'background-color': localSelectedIds.indexOf(userFile.id) !== -1 ? '#f3fafe' : isBackgroundShow(index) ? '#f7f9fc' : '',
+             'width': width + 'px', 'height': height + 'px'}">
           <div class="top" @click.stop>
             <el-checkbox :value="userFile.id"
-                         :style="{visibility: (selectedIds.indexOf(userFile.id) !== -1 || isBackgroundShow(index)) ? 'visible' : ''}" />
+                         :style="{visibility: (localSelectedIds.indexOf(userFile.id) !== -1 || isBackgroundShow(index)) ? 'visible' : ''}" />
             <div class="other-button" :style="{visibility: isBackgroundShow(index) ? 'visible' : ''}">
               <!--              <span class="iconfont icon-share" />-->
               <span class="iconfont icon-download" @click="download(userFile)" />
@@ -196,7 +210,7 @@ defineExpose({ clearSelection, restoreSelection })
             </div>
           </div>
           <div class="content">
-            <Icon :width="60" :fileType="userFile.itemType === 1 ? userFile.fileType : -1" />
+            <Icon :width="iconWidth" :fileType="userFile.itemType === 1 ? userFile.fileType : -1" />
             <el-tooltip placement="bottom" effect="light" :hide-after="0">
               <div>
                 <div class="name">{{ userFile.name }}</div>
@@ -251,8 +265,6 @@ defineExpose({ clearSelection, restoreSelection })
   display: flex;
   flex-direction: column;
   text-align: center;
-  width: 128px;
-  height: 170px;
   margin-left: 32px;
   margin-bottom: 24px;
   border-radius: 8px;

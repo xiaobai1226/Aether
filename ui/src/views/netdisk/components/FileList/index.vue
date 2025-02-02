@@ -99,18 +99,16 @@
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
         <!-- 缩略模式 -->
         <GridView ref="thumbnailViewRef" v-else-if="systemStore.displayMode === DisplayModeEnum.Thumbnail"
-                  :dataSource="tableData" :fetch="loadDataList" :loading="loading"
+                  :width="128" :height="170" :iconWidth="60"
+                  :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
-        <!--        <ThumbnailAndLargeMode-->
-        <!--          v-else-if="systemStore.displayMode === DisplayModeEnum.Thumbnail" :dataSource="tableData"-->
-        <!--          :fetch="loadDataList"-->
-        <!--          :config="thumbnailModeConfig" :options="tableOptions" :loading="loading" @rowSelected="selectionChange"-->
-        <!--          @rowClick="click" />-->
-        <ThumbnailAndLargeMode
-          v-else-if="systemStore.displayMode === DisplayModeEnum.Large" :dataSource="tableData" :fetch="loadDataList"
-          :config="largeModeConfig" :options="tableOptions" :loading="loading" @rowSelected="selectionChange"
-          @rowClick="click" />
+        <!-- 大图模式 -->
+        <GridView ref="largeViewRef" v-else-if="systemStore.displayMode === DisplayModeEnum.Large"
+                  :width="168" :height="245" :iconWidth="128"
+                  :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
+                  @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
       </div>
       <div class="no-data" v-else>
         <div class="no-data-inner">
@@ -167,7 +165,6 @@ import FolderSelect from '@/components/FolderSelect.vue'
 import Navigation from '@/components/Navigation.vue'
 import { useRoute } from 'vue-router'
 import Preview from '@/components/preview/Preview.vue'
-import ThumbnailAndLargeMode from '@/views/netdisk/components/FileDisplayMode/ThumbnailAndLargeMode/index.vue'
 import type { Config } from '@/views/netdisk/components/FileDisplayMode/ThumbnailAndLargeMode/index.vue'
 import { useUserStore } from '@/stores/user'
 import { RegexEnum } from '@/enums/RegexEnum'
@@ -184,15 +181,6 @@ const userStore = useUserStore()
 const systemStore = useSystemStore()
 
 const route = useRoute()
-
-/**
- * 大图显示模式配置
- */
-const largeModeConfig: Config = {
-  width: 168,
-  height: 234,
-  iconWidth: 128
-}
 
 /**
  * 初始化列表数据
@@ -491,17 +479,6 @@ const updateSelected = (selectIds: number[]) => {
 }
 
 /**
- * 选中修改
- * @param userFile 选中的数据项
- */
-const selectionChange = (userFile: UserFileInfo) => {
-  if (userFile && userFile.id) {
-    const index = selectedIds.value.indexOf(userFile.id)
-    index !== -1 ? selectedIds.value.splice(index, 1) : selectedIds.value.push(userFile.id)
-  }
-}
-
-/**
  * 文件夹选择Ref
  */
 const folderSelectRef = ref()
@@ -777,6 +754,8 @@ const listViewRef = ref()
 
 const thumbnailViewRef = ref()
 
+const largeViewRef = ref()
+
 /**
  * 清除选中
  */
@@ -785,6 +764,8 @@ const clearSelection = () => {
     listViewRef.value.clearSelection()
   } else if (systemStore.displayMode === DisplayModeEnum.Thumbnail) {
     thumbnailViewRef.value.clearSelection()
+  } else if (systemStore.displayMode === DisplayModeEnum.Large) {
+    largeViewRef.value.clearSelection()
   }
 }
 
@@ -797,10 +778,6 @@ const changeDisplayMode = (mode: DisplayModeEnum) => {
   if (systemStore.displayMode === DisplayModeEnum.List) {
     nextTick(() => {
       listViewRef.value.restoreSelection()
-    })
-  } else if (systemStore.displayMode === DisplayModeEnum.Thumbnail) {
-    nextTick(() => {
-      thumbnailViewRef.value.restoreSelection(selectedIds.value)
     })
   }
 }
