@@ -1,92 +1,12 @@
 <template>
   <div>
     <div class="top">
-      <div class="top-op">
-        <div class="btn" v-show="selectedIds.length == 0">
-          <el-button type="primary" @click="openUploadPopup">
-            <span class="iconfont icon-upload"></span>
-            上传
-          </el-button>
-          <UploadPopup ref="uploadPopupRef" :category="currentCategory" :path="currentPath"
-                       :callbackFunction="uploadFinishReload" />
-        </div>
-        <el-button type="success" v-show="selectedIds.length == 0" @click="showEditPanel(-1)">
-          <span class="iconfont icon-folder-add"></span>
-          新建文件夹
-        </el-button>
-
-        <el-dropdown class="dropdown_download" placement="bottom" v-show="selectedIds.length > 0">
-          <el-button type="success">
-            <span class="iconfont icon-download"></span>
-            下载
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item>
-                <span @click="downloadBatch(1)">批量下载</span>
-              </el-dropdown-item>
-              <el-dropdown-item>
-                <span @click="downloadBatch(2)">打包下载</span>
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-
-        <!--        <el-button type="primary" v-show="selectedFileIds.length > 0" @click="shareFileBatch">-->
-        <!--          <span class="iconfont icon-share"></span>-->
-        <!--          分享-->
-        <!--        </el-button>-->
-        <el-button type="danger" v-show="selectedIds.length > 0" @click="delFileBatch">
-          <span class="iconfont icon-delete"></span>
-          删除
-        </el-button>
-        <el-button type="warning" v-show="selectedIds.length > 0" @click="moveFileBatch">
-          <span class="iconfont icon-move"></span>
-          移动
-        </el-button>
-        <el-button type="warning" v-show="selectedIds.length > 0" @click="copyFileBatch">
-          <span class="iconfont icon-copy"></span>
-          复制
-        </el-button>
-        <!--        <div class="search-panel">-->
-        <!--          <el-input clearable placeholder="输入文件名搜索" v-model="fileNameFuzzy" @keyup.enter="search">-->
-        <!--            <template #suffix>-->
-        <!--              <i class="iconfont icon-search" @click="search"></i>-->
-        <!--            </template>-->
-        <!--          </el-input>-->
-        <!--        </div>-->
-        <div class="iconfont icon-refresh" @click="reload"></div>
-      </div>
-      <div class="second-op">
-        <!-- 导航 -->
-        <!--        <Navigation ref="navigationRef" @navChange="navChange"/>-->
-        <Navigation ref="navigationRef" class="navigation" />
-        <el-dropdown>
-          <span class="iconfont icon-xianshimoshi" />
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="changeDisplayMode(DisplayModeEnum.List)">
-                <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
-                  'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.List }" />
-                <span
-                  :class="{ 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.List }">列表模式</span>
-              </el-dropdown-item>
-              <el-dropdown-item @click="changeDisplayMode(DisplayModeEnum.Thumbnail)">
-                  <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
-                  'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Thumbnail }" />
-                <span
-                  :class="{ 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Thumbnail }">缩略模式</span>
-              </el-dropdown-item>
-              <el-dropdown-item @click="changeDisplayMode(DisplayModeEnum.Large)">
-                 <span :class="{ 'iconfont icon-right': true, 'display-mode-item': true,
-                 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Large }" />
-                <span
-                  :class="{ 'display-mode-item-selected': systemStore.displayMode === DisplayModeEnum.Large }">大图模式</span>
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </div>
+      <ActionBar ref="actionBarRef" :selectedIds="selectedIds" :loading="loading" :currentCategory="currentCategory"
+                 :currentPath="currentPath"
+                 @reload="reload" @handle-delete="handleDelete" @show-edit-panel="showEditPanel"
+                 @handle-download="handleDownload" @update-move-copy-ids="updateMoveCopyIds"
+                 @show-folder-dialog="showFolderDialog" />
+      <NavigationActionBar ref="navigationActionBarRef" @change-display-mode="changeDisplayMode" />
     </div>
 
     <div ref="loadingRef">
@@ -157,12 +77,10 @@ import type {
   MoveRequest,
   CopyRequest, DeleteRequest
 } from '@/api/v1/file/types'
-import UploadPopup from '@/components/UploadPopup.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Icon from '@/components/Icon.vue'
 import Confirm from '@/utils/Confirm'
 import FolderSelect from '@/components/FolderSelect.vue'
-import Navigation from '@/components/Navigation.vue'
 import { useRoute } from 'vue-router'
 import Preview from '@/components/preview/Preview.vue'
 import { useUserStore } from '@/stores/user'
@@ -172,6 +90,8 @@ import { useSystemStore } from '@/stores/system'
 import { DisplayModeEnum } from '@/enums/DisplayModeEnum'
 import ListView from '@/views/netdisk/components/FileList/components/ListView.vue'
 import GridView from '@/views/netdisk/components/FileList/components/GridView.vue'
+import ActionBar from '@/views/netdisk/components/FileList/components/ActionBar.vue'
+import NavigationActionBar from '@/views/netdisk/components/FileList/components/NavigationActionBar.vue'
 
 // 从pinia获取用户数据
 const userStore = useUserStore()
@@ -201,11 +121,6 @@ const currentCategory = ref<number | null>(null)
  * 当前目录路径
  */
 const currentPath = ref<string | null>(null)
-
-/**
- * 导航Ref实例
- */
-const navigationRef = ref()
 
 /**
  * 加载Ref
@@ -266,7 +181,7 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
     // 如果是列表形式，加载数据完成后，恢复点击状态
     if (systemStore.displayMode === DisplayModeEnum.List) {
       nextTick(() => {
-        listViewRef.value.restoreSelection()
+        listViewRef.value && listViewRef.value.restoreSelection()
         loading.value = false
       })
       return
@@ -284,22 +199,6 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
 const reload = () => {
   tableData.value.pageNum = 1
   loadDataList()
-}
-
-/**
- * 上传完成后重新加载
- */
-const uploadFinishReload = (uploadPath?: string) => {
-  if (loading.value) {
-    return
-  }
-
-  const path = uploadPath ? uploadPath : null
-  if (currentPath.value !== path) {
-    return
-  }
-
-  reload()
 }
 
 /**
@@ -440,9 +339,24 @@ const updateSelected = (selectIds: number[]) => {
 const folderSelectRef = ref()
 
 /**
+ * 打开选择目录弹窗
+ * @param type 0 移动 1 复制
+ */
+const showFolderDialog = (type: number) => {
+  folderSelectRef.value.showFolderDialog(type, currentPath.value)
+}
+
+/**
  * 当前要移动、复制的文件
  */
 const currentMoveOrCopyFileIds = ref<Array<number>>([])
+
+/**
+ * 更新当前要移动、复制的文件
+ */
+const updateMoveCopyIds = (newCurrentMoveOrCopyFileIds: number[]) => {
+  currentMoveOrCopyFileIds.value = newCurrentMoveOrCopyFileIds
+}
 
 /**
  * 移动单个文件
@@ -454,19 +368,6 @@ const moveFile = (userFileInfo: UserFileInfo) => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value.push(userFileInfo.id)
-  folderSelectRef.value.showFolderDialog(0, currentPath.value)
-}
-
-/**
- * 批量移动文件
- */
-const moveFileBatch = () => {
-  if (selectedIds.value.length == 0) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_MOVE_CONTENT_EMPTY)
-    return
-  }
-  currentMoveOrCopyFileIds.value = []
-  currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedIds.value)
   folderSelectRef.value.showFolderDialog(0, currentPath.value)
 }
 
@@ -515,19 +416,6 @@ const copyFile = (userFileInfo: UserFileInfo) => {
   }
   currentMoveOrCopyFileIds.value = []
   currentMoveOrCopyFileIds.value.push(userFileInfo.id)
-  folderSelectRef.value.showFolderDialog(1, currentPath.value)
-}
-
-/**
- * 批量复制文件
- */
-const copyFileBatch = () => {
-  if (selectedIds.value.length == 0) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_COPY_CONTENT_EMPTY)
-    return
-  }
-  currentMoveOrCopyFileIds.value = []
-  currentMoveOrCopyFileIds.value = currentMoveOrCopyFileIds.value.concat(selectedIds.value)
   folderSelectRef.value.showFolderDialog(1, currentPath.value)
 }
 
@@ -601,22 +489,6 @@ const delFile = (userFileInfo: UserFileInfo) => {
 }
 
 /**
- * 批量删除选中的文件
- */
-const delFileBatch = () => {
-  if (selectedIds.value.length == 0) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_DEL_CONTENT_EMPTY)
-    return
-  }
-  let currentDelFileIds: Array<number> = []
-  currentDelFileIds = currentDelFileIds.concat(selectedIds.value)
-
-  const message = '你确定要删除所选的文件吗？删除的文件可在10天内通过回收站还原'
-
-  handleDelete(currentDelFileIds, message)
-}
-
-/**
  * 删除文件
  *
  * @param currentDelFileIds 要删除的文件ID集合
@@ -638,10 +510,12 @@ const handleDelete = (currentDelFileIds: Array<number>, message: string) => {
 
 const previewRef = ref()
 
-const uploadPopupRef = ref()
+const actionBarRef = ref()
+
+const navigationActionBarRef = ref()
 
 const openUploadPopup = () => {
-  uploadPopupRef.value.show()
+  actionBarRef.value.openUploadPopup()
 }
 
 /**
@@ -652,7 +526,7 @@ const click = (userFile: UserFileInfo) => {
   // 目录
   if (userFile.itemType == 0) {
     clearSelection()
-    navigationRef.value.openFolder(userFile.name)
+    navigationActionBarRef.value.openFolder(userFile.name)
     return
   }
 
@@ -669,21 +543,6 @@ const download = (userFileInfo: UserFileInfo) => {
   const currentDownloadFileIds: Array<number> = []
   currentDownloadFileIds.push(userFileInfo.id)
   handleDownload(currentDownloadFileIds, 1)
-}
-
-/**
- * 批量下载选中的文件
- * @param type 下载类型 1 批量下载 2 打包下载
- */
-const downloadBatch = (type: number) => {
-  if (selectedIds.value.length == 0) {
-    ElMessage.warning(ResultErrorMsgEnum.ERROR_DOWNLOAD_CONTENT_EMPTY)
-    return
-  }
-  let currentDownloadFileIds: Array<number> = []
-  currentDownloadFileIds = currentDownloadFileIds.concat(selectedIds.value)
-
-  handleDownload(currentDownloadFileIds, type)
 }
 
 /**
@@ -733,7 +592,7 @@ const changeDisplayMode = (mode: DisplayModeEnum) => {
 
   if (systemStore.displayMode === DisplayModeEnum.List) {
     nextTick(() => {
-      listViewRef.value.restoreSelection()
+      listViewRef.value && listViewRef.value.restoreSelection()
     })
   }
 }
@@ -743,7 +602,7 @@ const changeDisplayMode = (mode: DisplayModeEnum) => {
  */
 const clearSort = () => {
   if (systemStore.displayMode === DisplayModeEnum.List) {
-    listViewRef.value.clearSort()
+    listViewRef.value && listViewRef.value.clearSort()
   }
 }
 
@@ -776,7 +635,7 @@ watch(
     }
 
     nextTick().then(() => {
-      navigationRef.value && navigationRef.value.updateFolderList(currentPath.value)
+      navigationActionBarRef.value && navigationActionBarRef.value.updateFolderList(currentPath.value)
     })
 
     clearSelection()
@@ -814,27 +673,6 @@ watch(
 // }
 
 /**
- * 批量分享文件
- */
-// const shareFileBatch = () => {
-//   if (selectedIds.value.length == 0) {
-//     ElMessage.warning(ResultErrorMsgEnum.ERROR_SHARE_CONTENT_EMPTY)
-//     return
-//   }
-//   let currentShareFileIds: Array<number> = []
-//   currentShareFileIds = currentShareFileIds.concat(selectedIds.value)
-//
-//   let title = ''
-//   tableData.value.list.forEach((item) => {
-//     if (selectedIds.value[0] == item.id) {
-//       title = item.name + '等'
-//     }
-//   })
-//
-//   openShareDialog(currentShareFileIds, title)
-// }
-
-/**
  * 打开分享弹窗
  * @param ids
  * @param title
@@ -846,37 +684,4 @@ watch(
 
 <style scoped lang="scss">
 @import "@/styles/file.list.scss";
-
-.second-op {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  .icon-xianshimoshi {
-    font-size: 20px;
-    margin-right: 20px;
-    cursor: pointer;
-  }
-
-}
-
-.dropdown_download {
-  margin-right: 12px;
-}
-
-.navigation {
-  margin-top: 10px;
-  margin-bottom: 10px;
-}
-
-.display-mode-item {
-  margin-right: 3px;
-  font-weight: bold;
-  visibility: hidden;
-}
-
-.display-mode-item-selected {
-  visibility: visible;
-  color: #5b9df8;
-}
 </style>
