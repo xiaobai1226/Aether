@@ -6,25 +6,25 @@
                  @reload="reload" @handle-delete="handleDelete" @show-edit-panel="showEditPanel"
                  @handle-download="handleDownload" @update-move-copy-ids="updateMoveCopyIds"
                  @show-folder-dialog="showFolderDialog" />
-      <NavigationActionBar ref="navigationActionBarRef" @change-display-mode="changeDisplayMode" />
+      <NavigationActionBar ref="navigationActionBarRef" />
     </div>
 
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <!-- 列表模式 -->
-        <ListView ref="listViewRef" v-if="systemStore.displayMode === DisplayModeEnum.List" :dataSource="tableData"
-                  :fetch="loadDataList" :initFetch="false" :loading="loading" :sortChange="sortChange"
+        <ListView ref="listViewRef" v-if="netdiskConfig.displayMode.id === List.id" :dataSource="tableData"
+                  :fetch="loadDataList" :initFetch="false" :loading="loading"
                   :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
         <!-- 缩略模式 -->
-        <GridView ref="thumbnailViewRef" v-else-if="systemStore.displayMode === DisplayModeEnum.Thumbnail"
+        <GridView ref="thumbnailViewRef" v-else-if="netdiskConfig.displayMode.id === Thumbnail.id"
                   :width="128" :height="170" :iconWidth="60"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
         <!-- 大图模式 -->
-        <GridView ref="largeViewRef" v-else-if="systemStore.displayMode === DisplayModeEnum.Large"
+        <GridView ref="largeViewRef" v-else-if="netdiskConfig.displayMode.id === Large.id"
                   :width="168" :height="245" :iconWidth="128"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
@@ -87,17 +87,26 @@ import { useUserStore } from '@/stores/user'
 import { RegexEnum } from '@/enums/RegexEnum'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
 import { useSystemStore } from '@/stores/system'
-import { DisplayModeEnum } from '@/enums/DisplayModeEnum'
+import { List, Thumbnail, Large } from '@/enums/DisplayModeEnum'
 import ListView from '@/views/netdisk/components/FileList/components/ListView.vue'
 import GridView from '@/views/netdisk/components/FileList/components/GridView.vue'
 import ActionBar from '@/views/netdisk/components/FileList/components/ActionBar.vue'
 import NavigationActionBar from '@/views/netdisk/components/FileList/components/NavigationActionBar.vue'
 
-// 从pinia获取用户数据
+/**
+ * 从pinia获取用户数据
+ */
 const userStore = useUserStore()
 
-// 获取系统配置
+/**
+ * 获取系统配置
+ */
 const systemStore = useSystemStore()
+
+/**
+ * 获取网盘配置
+ */
+const netdiskConfig = systemStore.netdiskConfig
 
 const route = useRoute()
 
@@ -135,25 +144,19 @@ const loading = ref(false)
 /**
  * 加载文件列表
  */
-const loadDataList = (sortField?: number, sortOrder?: number) => {
+const loadDataList = () => {
   loading.value = true
 
   const getFileListByPageRequest: GetFileListByPageRequest = {
     pageNum: tableData.value.pageNum,
     pageSize: tableData.value.pageSize,
-    category: currentCategory.value
+    category: currentCategory.value,
+    sortingField: netdiskConfig.sortingConfig.sortingField.id,
+    sortingMethod: netdiskConfig.sortingConfig.sortingMethod.id
   }
 
   if (currentPath.value != null) {
     getFileListByPageRequest.path = currentPath.value as string
-  }
-
-  if (sortField) {
-    getFileListByPageRequest.sortField = sortField
-  }
-
-  if (sortOrder) {
-    getFileListByPageRequest.sortOrder = sortOrder
   }
 
   // 请求后台获取文件列表
@@ -179,7 +182,7 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
     }
 
     // 如果是列表形式，加载数据完成后，恢复点击状态
-    if (systemStore.displayMode === DisplayModeEnum.List) {
+    if (netdiskConfig.displayMode.id === List.id) {
       nextTick(() => {
         listViewRef.value && listViewRef.value.restoreSelection()
         loading.value = false
@@ -199,30 +202,6 @@ const loadDataList = (sortField?: number, sortOrder?: number) => {
 const reload = () => {
   tableData.value.pageNum = 1
   loadDataList()
-}
-
-/**
- * 排序查询
- */
-const sortChange = (sortMessage: any) => {
-  let sortField = undefined
-  if (sortMessage.prop === 'fileName') {
-    sortField = 1
-  } else if (sortMessage.prop === 'updateTime') {
-    sortField = 2
-  } else if (sortMessage.prop === 'fileSize') {
-    sortField = 3
-  }
-
-  let sortOrder = undefined
-  if (sortMessage.order === 'ascending') {
-    sortOrder = 1
-  } else if (sortMessage.order === 'descending') {
-    sortOrder = 2
-  }
-
-  tableData.value.pageNum = 1
-  loadDataList(sortField, sortOrder)
 }
 
 /**
@@ -575,34 +554,12 @@ const largeViewRef = ref()
  * 清除选中
  */
 const clearSelection = () => {
-  if (systemStore.displayMode === DisplayModeEnum.List) {
+  if (netdiskConfig.displayMode.id === List.id) {
     listViewRef.value && listViewRef.value.clearSelection()
-  } else if (systemStore.displayMode === DisplayModeEnum.Thumbnail) {
+  } else if (netdiskConfig.displayMode.id === Thumbnail.id) {
     thumbnailViewRef.value && thumbnailViewRef.value.clearSelection()
-  } else if (systemStore.displayMode === DisplayModeEnum.Large) {
+  } else if (netdiskConfig.displayMode.id === Large.id) {
     largeViewRef.value && largeViewRef.value.clearSelection()
-  }
-}
-
-/**
- * 修改显示模式
- */
-const changeDisplayMode = (mode: DisplayModeEnum) => {
-  systemStore.changeDisplayMode(mode)
-
-  if (systemStore.displayMode === DisplayModeEnum.List) {
-    nextTick(() => {
-      listViewRef.value && listViewRef.value.restoreSelection()
-    })
-  }
-}
-
-/**
- * 清除排序
- */
-const clearSort = () => {
-  if (systemStore.displayMode === DisplayModeEnum.List) {
-    listViewRef.value && listViewRef.value.clearSort()
   }
 }
 
@@ -642,8 +599,34 @@ watch(
 
     // 加载数据
     reload()
-  },
+  }, // 可选，如果设置为 true，组件挂载时会立即触发一次回调
   { immediate: true }
+)
+
+/**
+ * 监听显示模式的变化
+ */
+watch(() => netdiskConfig.displayMode, (newValue, oldValue) => {
+  nextTick(() => {
+    if (newValue.id === List.id) {
+      listViewRef.value && listViewRef.value.restoreSelection()
+    }
+  })
+})
+
+/**
+ * 监听排序配置的组合变化
+ */
+watch(
+  () => [netdiskConfig.sortingConfig.sortingField, netdiskConfig.sortingConfig.sortingMethod], (newValues, oldValues) => {
+    if (netdiskConfig.displayMode.id === List.id) {
+      listViewRef.value &&
+      listViewRef.value.sort(netdiskConfig.sortingConfig.sortingField.elField, netdiskConfig.sortingConfig.sortingMethod.elStr)
+    }
+
+    clearSelection()
+    reload()
+  }, { deep: true }
 )
 
 // const fileNameFuzzy = ref()

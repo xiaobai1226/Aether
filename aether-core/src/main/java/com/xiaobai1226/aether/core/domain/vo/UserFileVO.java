@@ -32,12 +32,12 @@ public class UserFileVO {
     private Integer pageSize;
 
     /**
-     * 排序字段 1 文件名 2 文件修改日期 3 文件大小
+     * 排序字段 0 文件名 1 创建时间 2 修改时间 3 文件大小
      */
-    private Integer sortField;
+    private Integer sortingField;
 
     /**
-     * 排序顺序 1 升序 2 降序
+     * 排序顺序 0 升序 1 降序
      */
-    private Integer sortOrder;
+    private Integer sortingMethod;
 }

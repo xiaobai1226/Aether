@@ -235,11 +235,9 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 分页对象
         Page<UserFileDTO> page = new Page<>(userFileVO.getPageNum(), userFileVO.getPageSize());
-        Integer sortFieldIndex = userFileVO.getSortField();
-        Integer sortOrder = userFileVO.getSortOrder();
 
         // 查询文件列表
-        var userFileDTOList = userFileMapper.getFileListByPage(page, userFileDO, sortFieldIndex, sortOrder);
+        var userFileDTOList = userFileMapper.getFileListByPage(page, userFileDO, userFileVO.getSortingField(), userFileVO.getSortingMethod());
 
         // 判断结果是否为空
         if (CollUtil.isNotEmpty(userFileDTOList)) {

@@ -3,6 +3,7 @@
     <el-table ref="dataTable" :data="dataSource.list || []" :height="options.tableHeight" @sort-change="sortChange"
               :stripe="options.stripe" v-el-table-infinite-scroll="loadNextPage" :infinite-scroll-disabled="disabled"
               :border="options.border" header-row-class-name="table-header-row" highlight-current-row
+              :default-sort="{ prop: defaultProp, order: defaultOrder }"
               @row-click="rowClick" @selection-change="selectionChange">
       <!-- selection选择框 -->
       <el-table-column v-if="options.selectType && options.selectType == 'checkbox'" type="selection" width="50"
@@ -61,7 +62,7 @@ export interface Column {
 /**
  * 父类回调方法
  */
-const emit = defineEmits(['selection-change', 'row-click'])
+const emit = defineEmits(['selection-change', 'row-click', 'sort-change'])
 
 const props = defineProps({
   /**
@@ -135,9 +136,14 @@ const props = defineProps({
   },
 
   /**
-   * 排序改变
+   * 默认排序字段
    */
-  sortChange: Function
+  defaultProp: String,
+
+  /**
+   * 默认排序方式
+   */
+  defaultOrder: String
 })
 
 // const layout = computed(() => {
@@ -196,6 +202,14 @@ const selectionChange = (selection: []) => {
 }
 
 /**
+ * 当排序条件发生变化时会触发该方法
+ * @param data
+ */
+const sortChange = (data: any) => {
+  emit('sort-change', data)
+}
+
+/**
  * 加载下一页
  */
 const loadNextPage = () => {
@@ -224,6 +238,13 @@ const toggleRowSelection = (row: any, selected: boolean) => {
   dataTable.value.toggleRowSelection(row, selected)
 }
 
+/**
+ * 修改排序
+ */
+const sort = (prop: string, order: string) => {
+  dataTable.value.sort(prop, order)
+}
+
 // 切换每页的大小
 // const handlePageSizeChange = (size: number) => {
 //   props.dataSource.pageSize = size
@@ -240,7 +261,7 @@ const toggleRowSelection = (row: any, selected: boolean) => {
 /**
  * 将子组件暴露出去，否则父组件无法调用
  */
-defineExpose({ setCurrentRow, clearSelection, clearSort, toggleRowSelection })
+defineExpose({ setCurrentRow, clearSelection, clearSort, toggleRowSelection, sort })
 </script>
 
 <style scoped lang="scss">

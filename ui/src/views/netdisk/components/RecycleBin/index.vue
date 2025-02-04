@@ -21,7 +21,7 @@
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList" :initFetch="false"
-               :options="tableOptions" @rowSelected="rowSelected" :loading="loading" :sortChange="sortChange">
+               :options="tableOptions" @selection-change="rowSelected" :loading="loading" @sort-change="sortChange">
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
@@ -121,10 +121,19 @@ const tableData = ref<GetRecycleBinListByPageResponse>({
   total: 0,
   totalPage: 0
 })
-const tableOptions = {
-  extHeight: 20,
+
+
+// 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
+const topHeight = 60 + 20 + 30 + 46
+
+const tableHeight = ref(
+  window.innerHeight - topHeight - 20
+)
+
+const tableOptions = ref({
+  tableHeight: tableHeight.value,
   selectType: 'checkbox'
-}
+})
 
 /**
  * 加载Ref

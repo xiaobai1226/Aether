@@ -23,14 +23,14 @@ export interface GetFileListByPageRequest {
   pageSize: number;
 
   /**
-   * 排序字段 1 文件名 2 文件修改日期 3 文件大小
+   * 排序字段
    */
-  sortField?: number;
+  sortingField: number;
 
   /**
-   * 排序顺序 1 升序 2 降序
+   * 排序方式
    */
-  sortOrder?: number;
+  sortingMethod: number;
 }
 
 /**

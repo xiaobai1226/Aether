@@ -4,11 +4,24 @@ import Utils from '@/utils/Utils'
 import Icon from '@/components/Icon.vue'
 import type { Column } from '@/components/Table.vue'
 import type { UserFileInfo } from '@/api/v1/file/types'
+import { CreateTime, SortingFieldEnum } from '@/enums/SortingFieldEnum'
+import { ASC, DESC, SortingMethodEnum } from '@/enums/SortingMethodEnum'
+import { useSystemStore } from '@/stores/system'
 
 /**
  * 父类回调方法
  */
 const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file'])
+
+/**
+ * 获取系统配置
+ */
+const systemStore = useSystemStore()
+
+/**
+ * 获取网盘配置
+ */
+const netdiskConfig = systemStore.netdiskConfig
 
 /**
  * 列表列定义
@@ -71,11 +84,6 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-
-  /**
-   * 排序改变
-   */
-  sortChange: Function,
 
   /**
    * 已选择的ID
@@ -167,7 +175,35 @@ const selectionChange = (userFiles: UserFileInfo[]) => {
       .map((userFile) => userFile.id as number)
     updateSelected(newSelectedIds)
   }
+}
 
+/**
+ * 当排序条件发生变化时会触发该方法
+ * @param data
+ */
+const sortChange = (data: any) => {
+  if (data.prop === netdiskConfig.sortingConfig.sortingField.elField && data.order === netdiskConfig.sortingConfig.sortingMethod.elStr) {
+    return
+  }
+
+  for (const key in SortingFieldEnum) {
+    const item = SortingFieldEnum[key]
+    if (data.prop === item.elField) {
+      systemStore.changeSortingField(item)
+      break
+    }
+  }
+
+  for (const key in SortingMethodEnum) {
+    let item = SortingMethodEnum[key]
+    if (data.order === item.elStr) {
+      if (!data.order) {
+        item = netdiskConfig.sortingConfig.sortingMethod === ASC ? DESC : ASC
+      }
+      systemStore.changeSortingMethod(item)
+      break
+    }
+  }
 }
 
 /**
@@ -184,16 +220,20 @@ const clearSelection = () => {
 }
 
 /**
- * 清除排序
+ * 修改排序
  */
-const clearSort = () => {
-  dataTableRef.value.clearSort()
+const sort = (prop: string, order: string) => {
+  if (prop === CreateTime.elField) {
+    dataTableRef.value.clearSort()
+  } else {
+    dataTableRef.value.sort(prop, order)
+  }
 }
 
 /**
  * 将子组件暴露出去，否则父组件无法调用
  */
-defineExpose({ clearSelection, clearSort, restoreSelection })
+defineExpose({ clearSelection, restoreSelection, sort })
 </script>
 
 <template>
@@ -201,9 +241,10 @@ defineExpose({ clearSelection, clearSort, restoreSelection })
     <span>共 {{ dataSource.total }} 项 </span>
     <span v-show="selectedIds.length > 0">已选中 {{ selectedIds.length }} 个文件/文件夹</span>
   </div>
-  <Table ref="dataTableRef" :columns="columns"
-         :dataSource="dataSource" :fetch="fetch" :initFetch="false" :options="tableOptions"
-         :loading="loading" :sortChange="sortChange" @selection-change="selectionChange">
+  <Table ref="dataTableRef" :columns="columns" :dataSource="dataSource" :fetch="fetch" :initFetch="false"
+         :options="tableOptions" :loading="loading" :default-prop="netdiskConfig.sortingConfig.sortingField.elField"
+         :default-order="netdiskConfig.sortingConfig.sortingMethod.elStr"
+         @sort-change="sortChange" @selection-change="selectionChange">
     <!-- 文件名称 -->
     <template #fileName="{index, row}">
       <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">

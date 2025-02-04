@@ -18,22 +18,28 @@
         </where>
         ORDER BY user_file.item_type ASC
         <choose>
-            <when test="sortFieldIndex == 1 and sortOrder == 1">
+            <when test="sortingField == 0 and sortingMethod == 0">
                 , user_file.name ASC
             </when>
-            <when test="sortFieldIndex == 1 and sortOrder == 2">
+            <when test="sortingField == 0 and sortingMethod == 1">
                 , user_file.name DESC
             </when>
-            <when test="sortFieldIndex == 2 and sortOrder == 1">
+            <when test="sortingField == 1 and sortingMethod == 0">
+                , user_file.create_time ASC
+            </when>
+            <when test="sortingField == 1 and sortingMethod == 1">
+                , user_file.create_time DESC
+            </when>
+            <when test="sortingField == 2 and sortingMethod == 0">
                 , user_file.update_time ASC
             </when>
-            <when test="sortFieldIndex == 2 and sortOrder == 2">
+            <when test="sortingField == 2 and sortingMethod == 1">
                 , user_file.update_time DESC
             </when>
-            <when test="sortFieldIndex == 3 and sortOrder == 1">
+            <when test="sortingField == 3 and sortingMethod == 0">
                 , file.size ASC
             </when>
-            <when test="sortFieldIndex == 3 and sortOrder == 2">
+            <when test="sortingField == 3 and sortingMethod == 1">
                 , file.size DESC
             </when>
         </choose>

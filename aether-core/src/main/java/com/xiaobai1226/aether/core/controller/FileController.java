@@ -84,11 +84,11 @@ public class FileController {
             parentId = parentUserFile.getId();
         }
 
-        if (userFileVO.getSortField() == null) {
-            userFileVO.setSortField(1);
+        if (userFileVO.getSortingField() == null) {
+            userFileVO.setSortingField(0);
         }
-        if (userFileVO.getSortOrder() == null) {
-            userFileVO.setSortOrder(1);
+        if (userFileVO.getSortingMethod() == null) {
+            userFileVO.setSortingMethod(0);
         }
         return userFileService.getFileList(userId, parentId, userFileVO);
     }

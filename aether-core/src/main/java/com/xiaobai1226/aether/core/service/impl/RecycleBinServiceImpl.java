@@ -83,7 +83,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 //        } else
 
         if (recycleBinVO.getSortField() == 2 && recycleBinVO.getSortOrder() == 1) {
-            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+            lambdaQuery.orderByAsc(RecycleBinDO::getCreateTime);
         } else if (recycleBinVO.getSortField() == 2 && recycleBinVO.getSortOrder() == 2) {
             lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
         }
