@@ -6,13 +6,13 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.core.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.DownloadRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.domain.dto.common.PageResult;
 import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.*;
-import com.xiaobai1226.aether.core.enums.UserFileCategoryEnum;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.FileService;
@@ -534,7 +534,7 @@ public class FileController {
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
 
-            if (userFileDO == null || !UserFileCategoryEnum.isPicture(userFileDO.getCategory())) {
+            if (userFileDO == null || !CategoryEnum.isPictureBySuffix(userFileDO.getSuffix())) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
 
@@ -577,7 +577,7 @@ public class FileController {
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
 
-            if (userFileDO == null || !UserFileCategoryEnum.isVideo(userFileDO.getCategory())) {
+            if (userFileDO == null || !CategoryEnum.isVideoBySuffix(userFileDO.getSuffix())) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
 

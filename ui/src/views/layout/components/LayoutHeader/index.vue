@@ -60,7 +60,7 @@ const updatePassword = () => {
 const uploaderRef = ref()
 
 const toAdmin = () => {
-  router.push('/admin')
+  router.push('/admin/dashboard')
 }
 
 </script>
@@ -72,20 +72,24 @@ const toAdmin = () => {
       <div class="name">Aether</div>
     </div>
     <div class="right-panel">
-      <span v-if="accountStore.accountInfo.roleId === 1" class="iconfont icon-kongzhitai" @click="toAdmin"></span>
-
+      <el-tooltip content="控制台">
+        <span v-if="accountStore.accountInfo.roleId === 1" class="iconfont icon-kongzhitai" @click="toAdmin"></span>
+      </el-tooltip>
       <el-popover :width="800" trigger="click" v-model:visible="uploaderStore.isShowUploader" :offset="20"
                   transition="none"
                   :hide-after="0"
                   :popper-style="{ padding: '0px' }">
         <template #reference>
-          <span class="iconfont icon-transfer"></span>
+          <span>
+             <el-tooltip content="上传列表">
+              <span class="iconfont icon-transfer"></span>
+            </el-tooltip>
+          </span>
         </template>
         <template #default>
           <Uploader ref="uploaderRef" />
         </template>
       </el-popover>
-
       <el-dropdown>
         <div class="user-info">
           <!-- 头像 -->

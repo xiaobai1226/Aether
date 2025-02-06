@@ -32,15 +32,15 @@
       </div>
       <div class="no-data" v-else>
         <div class="no-data-inner">
-          <Icon iconName="no_data" :width="120" fit="fill"></Icon>
+          <Icon :iconUrl="NO_DATA.iconUrl" :width="120" fit="fill"></Icon>
           <div class="tips">当前目录为空，上传你的第一个文件吧</div>
           <div class="op-list">
             <div class="op-item" @click="openUploadPopup">
-              <Icon iconName="file" :width="60"></Icon>
+              <Icon :iconUrl="FILE.iconUrl" :width="60"></Icon>
               <div>上传文件</div>
             </div>
             <div class="op-item" v-if="!currentCategory" @click="showEditPanel(-1)">
-              <Icon iconName="folder" :width="60"></Icon>
+              <Icon :iconUrl="FOLDER.iconUrl" :width="60"></Icon>
               <div>新建目录</div>
             </div>
           </div>
@@ -92,6 +92,7 @@ import ListView from '@/views/netdisk/components/FileList/components/ListView.vu
 import GridView from '@/views/netdisk/components/FileList/components/GridView.vue'
 import ActionBar from '@/views/netdisk/components/FileList/components/ActionBar.vue'
 import NavigationActionBar from '@/views/netdisk/components/FileList/components/NavigationActionBar.vue'
+import { FOLDER, NO_DATA, FILE } from '@/enums/IconEnum'
 
 /**
  * 从pinia获取用户数据

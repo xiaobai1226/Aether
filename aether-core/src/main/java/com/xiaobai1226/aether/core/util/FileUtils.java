@@ -8,9 +8,9 @@ import cn.hutool.core.io.NioUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.core.constant.FolderNameConsts;
 import com.xiaobai1226.aether.domain.entity.FileDO;
-import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.web.webdav.impl.ShardingInputStream;
@@ -18,7 +18,6 @@ import org.noear.solon.web.webdav.impl.ShardingInputStream;
 import java.io.*;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Objects;
 
 /**
  * 文件工具类
@@ -243,7 +242,7 @@ public class FileUtils {
 
     public static void deleteFile(FileDO fileDO, String rootPath) {
         // 删除缩略图
-        if (Objects.equals(FileTypeEnum.PICTURE.id(), fileDO.getFileType()) || Objects.equals(FileTypeEnum.VIDEO.id(), fileDO.getFileType())) {
+        if (CategoryEnum.isPictureBySuffix(fileDO.getSuffix()) || CategoryEnum.isVideoBySuffix(fileDO.getSuffix())) {
             // 设置文件存储全路径
             var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, fileDO.getThumbnail());
             if (FileUtil.exist(thumbnailFilePath)) {

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { MenuChildren } from '@/views/old/types/MenuChildren'
 import Utils from '@/utils/Utils'
 import { useUserStore } from '@/stores/user'
+import { All, CategoryEnum } from '@/enums/CategoryEnum'
 
 // 从pinia获取用户数据
 const userStore = useUserStore()
@@ -11,40 +11,7 @@ const userStore = useUserStore()
 const route = useRoute()
 const router = useRouter()
 
-const menus: MenuChildren[] = [
-  {
-    icon: 'all-fill',
-    name: '全部',
-    category: null
-  },
-  {
-    icon: 'video_fill_light',
-    name: '视频',
-    category: 1
-  },
-  {
-    icon: 'MusicAcc',
-    name: '音频',
-    category: 2
-  },
-  {
-    icon: 'image-fill',
-    name: '图片',
-    category: 3
-  },
-  {
-    icon: 'format-doc',
-    name: '文档',
-    category: 4
-  },
-  {
-    icon: 'more',
-    name: '其他',
-    category: 0
-  }
-]
-
-const currentCategory = ref<number | null>(menus[0].category)
+const currentCategory = ref<number | null>(All.id)
 const currentPath = ref<string>(route.path)
 
 const NETDISK_PATH = '/netdisk/main'
@@ -132,12 +99,10 @@ userStore.handleGetUserSpaceUsage()
 
 <template>
   <div class="menu-sub-list">
-    <div :class="['menu-item-sub', (currentPath == NETDISK_PATH && currentCategory == sub.category) ?  'active' : '']"
-         v-for="(sub, index) in menus"
-         :key="index"
-         @click="jump(NETDISK_PATH, sub.category)">
-      <span :class="['iconfont', 'icon-' + sub.icon]" v-if="sub.icon"></span>
-      <span class="text">{{ sub.name }}</span>
+    <div :class="['menu-item-sub', (currentPath == NETDISK_PATH && currentCategory == item.id) ?  'active' : '']"
+         v-for="item in CategoryEnum" :key="item.id ? item.id : -1" @click="jump(NETDISK_PATH, item.id)">
+      <span :class="['iconfont', 'icon-' + item.icon]" v-if="item.icon"></span>
+      <span class="text">{{ item.name }}</span>
     </div>
 
     <el-divider class="divider" />

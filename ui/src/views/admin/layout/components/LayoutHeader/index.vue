@@ -64,7 +64,9 @@ const toMain = () => {
       <div class="name">Aether 管理</div>
     </div>
     <div class="right-panel">
-      <span class="iconfont icon-main" @click="toMain"></span>
+      <el-tooltip content="主页">
+        <span class="iconfont icon-main" @click="toMain"></span>
+      </el-tooltip>
 
       <el-dropdown>
         <div class="user-info">

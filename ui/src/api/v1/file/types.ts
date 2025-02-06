@@ -128,9 +128,9 @@ export interface UserFileInfo {
   name?: string;
 
   /**
-   * 文件分类
+   * 文件后缀
    */
-  category?: number;
+  suffix?: string;
 
   /**
    * 创建时间
@@ -151,11 +151,6 @@ export interface UserFileInfo {
    * 缩略图
    */
   thumbnail?: string;
-
-  /**
-   * 文件类型
-   */
-  fileType?: number;
 
   /**
    * md5唯一标识

@@ -31,21 +31,21 @@
         <el-progress type="circle" :width="50" :percentage="item.md5Progress"
                      v-if="item.status == STATUS.init.value"></el-progress>
         <div class="op-btn">
-          <Icon :width="28" class="btn-item" iconName="pause" title="暂停"
+          <Icon :width="28" class="btn-item" :iconUrl="PAUSE.iconUrl" title="暂停"
                 v-if="item.status === STATUS.uploading.value"
                 @click="uploaderStore.pauseUpload(item.uid)"></Icon>
           <span v-if="item.status === STATUS.pause.value">
-              <Icon :width="28" class="btn-item" iconName="upload"
+              <Icon :width="28" class="btn-item" :iconUrl="UPLOAD.iconUrl"
                     v-if="item.status === STATUS.pause.value" title="上传"
                     @click="uploaderStore.startUpload(item.uid, 1)"></Icon>
-              <Icon :width="28" class="del btn-item" iconName="delete" title="取消"
+              <Icon :width="28" class="del btn-item" :iconUrl="DELETE.iconUrl" title="取消"
                     v-if="item.status === STATUS.pause.value"
                     @click="uploaderStore.cancelUpload(item.uid)"></Icon>
             </span>
-          <Icon :width="28" class="clean btn-item" iconName="clean" title="清除"
+          <Icon :width="28" class="clean btn-item" :iconUrl="CLEAN.iconUrl" title="清除"
                 v-if="item.status == STATUS.upload_finish.value || item.status == STATUS.upload_seconds.value"
                 @click="uploaderStore.clearUploadRecord(item.uid, index, 2)"></Icon>
-          <Icon :width="28" class="clean btn-item" iconName="upload" title="重新开始"
+          <Icon :width="28" class="clean btn-item" :iconUrl="UPLOAD.iconUrl" title="重新开始"
                 v-if="item.status === STATUS.cancel.value"
                 @click="uploaderStore.startUpload(item.uid,2)"></Icon>
         </div>
@@ -64,6 +64,7 @@ import Icon from '@/components/Icon.vue'
 import type { UploadFileItem } from '@/views/netdisk/components/Uploader/types'
 import { STATUS } from '@/views/netdisk/components/Uploader/types'
 import { useUploaderStore } from '@/stores/uploader'
+import { CLEAN, DELETE, PAUSE, UPLOAD } from '@/enums/IconEnum'
 
 const props = defineProps({
   fileList: {

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.xiaobai1226.aether.core.mapper.UserFileMapper">
-    <!--    分页查询用户文件列表-->
+    <!-- 分页查询用户文件列表 -->
     <select id="getFileListByPage" resultType="com.xiaobai1226.aether.core.domain.dto.UserFileDTO">
-        SELECT user_file.*, file.size, file.thumbnail, file.file_type, file.identifier, file.path
+        SELECT user_file.*, file.size, file.thumbnail, file.identifier, file.path
         FROM user_file AS user_file
         LEFT JOIN file AS file ON user_file.file_id = file.id
         <where>
@@ -12,8 +12,25 @@
             <if test="userFileDO.parentId != null">
                 AND user_file.parent_id = #{userFileDO.parentId}
             </if>
-            <if test="userFileDO.category != null">
-                AND user_file.category = #{userFileDO.category}
+            <if test="userFileDO.itemType != null">
+                AND user_file.item_type = #{userFileDO.itemType}
+            </if>
+            <if test="categoryId != null">
+                <choose>
+                    <when test="categoryId == 0">
+                        AND (user_file.suffix NOT IN
+                        <foreach collection="suffixSet" item="suffix" open="(" separator="," close=")">
+                            #{suffix}
+                        </foreach>
+                        OR user_file.suffix IS NULL)
+                    </when>
+                    <otherwise>
+                        AND user_file.suffix IN
+                        <foreach collection="suffixSet" item="suffix" open="(" separator="," close=")">
+                            #{suffix}
+                        </foreach>
+                    </otherwise>
+                </choose>
             </if>
         </where>
         ORDER BY user_file.item_type ASC
@@ -47,7 +64,7 @@
 
     <!--    查询用户文件列表根据ID集合-->
     <select id="getUserFileDTOByIds" resultType="com.xiaobai1226.aether.core.domain.dto.UserFileDTO">
-        SELECT user_file.*, file.size, file.thumbnail, file.file_type, file.identifier, file.path
+        SELECT user_file.*, file.size, file.thumbnail, file.identifier, file.path
         FROM user_file AS user_file
         LEFT JOIN file AS file ON user_file.file_id = file.id
         <where>
@@ -64,7 +81,7 @@
     <select id="getUserFileDTOByNameAndParentId" resultType="com.xiaobai1226.aether.core.domain.dto.UserFileDTO">
         SELECT user_file.id, user_file.name, user_file.item_type, user_file.create_time, user_file.update_time,
         file.size,
-        file.thumbnail, file.file_type, file.identifier, file.path
+        file.thumbnail, file.identifier, file.path
         FROM user_file AS user_file
         LEFT JOIN file AS file ON user_file.file_id = file.id
         <where>
@@ -78,7 +95,7 @@
 
     <!--    查询用户文件列表 TODO 确认这个是否有必要存在，可以用getUserFileDTOByIdsAndUserId代替，自己通过逻辑实现-->
     <select id="getUserFileTreeDTOByIdsAndUserId" resultType="com.xiaobai1226.aether.core.domain.dto.UserFileTreeDTO">
-        SELECT user_file.*, file.size, file.thumbnail, file.file_type, file.identifier
+        SELECT user_file.*, file.size, file.thumbnail, file.identifier
         FROM user_file AS user_file
         LEFT JOIN file AS file ON user_file.file_id = file.id
         <where>
@@ -93,7 +110,7 @@
 
     <!--    查询用户文件列表-->
     <select id="getUserFileDTOByParentIdAndUserId" resultType="com.xiaobai1226.aether.core.domain.dto.UserFileTreeDTO">
-        SELECT user_file.*, file.size, file.thumbnail, file.file_type, file.identifier
+        SELECT user_file.*, file.size, file.thumbnail, file.identifier
         FROM user_file AS user_file
         LEFT JOIN file AS file ON user_file.file_id = file.id
         <where>

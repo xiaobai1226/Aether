@@ -217,7 +217,8 @@ defineExpose({ clearSelection })
             </div>
           </div>
           <div class="content">
-            <Icon :width="iconWidth" :fileType="userFile.itemType === 1 ? userFile.fileType : -1" />
+            <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
+                  :width="iconWidth" />
             <el-tooltip placement="bottom" effect="light" :hide-after="0">
               <div>
                 <div class="name">{{ userFile.name }}</div>

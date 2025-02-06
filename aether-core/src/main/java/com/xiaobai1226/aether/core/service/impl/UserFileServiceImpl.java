@@ -3,12 +3,14 @@ package com.xiaobai1226.aether.core.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
 import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
+import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.core.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
 import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
@@ -23,7 +25,6 @@ import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFolderVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
-import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.mapper.UserFileMapper;
 import com.xiaobai1226.aether.core.service.intf.FileService;
@@ -41,13 +42,12 @@ import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.data.annotation.Tran;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
+import static com.xiaobai1226.aether.common.enums.CategoryEnum.OTHER;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
 import static com.xiaobai1226.aether.core.enums.UploadStatusEnum.*;
@@ -226,9 +226,15 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             userFileVO.setPageSize(-1);
         }
 
+        Set<String> suffixSet = null;
         // 如果分类为全部分类，则不设置分类条件
         if (userFileVO.getCategory() != null) {
-            userFileDO.setCategory(userFileVO.getCategory());
+            if (userFileVO.getCategory().equals(OTHER.id())) {
+                suffixSet = CategoryEnum.getAllSuffix();
+            } else {
+                suffixSet = CategoryEnum.getSuffixSet(userFileVO.getCategory());
+            }
+            userFileDO.setItemType(FILE.flag());
         } else {
             userFileDO.setParentId(parentId);
         }
@@ -237,7 +243,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         Page<UserFileDTO> page = new Page<>(userFileVO.getPageNum(), userFileVO.getPageSize());
 
         // 查询文件列表
-        var userFileDTOList = userFileMapper.getFileListByPage(page, userFileDO, userFileVO.getSortingField(), userFileVO.getSortingMethod());
+        var userFileDTOList = userFileMapper.getFileListByPage(page, userFileDO, userFileVO.getCategory(), suffixSet, userFileVO.getSortingField(), userFileVO.getSortingMethod());
 
         // 判断结果是否为空
         if (CollUtil.isNotEmpty(userFileDTOList)) {
@@ -285,13 +291,14 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         LambdaUpdateWrapper<UserFileDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<>();
         lambdaUpdateWrapper.set(UserFileDO::getName, newName).eq(UserFileDO::getId, id).eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, userFileStatus.flag());
 
-        // TODO 重新设计category和File的fileType字段
-//        if (UserFileItemTypeEnum.isFile(userFileDO.getItemType())) {
-//            var category = FileTypeEnum.getEnumByFileName(newName).category().flag();
-//            if (!Objects.equals(category, userFileDO.getCategory())) {
-//                lambdaUpdateWrapper.set(UserFileDO::getCategory, category);
-//            }
-//        }
+        if (UserFileItemTypeEnum.isFile(userFileDO.getItemType())) {
+            var suffix = FileNameUtil.extName(newName);
+            if (StrUtil.isNotEmpty(suffix)) {
+                lambdaUpdateWrapper.set(UserFileDO::getSuffix, suffix.toLowerCase());
+            } else {
+                lambdaUpdateWrapper.set(UserFileDO::getSuffix, null);
+            }
+        }
 
         var updateNameResult = userFileMapper.update(null, lambdaUpdateWrapper);
 
@@ -398,31 +405,29 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             }
         }
 
-        // 获取文件类型
-        var fileType = FileTypeEnum.getEnumByFileName(uploadTempFileDTO.getFileName());
         String thumbnailFileName = null;
 //        String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH + FileUtils.replaceFileExtName(finalFileName, SystemConsts.THUMBNAIL_SUFFIX);
-//        // 设置文件存储全路径
-//        var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnailFileName);
-//        uploadFileCacheDTO.setThumbnailFilePath(thumbnailFilePath);
-//
-//        // 图片生成缩略图
-//        if (FileTypeEnum.PICTURE == fileType) {
+        // 设置文件存储全路径
+        var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnailFileName);
+        uploadFileCacheDTO.setThumbnailFilePath(thumbnailFilePath);
+
+        // 图片生成缩略图
+        if (CategoryEnum.isPictureByName(uploadTempFileDTO.getFileName())) {
 //            var result = ImageUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150, -1);
 //            thumbnailFileName = result ? thumbnailFileName : null;
-//        } else if (FileTypeEnum.VIDEO == fileType) { // 视频生成缩略图
+        } else if (CategoryEnum.isVideoByName(uploadTempFileDTO.getFileName())) { // 视频生成缩略图
 //            var result = VideoUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150);
 //            thumbnailFileName = result ? thumbnailFileName : null;
-//        } else {
-//            thumbnailFileName = null;
-//        }
-//
-//        if (thumbnailFileName == null) {
-//            uploadFileCacheDTO.setThumbnailFilePath(null);
-//        }
+        } else {
+            thumbnailFileName = null;
+        }
+
+        if (thumbnailFileName == null) {
+            uploadFileCacheDTO.setThumbnailFilePath(null);
+        }
 
         // 写入File库，获取文件ID
-        var fileId = fileService.addFile(finalFileName, finalFilePath, finalFileSize, uploadTempFileDTO.getIdentifier(), thumbnailFileName, fileType);
+        var fileId = fileService.addFile(finalFileName, finalFilePath, finalFileSize, uploadTempFileDTO.getIdentifier(), thumbnailFileName);
 
         if (fileId == null) {
             throw new FailResultException(SYSTEM_ERROR);
@@ -688,9 +693,11 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         if (UserFileItemTypeEnum.isFile(userFileItemType)) {
             userFileDO.setFileId(fileId);
-            // TODO 改为数据库的
-            var userFileType = FileTypeEnum.getEnumByFileName(fileName);
-            userFileDO.setCategory(userFileType.category().flag());
+
+            var suffix = FileNameUtil.extName(fileName);
+            if (StrUtil.isNotEmpty(suffix)) {
+                userFileDO.setSuffix(suffix.toLowerCase());
+            }
         }
 
         var resultCount = userFileMapper.insert(userFileDO);

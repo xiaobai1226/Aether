@@ -8,6 +8,7 @@ import com.xiaobai1226.aether.core.domain.dto.UserFileDTO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 用户文件表Mapper
@@ -25,7 +26,7 @@ public interface UserFileMapper extends BaseMapper<UserFileDO> {
      * @param sortingMethod 排序顺序，0 升序 1 降序
      * @return 文件列表
      */
-    List<UserFileDTO> getFileListByPage(IPage<UserFileDTO> page, @Param("userFileDO") UserFileDO userFileDO, @Param("sortingField") Integer sortingField, @Param("sortingMethod") Integer sortingMethod);
+    List<UserFileDTO> getFileListByPage(IPage<UserFileDTO> page, @Param("userFileDO") UserFileDO userFileDO, @Param("categoryId") Integer categoryId, @Param("suffixSet") Set<String> suffixSet, @Param("sortingField") Integer sortingField, @Param("sortingMethod") Integer sortingMethod);
 
     /**
      * 获取文件列表

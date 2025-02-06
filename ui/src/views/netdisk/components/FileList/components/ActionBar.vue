@@ -205,7 +205,9 @@ defineExpose({ openUploadPopup })
       <span class="iconfont icon-copy"></span>
       复制
     </el-button>
-    <div class="iconfont icon-refresh" @click="reload"></div>
+    <el-tooltip content="刷新">
+      <span class="iconfont icon-refresh" @click="reload" />
+    </el-tooltip>
   </div>
 </template>
 

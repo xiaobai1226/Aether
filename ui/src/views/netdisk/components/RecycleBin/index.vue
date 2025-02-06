@@ -29,10 +29,7 @@
               <!--                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>-->
               <!--              </template>-->
               <!--              <template v-else>-->
-              <!-- 如果是文件-->
-              <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
-              <!-- 如果是文件夹-->
-              <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
+              <Icon :itemType="row.itemType" :suffix="row.suffix" :thumbnail="row.thumbnail" />
               <!--              </template>-->
 
               <span class="file-name" :title="row.name">{{ row.name }}</span>
@@ -55,7 +52,7 @@
       </div>
       <div class="no-data" v-else>
         <div class="no-data-inner">
-          <Icon iconName="no_data" :width="120" fit="fill"></Icon>
+          <Icon :iconUrl="NO_DATA.iconUrl" :width="120" fit="fill" />
           <div class="tips">您的回收站为空哦</div>
         </div>
       </div>
@@ -78,6 +75,7 @@ import Icon from '@/components/Icon.vue'
 import Confirm from '@/utils/Confirm'
 import { ElMessage } from 'element-plus'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
+import { NO_DATA } from '@/enums/IconEnum'
 
 /**
  * 列定义

@@ -253,17 +253,11 @@ defineExpose({ clearSelection, restoreSelection, sort })
         <!--                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>-->
         <!--              </template>-->
         <!--              <template v-else>-->
-        <!-- 如果是文件-->
-        <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
-        <!-- 如果是文件夹-->
-        <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
+        <Icon :itemType="row.itemType" :suffix="row.suffix" :thumbnail="row.thumbnail" />
         <!--              </template>-->
         <span class="file-name" :title="row.name">
               <span @click="emit('click', row)">{{ row.name }}</span>
-          <!-- TODO 需要删除 -->
-          <!--              <span v-if="row.status == 0" class="transfer-status">转码中</span>-->
-          <!--              <span v-if="row.status == 1" class="transfer-status transfer-fail">转码失败</span>-->
-              </span>
+        </span>
         <!-- 新建文件夹或重命名输入栏 -->
         <!--              <div class="edit-panel" v-if="showEditPanelIndex == index">-->
         <!--                <el-input v-model.trim="editPanelFileName" ref="editPanelRef"-->
