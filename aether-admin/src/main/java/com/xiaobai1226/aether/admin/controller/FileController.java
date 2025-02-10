@@ -45,7 +45,10 @@ public class FileController {
     @Post
     @Mapping("/generateThumbnails")
     public void generateThumbnails(@Param("fileIds") String fileIds) {
-        List<Integer> ids = Arrays.stream(fileIds.split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().collect(Collectors.toList());
+        List<Integer> ids = null;
+        if (StrUtil.isNotEmpty(fileIds)) {
+            ids = Arrays.stream(fileIds.split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().collect(Collectors.toList());
+        }
 
         // 获取要处理的文件
         var fileDOList = fileService.getNoThumbnailFileDOList(ids);

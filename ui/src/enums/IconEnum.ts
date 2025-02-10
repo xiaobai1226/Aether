@@ -3,7 +3,7 @@
  * @param iconName icon名称
  */
 const url = (iconName: string): string => {
-  return new URL('/src/assets/icon-image/' + iconName + '.png', import.meta.url).href
+  return new URL('../assets/icon-image/' + iconName + '.png', import.meta.url).href
 }
 
 /**
