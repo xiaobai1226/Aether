@@ -122,6 +122,7 @@ const toMain = () => {
   .right-panel {
     display: flex;
     align-items: center;
+    gap: 24px;
 
     .icon-main {
       font-size: 18px;
@@ -130,13 +131,12 @@ const toMain = () => {
     }
 
     .user-info {
-      margin-left: 10px;
       display: flex;
       align-items: center;
       cursor: pointer;
 
       .avatar {
-        margin: 0 5px 0 15px;
+        margin: 0 5px 0 0;
       }
 
       .nick-name {

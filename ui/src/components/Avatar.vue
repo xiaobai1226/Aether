@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch, ref } from 'vue'
-import { getAvatar } from '@/api/v1/user'
+import { getAvatarUrl } from '@/api/v1/user'
 
 const props = defineProps({
   width: {
@@ -19,9 +19,11 @@ const avatarUrl = ref('')
  * 更新头像图片
  */
 const updateAvatarImage = () => {
-  getAvatar().then(({ data }) => {
-    avatarUrl.value = URL.createObjectURL(new Blob([data]))
-  })
+  // getAvatar().then(({ data }) => {
+  //   avatarUrl.value = URL.createObjectURL(new Blob([data]))
+  // })
+
+  avatarUrl.value = getAvatarUrl()
 }
 
 defineExpose({ updateAvatarImage })

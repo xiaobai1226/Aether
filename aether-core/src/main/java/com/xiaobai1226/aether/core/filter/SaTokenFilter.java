@@ -41,7 +41,13 @@ public class SaTokenFilter implements Filter {
     /**
      * token在URL中校验登录的接口
      */
-    private final Set<String> urlCheckPathSet = Set.of("/api/v1/file/getImage", "/api/v1/file/getVideo", "/api/v1/file/getFile", "/api/v1/file/getThumbnail");
+    private final Set<String> urlCheckPathSet = Set.of(
+            "/api/v1/file/getImage",
+            "/api/v1/file/getVideo",
+            "/api/v1/file/getFile",
+            "/api/v1/file/getThumbnail",
+            "/api/v1/user/getAvatar"
+    );
 
     @Override
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {

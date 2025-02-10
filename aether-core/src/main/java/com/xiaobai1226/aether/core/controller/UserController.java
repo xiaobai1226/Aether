@@ -18,6 +18,7 @@ import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
@@ -92,12 +93,15 @@ public class UserController {
 //        }
 
         try {
+            URL res = null;
+
             // 判断文件是否存在
             if (!FileUtil.exist(avatarPath)) {
-                avatarPath = FileUtils.generatePath("/avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
+                avatarPath = FileUtils.generatePath("avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
+                res = UserController.class.getClassLoader().getResource(avatarPath);
             }
 
-            var file = FileUtil.file(avatarPath);
+            var file = (res == null) ? FileUtil.file(avatarPath) : FileUtil.file(res);
 
             var downloadedFile = new DownloadedFile(file);
 

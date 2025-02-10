@@ -3,6 +3,7 @@ import httpInstance from '@/utils/http'
 import type { NetdiskInternalAxiosRequestConfig } from '@/utils/http'
 import type { AxiosPromise } from 'axios'
 import type { UserSpaceUsage } from '@/api/v1/user/types'
+import { useAccountStore } from '@/stores/account'
 import { ApiVersion } from '@/api/ApiVersion'
 
 const baseUrl = ApiVersion.API_V1 + '/user'
@@ -16,6 +17,20 @@ export const getAvatar = (): AxiosPromise<ArrayBuffer> => {
     method: 'GET',
     responseType: 'arraybuffer'
   })
+}
+
+/**
+ * 获取头像Url
+ */
+export const getAvatarUrl = (): string => {
+  // 从pinia获取token数据
+  const accountStore = useAccountStore()
+  const { tokenName, tokenPrefix, token } = accountStore.accountInfo
+  // 按照后端要求拼接token数据
+  const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
+  const sign = btoa(tokenString)
+
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getAvatar?sign=' + sign
 }
 
 /**
