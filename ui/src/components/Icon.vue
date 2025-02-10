@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { getThumbnail } from '@/api/v1/file'
+import { getThumbnailUrl } from '@/api/v1/file'
 import { IconEnum, FOLDER, OTHER } from '@/enums/IconEnum'
 
 const props = defineProps({
@@ -53,9 +53,11 @@ const getImage = () => {
   }
 
   if (props.thumbnail) {
-    getThumbnail(props.thumbnail).then(({ data }) => {
-      thumbnailUrl.value = URL.createObjectURL(new Blob([data]))
-    })
+    // getThumbnail(props.thumbnail).then(({ data }) => {
+    //   thumbnailUrl.value = URL.createObjectURL(new Blob([data]))
+    // })
+
+    thumbnailUrl.value = getThumbnailUrl(props.thumbnail)
     return
   }
 
