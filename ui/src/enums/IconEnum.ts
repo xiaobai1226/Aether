@@ -21,6 +21,13 @@ interface IconEnumType {
 }
 
 /**
+ * 判断是否是图片或视频
+ */
+export const isImageOrVideo = (suffix: string) => {
+  return IMAGE.suffixSet.has(suffix) || VIDEO.suffixSet.has(suffix)
+}
+
+/**
  * 创建一个对象来模拟Icon枚举
  */
 export const IconEnum: IconEnumType = {

@@ -2,6 +2,7 @@ package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.IdUtil;
@@ -10,11 +11,14 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
 import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
+import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
-import com.xiaobai1226.aether.core.constant.FolderNameConsts;
+import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
 import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
+import com.xiaobai1226.aether.common.util.ImageUtils;
+import com.xiaobai1226.aether.common.util.VideoUtils;
 import com.xiaobai1226.aether.domain.dto.common.PageResult;
 import com.xiaobai1226.aether.domain.entity.FileDO;
 import com.xiaobai1226.aether.domain.entity.RecycleBinDO;
@@ -31,7 +35,7 @@ import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
-import com.xiaobai1226.aether.core.util.FileUtils;
+import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.core.util.LockManager;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
@@ -405,19 +409,19 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             }
         }
 
-        String thumbnailFileName = null;
-//        String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH + FileUtils.replaceFileExtName(finalFileName, SystemConsts.THUMBNAIL_SUFFIX);
+//        String thumbnailFileName = null;
+        String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH + FileUtils.replaceFileExtName(finalFileName, SystemConsts.THUMBNAIL_SUFFIX);
         // 设置文件存储全路径
         var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnailFileName);
         uploadFileCacheDTO.setThumbnailFilePath(thumbnailFilePath);
 
         // 图片生成缩略图
         if (CategoryEnum.isPictureByName(uploadTempFileDTO.getFileName())) {
-//            var result = ImageUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150, -1);
-//            thumbnailFileName = result ? thumbnailFileName : null;
+            var result = ImageUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150, -1);
+            thumbnailFileName = result ? thumbnailFileName : null;
         } else if (CategoryEnum.isVideoByName(uploadTempFileDTO.getFileName())) { // 视频生成缩略图
-//            var result = VideoUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150);
-//            thumbnailFileName = result ? thumbnailFileName : null;
+            var result = VideoUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150);
+            thumbnailFileName = result ? thumbnailFileName : null;
         } else {
             thumbnailFileName = null;
         }

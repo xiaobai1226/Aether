@@ -1,4 +1,4 @@
-package com.xiaobai1226.aether.core.constant;
+package com.xiaobai1226.aether.common.constant;
 
 /**
  * 系统常量类
@@ -74,4 +74,9 @@ public class SystemConsts {
      * 默认头像文件名
      */
     public static final String DEFAULT_AVATAR_FILE_NAME = "default_avatar" + AVATAR_SUFFIX;
+
+    /**
+     * ffmpeg路径
+     */
+    public static final String FFMPEG_PATH = "/root/aether/bin/";
 }

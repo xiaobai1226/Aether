@@ -2,16 +2,17 @@ package com.xiaobai1226.aether.core.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.io.FileUtil;
-import com.xiaobai1226.aether.core.constant.FolderNameConsts;
-import com.xiaobai1226.aether.core.constant.SystemConsts;
+import com.xiaobai1226.aether.common.constant.FolderNameConsts;
+import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.core.domain.dto.UserSpaceUsageDTO;
 import com.xiaobai1226.aether.core.domain.vo.UpdatePasswordVO;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.UserService;
-import com.xiaobai1226.aether.core.util.FileUtils;
+import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
@@ -81,13 +82,32 @@ public class UserController {
 
         // 设置头像存储全路径
         var avatarPath = FileUtils.generatePath(avatarFolderPath, userId + SystemConsts.AVATAR_SUFFIX);
-        ctx.contentType("image/jpg");
+//        ctx.contentType("image/jpg");
         // 判断文件是否存在
-        if (FileUtil.exist(avatarPath)) {
-            FileUtils.readFile(ctx, avatarPath);
-        } else {
-            var defaultAvatarPath = FileUtils.generatePath("/avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
-            FileUtils.readFileByResources(ctx, defaultAvatarPath);
+//        if (FileUtil.exist(avatarPath)) {
+//            FileUtils.readFile(ctx, avatarPath);
+//        } else {
+//            var defaultAvatarPath = FileUtils.generatePath("/avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
+//            FileUtils.readFileByResources(ctx, defaultAvatarPath);
+//        }
+
+        try {
+            // 判断文件是否存在
+            if (!FileUtil.exist(avatarPath)) {
+                avatarPath = FileUtils.generatePath("/avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
+            }
+
+            var file = FileUtil.file(avatarPath);
+
+            var downloadedFile = new DownloadedFile(file);
+
+            // 不做为附件下载（按需配置）
+            downloadedFile.asAttachment(false);
+
+            //也可用接口输出
+            ctx.outputAsFile(downloadedFile);
+        } catch (IOException e) {
+            throw new FailResultException(SYSTEM_ERROR);
         }
     }
 

@@ -25,6 +25,11 @@ const props = defineProps({
     type: Number,
     default: 32
   },
+  // 图标圆角弧度
+  borderRadius: {
+    type: Number,
+    default: 4
+  },
   // 图片填充方式
   fit: {
     type: String,
@@ -75,7 +80,7 @@ watch(() => props, () => {
 </script>
 
 <template>
-<span :style="{width: width + 'px', height: width + 'px'}" class="icon">
+<span :style="{width: width + 'px', height: width + 'px', 'border-radius': borderRadius + 'px'}" class="icon">
   <img :src="thumbnailUrl" :style="{'object-fit': fit}" />
 </span>
 </template>
@@ -84,7 +89,6 @@ watch(() => props, () => {
 .icon {
   text-align: center;
   display: inline-block;
-  border-radius: 3px;
   overflow: hidden;
 
   img {

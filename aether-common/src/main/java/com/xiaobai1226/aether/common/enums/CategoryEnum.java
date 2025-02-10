@@ -67,6 +67,15 @@ public enum CategoryEnum {
     }
 
     /**
+     * 获取后缀集合
+     *
+     * @return id
+     */
+    public Set<String> suffixSet() {
+        return this.suffixSet;
+    }
+
+    /**
      * 是否是图片
      */
     public static Boolean isPictureBySuffix(String suffix) {

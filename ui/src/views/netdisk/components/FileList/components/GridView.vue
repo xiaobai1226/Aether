@@ -70,6 +70,11 @@ const props = defineProps({
   iconWidth: {
     type: Number,
     default: 0
+  },
+  // 图片填充方式
+  iconFit: {
+    type: String,
+    default: 'cover'
   }
 })
 
@@ -218,7 +223,7 @@ defineExpose({ clearSelection })
           </div>
           <div class="content">
             <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
-                  :width="iconWidth" />
+                  :width="iconWidth" :border-radius="8" :fit="iconFit" />
             <el-tooltip placement="bottom" effect="light" :hide-after="0">
               <div>
                 <div class="name">{{ userFile.name }}</div>

@@ -4,11 +4,12 @@ import type {
   GetFileListByPageRequest,
   GetFileListByPageResponse
 } from '@/api/admin/file/types'
-import { getFileListByPage } from '@/api/admin/file'
+import { getFileListByPage, generateThumbnails } from '@/api/admin/file'
 import Utils from '@/utils/Utils'
 import Icon from '@/components/Icon.vue'
 import ActionBar from '@/views/admin/components/FileList/components/ActionBar.vue'
 import TableByPagination, { type Column } from '@/components/TableByPagination.vue'
+import { isImageOrVideo } from '@/enums/IconEnum'
 
 /**
  * 列表列定义
@@ -43,19 +44,18 @@ const columns: Column[] = [
   },
   {
     label: '路径',
-    prop: 'path',
-    width: 200
+    prop: 'path'
   },
   {
     label: '操作',
     prop: 'op',
-    scopedSlots: 'op'
+    scopedSlots: 'op',
+    width: 300
   }
 ]
 
 // 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
-// const topHeight = 60 + 20 + 30 + 46
-const topHeight = 20 + 30 + 46
+const topHeight = 56 + 20 + 30 + 46
 
 const tableHeight = ref(
   window.innerHeight - topHeight - 50
@@ -126,12 +126,24 @@ const pageNumChange = (pageNum: number) => {
   tableData.value.pageNum = pageNum
   loadDataList()
 }
+
+/**
+ * 生成缩略图
+ */
+const handleGenerateThumbnails = (id: number) => {
+  const ids = [id].join(',')
+// 请求后台获取文件列表
+  generateThumbnails(ids).then(() => {
+    // 重新加载数据
+    loadDataList()
+  })
+}
 </script>
 
 <template>
   <div class="container">
     <div class="top">
-      <ActionBar />
+      <ActionBar @generate-thumbnails="handleGenerateThumbnails" />
     </div>
     <div class="data-list">
       <TableByPagination :columns="columns" :dataSource="tableData" :initFetch="false" :options="tableOptions"
@@ -151,9 +163,9 @@ const pageNumChange = (pageNum: number) => {
           <span v-else>-</span>
         </template>
         <!-- 操作栏 -->
-        <template #op>
-          <el-button size="small">
-            编辑
+        <template #op="{row}">
+          <el-button v-if="isImageOrVideo(row.suffix)" size="small" @click="handleGenerateThumbnails(row.id)">
+            生成缩略图
           </el-button>
         </template>
       </TableByPagination>
@@ -169,7 +181,10 @@ const pageNumChange = (pageNum: number) => {
 }
 
 .top {
-  margin-top: 20px;
+  padding-top: 20px;
+  padding-left: 20px;
+  padding-right: 20px;
+
 }
 
 .data-list {

@@ -21,7 +21,7 @@ import com.xiaobai1226.aether.core.mapper.UserFileMapper;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
-import com.xiaobai1226.aether.core.util.FileUtils;
+import com.xiaobai1226.aether.common.util.FileUtils;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -249,7 +249,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
         // 删除文件
         for (var delFile : delFileList) {
-            FileUtils.deleteFile(delFile, rootPath);
+            FileUtils.deleteFile(delFile.getSuffix(), delFile.getThumbnail(), delFile.getPath(), rootPath);
         }
     }
 

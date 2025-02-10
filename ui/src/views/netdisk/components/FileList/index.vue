@@ -25,7 +25,7 @@
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
         <!-- 大图模式 -->
         <GridView ref="largeViewRef" v-else-if="netdiskConfig.displayMode.id === Large.id"
-                  :width="168" :height="245" :iconWidth="128"
+                  :width="168" :height="245" :iconWidth="128" icon-fit="contain"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />

@@ -7,7 +7,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
-import com.xiaobai1226.aether.core.constant.FolderNameConsts;
+import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.DownloadRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.domain.dto.common.PageResult;
@@ -18,7 +18,7 @@ import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
-import com.xiaobai1226.aether.core.util.FileUtils;
+import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
@@ -518,8 +518,22 @@ public class FileController {
             // TODO 这没写
         }
 
-        ctx.contentType("image/jpg");
-        FileUtils.readFile(ctx, thumbnailFilePath);
+//        ctx.contentType("image/jpg");
+//        FileUtils.readFile(ctx, thumbnailFilePath);
+
+        try {
+            var file = FileUtil.file(thumbnailFilePath);
+
+            var downloadedFile = new DownloadedFile(file);
+
+            // 不做为附件下载（按需配置）
+            downloadedFile.asAttachment(false);
+
+            //也可用接口输出
+            ctx.outputAsFile(downloadedFile);
+        } catch (IOException e) {
+            throw new FailResultException(SYSTEM_ERROR);
+        }
     }
 
     /**

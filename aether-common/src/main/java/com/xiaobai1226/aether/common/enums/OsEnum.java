@@ -1,4 +1,4 @@
-package com.xiaobai1226.aether.core.enums;
+package com.xiaobai1226.aether.common.enums;
 
 /**
  * 系统枚举

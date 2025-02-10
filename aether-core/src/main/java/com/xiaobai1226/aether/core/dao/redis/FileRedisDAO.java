@@ -14,7 +14,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import static com.xiaobai1226.aether.core.constant.RedisKeyConsts.UPLOADED_SIZE;
-import static com.xiaobai1226.aether.core.constant.SystemConsts.UPLOAD_TEMP_FILE_INFO_TIMEOUT;
+import static com.xiaobai1226.aether.common.constant.SystemConsts.UPLOAD_TEMP_FILE_INFO_TIMEOUT;
 
 /**
  * 文件Redis DAO
