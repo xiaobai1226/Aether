@@ -1,5 +1,5 @@
 # 使用 OpenJDK 21 作为基础镜像
-FROM openjdk:21
+FROM openjdk:21-slim
 
 # 更新 apt 源并安装 FFmpeg
 RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
