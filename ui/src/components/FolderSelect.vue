@@ -9,7 +9,7 @@
         <div v-infinite-scroll="loadNextPage" class="folder-list" v-if="folderData.list.length > 0"
              :infinite-scroll-disabled="disabled">
           <div class="folder-item" v-for="item in folderData.list" @click="selectFolder(item)" :key="item.id">
-            <Icon :fileType="-1"></Icon>
+            <Icon :iconUrl="FOLDER.iconUrl" />
             <span class="file-name">{{ item.name }}</span>
           </div>
         </div>
@@ -31,6 +31,7 @@ import type {
   UserFileInfo
 } from '@/api/v1/file/types'
 import Navigation from '@/components/Navigation.vue'
+import { FOLDER } from '@/enums/IconEnum'
 
 /**
  * 配置对象

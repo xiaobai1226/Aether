@@ -13,7 +13,7 @@ import org.redisson.api.RedissonClient;
 import java.time.Duration;
 import java.util.Map;
 
-import static com.xiaobai1226.aether.core.constant.SystemConsts.DOWNLOAD_FILE_SIGN_TIMEOUT;
+import static com.xiaobai1226.aether.common.constant.SystemConsts.DOWNLOAD_FILE_SIGN_TIMEOUT;
 
 /**
  * 下载Redis DAO

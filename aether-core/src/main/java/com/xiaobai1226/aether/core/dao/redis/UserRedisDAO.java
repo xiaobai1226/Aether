@@ -9,7 +9,7 @@ import org.redisson.api.RedissonClient;
 
 import java.time.Duration;
 
-import static com.xiaobai1226.aether.core.constant.SystemConsts.UPLOADING_USED_STORAGE_TIMEOUT;
+import static com.xiaobai1226.aether.common.constant.SystemConsts.UPLOADING_USED_STORAGE_TIMEOUT;
 
 /**
  * 用户Redis DAO

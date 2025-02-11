@@ -52,9 +52,14 @@ public class UserFileDO {
     private String name;
 
     /**
+     * 文件名后缀
+     */
+    private String suffix;
+
+    /**
      * 文件分类 0 其他 1 视频 2音频 3 图片 4 文档
      */
-    private Integer category;
+//    private Integer category;
 
     /**
      * 创建时间

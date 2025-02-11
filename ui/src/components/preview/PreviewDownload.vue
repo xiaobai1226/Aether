@@ -3,6 +3,7 @@
 import Utils from '@/utils/Utils'
 import Icon from '@/components/Icon.vue'
 import { createDownloadSign } from '@/api/v1/file'
+import { OTHER, ZIP } from '@/enums/IconEnum'
 
 const props = defineProps({
   fileInfo: {
@@ -21,7 +22,7 @@ const download = () => {
   <div class="others">
     <div class="body-content">
       <div>
-        <Icon :iconName="fileInfo.fileType == 9 ? 'zip' : 'others'" :width="80" />
+        <Icon :iconUrl="ZIP.suffixSet.has(fileInfo.suffix) ? ZIP.iconUrl : OTHER.iconUrl" :width="80" />
       </div>
       <div class="file-name">{{ fileInfo.name }}</div>
       <div class="tips">该类型的文件暂不支持预览，请下载后查看</div>

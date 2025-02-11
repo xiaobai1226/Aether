@@ -7,6 +7,7 @@ import RecycleBin from '@/views/netdisk/components/RecycleBin/index.vue'
 import AdminLayout from '@/views/admin/layout/index.vue'
 import UserList from '@/views/admin/components/UserList/index.vue'
 import AdminFileList from '@/views/admin/components/FileList/index.vue'
+import Dashboard from '@/views/admin/components/Dashboard/index.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -56,8 +57,14 @@ const router = createRouter({
     // 管理页
     {
       path: '/admin',
+      redirect: '/admin/dashboard',
       component: AdminLayout,
       children: [
+        {
+          path: 'dashboard',
+          name: '仪表板',
+          component: Dashboard
+        },
         {
           path: 'userlist',
           name: '用户列表',

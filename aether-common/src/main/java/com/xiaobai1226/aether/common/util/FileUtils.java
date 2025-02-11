@@ -1,4 +1,4 @@
-package com.xiaobai1226.aether.core.util;
+package com.xiaobai1226.aether.common.util;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
@@ -8,17 +8,13 @@ import cn.hutool.core.io.NioUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.core.constant.FolderNameConsts;
-import com.xiaobai1226.aether.domain.entity.FileDO;
-import com.xiaobai1226.aether.core.enums.FileTypeEnum;
+import com.xiaobai1226.aether.common.enums.CategoryEnum;
+import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import lombok.extern.slf4j.Slf4j;
-import org.noear.solon.core.handle.Context;
-import org.noear.solon.web.webdav.impl.ShardingInputStream;
 
 import java.io.*;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Objects;
 
 /**
  * 文件工具类
@@ -129,100 +125,101 @@ public class FileUtils {
                 try (InputStream inputStream = new BufferedInputStream(new FileInputStream(sourceFile))) {
                     IoUtil.copy(inputStream, outputStream, NioUtil.DEFAULT_BUFFER_SIZE);
                 } catch (IOException e) {
+                    log.error(e.getMessage());
                     throw new IORuntimeException(e);
                 }
             }
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new IORuntimeException(e);
         }
     }
 
-    public static InputStream fileInputStream(String filePath, long start, long length) {
-        InputStream in = FileUtil.getInputStream(filePath);
-        if (length == 0) {
-            return in;
-        } else {
-            return new ShardingInputStream(in, start, length);
-        }
-    }
+//    public static InputStream fileInputStream(String filePath, long start, long length) {
+//        InputStream in = FileUtil.getInputStream(filePath);
+//        if (length == 0) {
+//            return in;
+//        } else {
+//            return new ShardingInputStream(in, start, length);
+//        }
+//    }
 
     /**
      * 将文件写入到输出流中
      */
-    public static void readFile(Context context, String filePath) {
-        if (!FileUtil.exist(filePath)) {
-            return;
-        }
-        OutputStream out = null;
-        FileInputStream in = null;
-        try {
-            File file = new File(filePath);
-            if (!file.exists()) {
-                return;
-            }
-            in = new FileInputStream(file);
-            byte[] byteData = new byte[1024];
-            out = context.outputStream();
-            int len = 0;
-            while ((len = in.read(byteData)) != -1) {
-                out.write(byteData, 0, len);
-            }
-            out.flush();
-        } catch (Exception e) {
-            log.error("读取文件异常", e);
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    log.error("关闭输出流异常", e);
-                }
-            }
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    log.error("关闭输入流异常", e);
-                }
-            }
-        }
-    }
-
-    public static void readFileByResources(Context context, String resourcePath) {
-
-        OutputStream out = null;
-        InputStream in = null;
-        try {
-            in = ImageUtils.class.getResourceAsStream(resourcePath);
-            if (in == null) {
-                return;
-            }
-            byte[] byteData = new byte[1024];
-            out = context.outputStream();
-            int len = 0;
-            while ((len = in.read(byteData)) != -1) {
-                out.write(byteData, 0, len);
-            }
-            out.flush();
-        } catch (Exception e) {
-            log.error("读取文件异常", e);
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    log.error("关闭输出流异常", e);
-                }
-            }
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    log.error("关闭输入流异常", e);
-                }
-            }
-        }
-    }
+//    public static void readFile(Context context, String filePath) {
+//        if (!FileUtil.exist(filePath)) {
+//            return;
+//        }
+//        OutputStream out = null;
+//        FileInputStream in = null;
+//        try {
+//            File file = new File(filePath);
+//            if (!file.exists()) {
+//                return;
+//            }
+//            in = new FileInputStream(file);
+//            byte[] byteData = new byte[1024];
+//            out = context.outputStream();
+//            int len = 0;
+//            while ((len = in.read(byteData)) != -1) {
+//                out.write(byteData, 0, len);
+//            }
+//            out.flush();
+//        } catch (Exception e) {
+//            log.error("读取文件异常", e);
+//        } finally {
+//            if (out != null) {
+//                try {
+//                    out.close();
+//                } catch (IOException e) {
+//                    log.error("关闭输出流异常", e);
+//                }
+//            }
+//            if (in != null) {
+//                try {
+//                    in.close();
+//                } catch (IOException e) {
+//                    log.error("关闭输入流异常", e);
+//                }
+//            }
+//        }
+//    }
+//    public static void readFileByResources(Context context, String resourcePath) {
+//
+//        OutputStream out = null;
+//        InputStream in = null;
+//        try {
+//            in = ImageUtils.class.getResourceAsStream(resourcePath);
+//            if (in == null) {
+//                return;
+//            }
+//            byte[] byteData = new byte[1024];
+//            out = context.outputStream();
+//            int len = 0;
+//            while ((len = in.read(byteData)) != -1) {
+//                out.write(byteData, 0, len);
+//            }
+//            out.flush();
+//        } catch (Exception e) {
+//            log.error("读取文件异常", e);
+//        } finally {
+//            if (out != null) {
+//                try {
+//                    out.close();
+//                } catch (IOException e) {
+//                    log.error("关闭输出流异常", e);
+//                }
+//            }
+//            if (in != null) {
+//                try {
+//                    in.close();
+//                } catch (IOException e) {
+//                    log.error("关闭输入流异常", e);
+//                }
+//            }
+//        }
+//    }
 
 // TODO 暂时注释掉
 //    public static void printNoDefaultImage(HttpServletResponse response) {
@@ -240,18 +237,17 @@ public class FileUtils {
 //            }
 //        }
 //    }
-
-    public static void deleteFile(FileDO fileDO, String rootPath) {
+    public static void deleteFile(String suffix, String thumbnail, String path, String rootPath) {
         // 删除缩略图
-        if (Objects.equals(FileTypeEnum.PICTURE.id(), fileDO.getFileType()) || Objects.equals(FileTypeEnum.VIDEO.id(), fileDO.getFileType())) {
+        if (CategoryEnum.isPictureBySuffix(suffix) || CategoryEnum.isVideoBySuffix(suffix)) {
             // 设置文件存储全路径
-            var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, fileDO.getThumbnail());
+            var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnail);
             if (FileUtil.exist(thumbnailFilePath)) {
                 FileUtil.del(thumbnailFilePath);
             }
         }
 
-        var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+        var fileFullPath = FileUtils.generatePath(rootPath, path);
         if (FileUtil.exist(fileFullPath)) {
             FileUtil.del(fileFullPath);
         }

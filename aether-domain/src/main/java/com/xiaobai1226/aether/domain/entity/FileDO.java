@@ -40,6 +40,11 @@ public class FileDO {
     private String thumbnail;
 
     /**
+     * 文件名后缀
+     */
+    private String suffix;
+
+    /**
      * 文件状态 0 转码中 1 转码成功 2 转码失败
      */
 //    private Integer fileStatus;
@@ -47,7 +52,7 @@ public class FileDO {
     /**
      * 文件类型ID
      */
-    private Integer fileType;
+//    private Integer fileType;
 
     /**
      * md5唯一标识

@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import {ref, watch} from "vue";
-import {getThumbnail} from "@/api/v1/file";
+import { ref, watch } from 'vue'
+import { getThumbnailUrl } from '@/api/v1/file'
+import { IconEnum, FOLDER, OTHER } from '@/enums/IconEnum'
 
 const props = defineProps({
-  // 文件类型
-  fileType: {
+  // 文件类型 0 文件夹 1 文件
+  itemType: {
     type: Number
   },
-  // 图标名称
-  iconName: {
+  // 后缀
+  suffix: {
+    type: String
+  },
+  // 图标Url
+  iconUrl: {
     type: String
   },
   // 文件缩略图
@@ -20,72 +25,65 @@ const props = defineProps({
     type: Number,
     default: 32
   },
+  // 图标圆角弧度
+  borderRadius: {
+    type: Number,
+    default: 4
+  },
   // 图片填充方式
   fit: {
     type: String,
-    default: "cover"
+    default: 'cover'
   }
-});
+})
 
-interface FileType {
-  desc: string;
-  icon: string;
-}
-
-// TODO 优化
-const fileTypeMap: { [key: number]: FileType | undefined } = {
-  // 0: {desc: "目录", icon: "folder"},
-  0: {desc: "其他文件", icon: "others"},
-  1: {desc: "视频", icon: "video"},
-  2: {desc: "音频", icon: "music"},
-  3: {desc: "图片", icon: "image"},
-  4: {desc: "exe", icon: "pdf"},
-  5: {desc: "doc", icon: "word"},
-  6: {desc: "excel", icon: "excel"},
-  7: {desc: "纯文本", icon: "txt"},
-  8: {desc: "程序", icon: "code"},
-  9: {desc: "压缩包", icon: "zip"}
-};
-
-const thumbnailUrl = ref("");
+const thumbnailUrl = ref('')
 
 const getImage = () => {
-  if (props.thumbnail) {
-    getThumbnail(props.thumbnail).then(({data}) => {
-      thumbnailUrl.value = URL.createObjectURL(new Blob([data]));
-    });
-
-    return;
+  // 如果指定了iconUrl
+  if (props.iconUrl) {
+    thumbnailUrl.value = props.iconUrl
+    return
   }
 
-  let icon = "others";
+  // 如果是文件夹
+  if (props.itemType === 0) {
+    thumbnailUrl.value = FOLDER.iconUrl
+    return
+  }
 
-  // TODO 优化关于文件夹图标显示的逻辑
-  if (props.iconName) {
-    icon = props.iconName;
-  } else if (props.fileType != undefined) {
-    if (props.fileType == -1) {
-      icon = "folder";
-    } else {
-      const iconMap = fileTypeMap[props.fileType];
-      if (iconMap != undefined) {
-        icon = iconMap["icon"];
+  if (props.thumbnail) {
+    // getThumbnail(props.thumbnail).then(({ data }) => {
+    //   thumbnailUrl.value = URL.createObjectURL(new Blob([data]))
+    // })
+
+    thumbnailUrl.value = getThumbnailUrl(props.thumbnail)
+    return
+  }
+
+  // 如果后缀不为空
+  if (props.suffix) {
+    for (const key in IconEnum) {
+      const item = IconEnum[key]
+      if (item.suffixSet.has(props.suffix)) {
+        thumbnailUrl.value = item.iconUrl
+        return
       }
     }
   }
 
-  thumbnailUrl.value = new URL(`/src/assets/icon-image/${icon}.png`, import.meta.url).href;
-};
+  thumbnailUrl.value = OTHER.iconUrl
+}
 
 watch(() => props, () => {
   // 一旦props改变，就执行此代码
-  getImage();
-}, {immediate: true, deep: true})
+  getImage()
+}, { immediate: true, deep: true })
 </script>
 
 <template>
-<span :style="{width: width + 'px', height: width + 'px'}" class="icon">
-  <img :src="thumbnailUrl" :style="{'object-fit': fit}"/>
+<span :style="{width: width + 'px', height: width + 'px', 'border-radius': borderRadius + 'px'}" class="icon">
+  <img :src="thumbnailUrl" :style="{'object-fit': fit}" />
 </span>
 </template>
 
@@ -93,7 +91,6 @@ watch(() => props, () => {
 .icon {
   text-align: center;
   display: inline-block;
-  border-radius: 3px;
   overflow: hidden;
 
   img {

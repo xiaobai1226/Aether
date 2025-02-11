@@ -6,6 +6,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.*;
 import com.xiaobai1226.aether.core.webdav.intf.FileInfo;
 import com.xiaobai1226.aether.core.webdav.intf.FileSystem;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.Handler;
 import org.noear.solon.web.webdav.WebDavActionException;
@@ -19,6 +20,7 @@ import java.util.Map;
  *
  * @author 高压锅里的小白
  */
+@Slf4j
 public abstract class WebdavAbstractHandler implements Handler {
     private boolean range = true;
 
@@ -113,10 +115,10 @@ public abstract class WebdavAbstractHandler implements Handler {
                             break;
                     }
                 } catch (WebDavActionException e) {
-                    //e.printStackTrace();
+                    log.error(e.getMessage());
                     status = e.getCode();
                 } catch (Exception e) {
-                    //e.printStackTrace();
+                    log.error(e.getMessage());
                     status = 400;
                 }
             }
@@ -216,6 +218,7 @@ public abstract class WebdavAbstractHandler implements Handler {
             ctx.output(StrUtil.format("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" + "<D:prop xmlns:D=\"DAV:\"><D:lockdiscovery><D:activelock>\n" + "\t<D:locktype>{}</D:locktype>\n" + "\t<D:lockscope>{}</D:lockscope>\n" + "\t<D:depth>infinity</D:depth>\n" + "\t<D:owner>{}</D:owner>\n" + "\t<D:timeout>Infinite</D:timeout>\n" + "\t<D:locktoken><D:href>{}</D:href></D:locktoken>\n" + "</D:activelock></D:lockdiscovery></D:prop>", locktype, lockscope, owner, token));
             return 200;
         } catch (Exception e) {
+            log.error(e.getMessage());
             return 400;
         }
     }

@@ -2,21 +2,24 @@ package com.xiaobai1226.aether.core.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.io.FileUtil;
-import com.xiaobai1226.aether.core.constant.FolderNameConsts;
-import com.xiaobai1226.aether.core.constant.SystemConsts;
+import com.xiaobai1226.aether.common.constant.FolderNameConsts;
+import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.core.domain.dto.UserSpaceUsageDTO;
 import com.xiaobai1226.aether.core.domain.vo.UpdatePasswordVO;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.UserService;
-import com.xiaobai1226.aether.core.util.FileUtils;
+import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.domain.dto.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
@@ -34,6 +37,7 @@ import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.SUCCESS_M
 @Component(tag = API_V1)
 @Mapping("/user")
 @Valid
+@Slf4j
 public class UserController {
 
     @Inject("${project.path.root}")
@@ -81,13 +85,36 @@ public class UserController {
 
         // 设置头像存储全路径
         var avatarPath = FileUtils.generatePath(avatarFolderPath, userId + SystemConsts.AVATAR_SUFFIX);
-        ctx.contentType("image/jpg");
+//        ctx.contentType("image/jpg");
         // 判断文件是否存在
-        if (FileUtil.exist(avatarPath)) {
-            FileUtils.readFile(ctx, avatarPath);
-        } else {
-            var defaultAvatarPath = FileUtils.generatePath("/avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
-            FileUtils.readFileByResources(ctx, defaultAvatarPath);
+//        if (FileUtil.exist(avatarPath)) {
+//            FileUtils.readFile(ctx, avatarPath);
+//        } else {
+//            var defaultAvatarPath = FileUtils.generatePath("/avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
+//            FileUtils.readFileByResources(ctx, defaultAvatarPath);
+//        }
+
+        try {
+            URL res = null;
+
+            // 判断文件是否存在
+            if (!FileUtil.exist(avatarPath)) {
+                avatarPath = FileUtils.generatePath("avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
+                res = UserController.class.getClassLoader().getResource(avatarPath);
+            }
+
+            var file = (res == null) ? FileUtil.file(avatarPath) : FileUtil.file(res);
+
+            var downloadedFile = new DownloadedFile(file);
+
+            // 不做为附件下载（按需配置）
+            downloadedFile.asAttachment(false);
+
+            //也可用接口输出
+            ctx.outputAsFile(downloadedFile);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+            throw new FailResultException(SYSTEM_ERROR);
         }
     }
 

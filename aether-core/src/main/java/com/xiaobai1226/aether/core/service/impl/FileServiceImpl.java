@@ -1,14 +1,15 @@
 package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.file.FileNameUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
-import com.xiaobai1226.aether.core.constant.FolderNameConsts;
+import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
 import com.xiaobai1226.aether.domain.entity.FileDO;
-import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 import com.xiaobai1226.aether.core.mapper.FileMapper;
 import com.xiaobai1226.aether.core.service.intf.FileService;
-import com.xiaobai1226.aether.core.util.FileUtils;
+import com.xiaobai1226.aether.common.util.FileUtils;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -40,7 +41,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public Integer addFile(String fileName, String filePath, Long fileSize, String identifier, String thumbnail, FileTypeEnum fileType) {
+    public Integer addFile(String fileName, String filePath, Long fileSize, String identifier, String thumbnail) {
         var fileDO = new FileDO();
         fileDO.setName(fileName);
         fileDO.setPath(filePath);
@@ -50,9 +51,11 @@ public class FileServiceImpl implements FileService {
             fileDO.setThumbnail(thumbnail);
         }
 
-        fileDO.setFileType(fileType.id());
-        // TODO 修改为转码中状态
-//        fileDO.setFileStatus(1);
+        var suffix = FileNameUtil.extName(fileName);
+        if (StrUtil.isNotEmpty(suffix)) {
+            fileDO.setSuffix(suffix.toLowerCase());
+        }
+
         fileDO.setIdentifier(identifier);
 //        fileDO.setStorageSourceId(LOCAL.getId());
 

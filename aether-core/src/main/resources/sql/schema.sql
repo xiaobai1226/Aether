@@ -42,11 +42,11 @@ DROP TABLE IF EXISTS file;
 CREATE TABLE file
 (
     id          int unsigned AUTO_INCREMENT COMMENT '主键ID' PRIMARY KEY,
-    name        varchar(200)                           NOT NULL COMMENT '文件名称',
+    name        varchar(300)                           NOT NULL COMMENT '文件名称',
     path        varchar(200)                           NOT NULL COMMENT '文件路径',
     size        bigint unsigned                        NOT NULL COMMENT '文件大小',
     thumbnail   varchar(100)                           NULL COMMENT '缩略图 只有视频与图片存在',
-#     file_status tinyint(1)                             NOT NULL COMMENT '文件状态 0 转码中 1 转码成功 2 转码失败',
+    suffix      varchar(300) DEFAULT NULL              NULL COMMENT '文件名后缀',
     file_type   int unsigned DEFAULT 0                 NULL COMMENT '文件类型 0 其他 1 视频 2音频 3 图片 4 pdf 5 doc 6 excel 7 txt 8 code 9 zip',
     identifier  varchar(50)                            NOT NULL COMMENT 'md5唯一标识',
 #     storage_source_id int unsigned                           NOT NULL COMMENT '存储源ID 1 本地存储',
@@ -70,6 +70,7 @@ CREATE TABLE user_file
     item_type   tinyint(1)                             NOT NULL COMMENT '类型 0 目录 1 文件',
     file_status tinyint(1)   DEFAULT 1                 NOT NULL COMMENT '文件状态 1 正常 0 回收站',
     name        varchar(300)                           NOT NULL COMMENT '文件夹或文件名称',
+    suffix      varchar(300) DEFAULT NULL              NULL COMMENT '文件名后缀',
     category    int unsigned DEFAULT NULL              NULL COMMENT '文件分类 0 其他 1 视频 2音频 3 图片 4 文档 文件夹为null',
 #     storage_source_id int unsigned                         NOT NULL COMMENT '存储源ID 1 本地存储',
     create_time datetime     DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',

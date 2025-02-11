@@ -16,7 +16,6 @@ import com.xiaobai1226.aether.core.domain.dto.ShareInfoDTO;
 import com.xiaobai1226.aether.domain.entity.ShareDO;
 import com.xiaobai1226.aether.domain.entity.ShareUserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
-import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.mapper.ShareMapper;
@@ -170,7 +169,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
                             shareFileDTO.setItemType(userFileDTO.getItemType());
                             shareFileDTO.setThumbnail(userFileDTO.getThumbnail());
                             shareFileDTO.setFileType(userFileDTO.getFileType());
-                            shareFileDTO.setCategory(userFileDTO.getCategory());
+//                            shareFileDTO.setCategory(userFileDTO.getCategory());
                         }
 
                         count++;
@@ -186,7 +185,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
             if (count == 0) {
                 shareFileDTO.setName("分享的文件已被删除");
                 shareFileDTO.setItemType(UserFileItemTypeEnum.FILE.flag());
-                shareFileDTO.setFileType(FileTypeEnum.OTHER.id());
+//                shareFileDTO.setFileType(FileTypeEnum.OTHER.id());
             } else if (count > 1) {
                 shareFileDTO.setName(shareFileDTO.getName() + " 等");
             }

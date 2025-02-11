@@ -1,7 +1,6 @@
 package com.xiaobai1226.aether.core.service.intf;
 
 import com.xiaobai1226.aether.domain.entity.FileDO;
-import com.xiaobai1226.aether.core.enums.FileTypeEnum;
 
 /**
  * 文件服务接口
@@ -27,10 +26,9 @@ public interface FileService {
      * @param fileSize   文件大小
      * @param identifier 文件MD5码
      * @param thumbnail  缩略图
-     * @param fileType   文件类型
      * @return 主键ID
      */
-    Integer addFile(String fileName, String filePath, Long fileSize, String identifier, String thumbnail, FileTypeEnum fileType);
+    Integer addFile(String fileName, String filePath, Long fileSize, String identifier, String thumbnail);
 
     /**
      * 合并文件
@@ -47,10 +45,8 @@ public interface FileService {
      * 根据ID获取文件数据
      *
      * @param id ID
-     * @return
      */
     FileDO getFileById(Integer id);
-
 
 //    Integer mergeFiless(Integer userId, String taskId);
 }

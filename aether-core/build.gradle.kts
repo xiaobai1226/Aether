@@ -20,7 +20,6 @@ dependencies {
     implementation("org.projectlombok:lombok:${DependenciesVersion.lombokVersion}")
     annotationProcessor("org.projectlombok:lombok:${DependenciesVersion.lombokVersion}")
     implementation("com.mysql:mysql-connector-j:8.2.0")
-    implementation("com.github.kokorin.jaffree:jaffree:2023.09.10")
 
     // 内部模块
     implementation(project(":aether-common"))

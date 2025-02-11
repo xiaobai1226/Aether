@@ -6,6 +6,7 @@ import cn.hutool.http.HttpStatus;
 import com.xiaobai1226.aether.common.enums.ResultCodeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.common.domain.dto.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.core.exception.StatusException;
 import org.noear.solon.core.handle.Context;
@@ -19,6 +20,7 @@ import org.noear.solon.validation.ValidatorException;
  * @author bai
  */
 @Component
+@Slf4j
 public class GlobalExceptionFilter implements Filter {
     @Override
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {
@@ -52,6 +54,8 @@ public class GlobalExceptionFilter implements Filter {
                 ctx.forward("/");
             }
         } catch (Throwable e) { // 其他异常错误
+            // 打印错误日志
+            log.error(e.getMessage());
             ctx.status(HttpStatus.HTTP_INTERNAL_ERROR);
             ctx.render(Result.fail(ResultCodeEnum.SYSTEM_ERROR));
         }

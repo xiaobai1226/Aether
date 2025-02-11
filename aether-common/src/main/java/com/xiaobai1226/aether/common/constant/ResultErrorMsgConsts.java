@@ -161,10 +161,16 @@ public class ResultErrorMsgConsts {
 
 
     ///////////////////////////////////////////////// 文件 ///////////////////////////////////////////////
+    
+    /**
+     * 文件ID为空错误
+     */
+    public static final String ERROR_FILE_ID_EMPTY = "文件ID不能为空";
+
     /**
      * 文件大小为空错误
      */
-    public static final String ERROR_FILE_ID_EMPTY = "文件(夹)ID不能为空";
+    public static final String ERROR_FILE_FOLDER_ID_EMPTY = "文件(夹)ID不能为空";
 
     /**
      * 文件(夹)不存在

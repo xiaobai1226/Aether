@@ -20,7 +20,7 @@ public class FileRenameVO {
     /**
      * 用户文件ID
      */
-    @NotNull(message = ERROR_FILE_ID_EMPTY)
+    @NotNull(message = ERROR_FILE_FOLDER_ID_EMPTY)
     private Integer id;
 
     /**
