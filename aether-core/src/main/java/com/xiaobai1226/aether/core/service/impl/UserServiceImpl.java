@@ -15,7 +15,7 @@ import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
-import static com.xiaobai1226.aether.core.constant.SystemConsts.DEFAULT_USER_TOTAL_SPACE;
+import static com.xiaobai1226.aether.common.constant.SystemConsts.DEFAULT_USER_TOTAL_SPACE;
 import static com.xiaobai1226.aether.common.enums.UserStatusEnum.NORMAL;
 
 /**

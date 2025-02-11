@@ -64,7 +64,9 @@ const toMain = () => {
       <div class="name">Aether 管理</div>
     </div>
     <div class="right-panel">
-      <span class="iconfont icon-main" @click="toMain"></span>
+      <el-tooltip content="主页">
+        <span class="iconfont icon-main" @click="toMain"></span>
+      </el-tooltip>
 
       <el-dropdown>
         <div class="user-info">
@@ -120,6 +122,7 @@ const toMain = () => {
   .right-panel {
     display: flex;
     align-items: center;
+    gap: 24px;
 
     .icon-main {
       font-size: 18px;
@@ -128,13 +131,12 @@ const toMain = () => {
     }
 
     .user-info {
-      margin-left: 10px;
       display: flex;
       align-items: center;
       cursor: pointer;
 
       .avatar {
-        margin: 0 5px 0 15px;
+        margin: 0 5px 0 0;
       }
 
       .nick-name {

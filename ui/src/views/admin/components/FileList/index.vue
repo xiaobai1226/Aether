@@ -1,14 +1,70 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type {
   GetFileListByPageRequest,
   GetFileListByPageResponse
 } from '@/api/admin/file/types'
-import { getFileListByPage } from '@/api/admin/file'
+import { getFileListByPage, generateThumbnails } from '@/api/admin/file'
 import Utils from '@/utils/Utils'
+import Icon from '@/components/Icon.vue'
+import ActionBar from '@/views/admin/components/FileList/components/ActionBar.vue'
+import TableByPagination, { type Column } from '@/components/TableByPagination.vue'
+import { isImageOrVideo } from '@/enums/IconEnum'
 
-const layout = computed(() => {
-  return `total, prev, pager, next, jumper`
+/**
+ * 列表列定义
+ */
+const columns: Column[] = [
+  {
+    label: 'ID',
+    prop: 'id',
+    width: 60
+  },
+  {
+    label: '文件名',
+    prop: 'name',
+    scopedSlots: 'name',
+    width: 550
+  },
+  {
+    label: '大小',
+    prop: 'size',
+    scopedSlots: 'size',
+    width: 100
+  },
+  {
+    label: '唯一标识',
+    prop: 'identifier',
+    width: 200
+  },
+  {
+    label: '创建时间',
+    prop: 'createTime',
+    width: 180
+  },
+  {
+    label: '路径',
+    prop: 'path'
+  },
+  {
+    label: '操作',
+    prop: 'op',
+    scopedSlots: 'op',
+    width: 300
+  }
+]
+
+// 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
+const topHeight = 56 + 20 + 30 + 46
+
+const tableHeight = ref(
+  window.innerHeight - topHeight - 50
+)
+
+const tableOptions = ref({
+  tableHeight: tableHeight.value,
+  border: true,
+  stripe: true
 })
 
 /**
@@ -56,7 +112,7 @@ loadDataList()
  * 切换每页的大小
  * @param size
  */
-const handlePageSizeChange = (size: number) => {
+const pageSizeChange = (size: number) => {
   tableData.value.pageSize = size
   tableData.value.pageNum = 1
   loadDataList()
@@ -66,108 +122,72 @@ const handlePageSizeChange = (size: number) => {
  * 切换页码
  * @param pageNum
  */
-const handlePageNoChange = (pageNum: number) => {
+const pageNumChange = (pageNum: number) => {
   tableData.value.pageNum = pageNum
   loadDataList()
+}
+
+/**
+ * 生成缩略图
+ */
+const handleGenerateThumbnails = (id: number) => {
+  const ids = [id].join(',')
+// 请求后台获取文件列表
+  generateThumbnails(ids).then(() => {
+    // 重新加载数据
+    loadDataList()
+  })
 }
 </script>
 
 <template>
   <div class="container">
-    <!--    <div class="top">-->
-    <!--      <div class="top-op">-->
-    <!--        <el-button type="success" @click="showAddOrUpdateUserDialog(0,null)">-->
-    <!--          <span class="iconfont icon-xinzengyonghu"></span>-->
-    <!--          新增用户-->
-    <!--        </el-button>-->
-
-    <!--        <div class="iconfont icon-refresh" @click="loadDataList"></div>-->
-    <!--      </div>-->
-    <!--    </div>-->
-
+    <div class="top">
+      <ActionBar @generate-thumbnails="handleGenerateThumbnails" />
+    </div>
     <div class="data-list">
-      <el-table :data="tableData.list" stripe border>
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="name" label="文件名" width="200" />
-        <el-table-column label="大小" width="100">
-          <template #default="scope">
-            {{ Utils.sizeToStr(scope.row.size) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="identifier" label="唯一标识" width="200" />
-        <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column prop="path" label="路径" />
-        <!--        <el-table-column label="操作">-->
-        <!--          <template #default="scope">-->
-        <!--            <el-button size="small" @click="showAddOrUpdateUserDialog(1,scope.row)">-->
-        <!--              编辑-->
-        <!--            </el-button>-->
-        <!--            <el-popconfirm :title="scope.row.status === 0 ? '确认启用该用户？': '确认禁用该用户？'" width="160"-->
-        <!--                           @confirm="updateUserStatus(scope.row)">-->
-        <!--              <template #reference>-->
-        <!--                <el-button size="small" :type="(scope.row.status === 0 ? 'success':'warning')">-->
-        <!--                  {{ (scope.row.status === 0 ? '启用' : '禁用') }}-->
-        <!--                </el-button>-->
-        <!--              </template>-->
-        <!--            </el-popconfirm>-->
-        <!--            &lt;!&ndash;            <el-button size="small" type="danger">&ndash;&gt;-->
-        <!--            &lt;!&ndash;              删除&ndash;&gt;-->
-        <!--            &lt;!&ndash;            </el-button>&ndash;&gt;-->
-        <!--          </template>-->
-        <!--        </el-table-column>-->
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination">
-        <el-pagination v-if="tableData.total" background :total="tableData.total"
-                       :page-sizes="[15, 30, 50, 100]"
-                       :page-size="tableData.pageSize" v-model:current-page="tableData.pageNum"
-                       :layout="layout" @current-change="handlePageNoChange" @size-change="handlePageSizeChange"
-                       style="text-align: right" />
-      </div>
+      <TableByPagination :columns="columns" :dataSource="tableData" :initFetch="false" :options="tableOptions"
+                         @page-num-change="pageNumChange" @page-size-change="pageSizeChange">
+        <!-- 文件名称 -->
+        <template #name="{row}">
+          <div class="file-item">
+            <Icon :suffix="row.suffix" :thumbnail="row.thumbnail" />
+            <span class="file-name" :title="row.name">
+              <span>{{ row.name }}</span>
+            </span>
+          </div>
+        </template>
+        <!-- 文件大小 -->
+        <template #size="{ row }">
+          <span v-if="row.size">{{ Utils.sizeToStr(row.size) }}</span>
+          <span v-else>-</span>
+        </template>
+        <!-- 操作栏 -->
+        <template #op="{row}">
+          <el-button v-if="isImageOrVideo(row.suffix)" size="small" @click="handleGenerateThumbnails(row.id)">
+            生成缩略图
+          </el-button>
+        </template>
+      </TableByPagination>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
 .container {
-  width: 100%;
+  // 让容器占据剩余宽度
+  flex-grow: 1;
+  height: calc(100vh - 56px);
 }
 
-//.top {
-//  margin-top: 20px;
-//  margin-left: 20px;
-//
-//  .top-op {
-//    display: flex;
-//    align-items: center;
-//
-//    .icon-xinzengyonghu {
-//      font-size: 20px;
-//    }
-//
-//    .icon-refresh {
-//      cursor: pointer;
-//      margin-left: 20px;
-//    }
-//  }
-//}
+.top {
+  padding-top: 20px;
+  padding-left: 20px;
+  padding-right: 20px;
+
+}
 
 .data-list {
   margin: 20px;
-}
-
-.percentage-value {
-  display: block;
-  font-size: 10px;
-}
-
-.pagination {
-  padding-top: 10px;
-  padding-right: 10px;
-
-  .el-pagination {
-    justify-content: right;
-  }
 }
 </style>

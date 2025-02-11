@@ -21,3 +21,15 @@ export const getFileListByPage = (params: GetFileListByPageRequest): AxiosPromis
     showLoading: true
   } as NetdiskInternalAxiosRequestConfig)
 }
+
+/**
+ * 生成缩略图
+ * @param ids
+ */
+export const generateThumbnails = (ids: string): AxiosPromise => {
+  return httpInstance({
+    url: baseUrl + '/generateThumbnails',
+    method: 'POST',
+    data: { fileIds: ids }
+  })
+}

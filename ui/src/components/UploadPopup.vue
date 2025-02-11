@@ -25,17 +25,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, type PropType, ref } from 'vue'
 import CategoryInfo from '@/js/CategoryInfo'
 import { useUploaderStore } from '@/stores/uploader'
 
 const props = defineProps({
   category: {
-    type: Number,
+    type: [Number, null] as PropType<number | null>,
     default: null
   },
   path: {
-    type: String,
+    type: [String, null] as PropType<string | null>,
     default: null
   },
   callbackFunction: {

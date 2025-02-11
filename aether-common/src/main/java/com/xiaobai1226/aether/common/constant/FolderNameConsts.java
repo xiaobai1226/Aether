@@ -1,4 +1,4 @@
-package com.xiaobai1226.aether.core.constant;
+package com.xiaobai1226.aether.common.constant;
 
 import cn.hutool.core.util.StrUtil;
 

@@ -21,7 +21,7 @@
     <div ref="loadingRef">
       <div class="file-list" v-if="tableData.list && tableData.list.length > 0">
         <Table ref="dataTableRef" :columns="columns" :dataSource="tableData" :fetch="loadDataList" :initFetch="false"
-               :options="tableOptions" @rowSelected="rowSelected" :loading="loading" :sortChange="sortChange">
+               :options="tableOptions" @selection-change="rowSelected" :loading="loading" @sort-change="sortChange">
           <template #fileName="{index, row}">
             <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
               <!-- 只有图片或视频，并且已经是转码成功状态才展示图片-->
@@ -29,10 +29,7 @@
               <!--                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>-->
               <!--              </template>-->
               <!--              <template v-else>-->
-              <!-- 如果是文件-->
-              <Icon v-if="row.itemType == 1" :fileType=row.fileType></Icon>
-              <!-- 如果是文件夹-->
-              <Icon v-if="row.itemType == 0" :fileType="-1"></Icon>
+              <Icon :itemType="row.itemType" :suffix="row.suffix" :thumbnail="row.thumbnail" />
               <!--              </template>-->
 
               <span class="file-name" :title="row.name">{{ row.name }}</span>
@@ -55,7 +52,7 @@
       </div>
       <div class="no-data" v-else>
         <div class="no-data-inner">
-          <Icon iconName="no_data" :width="120" fit="fill"></Icon>
+          <Icon :iconUrl="NO_DATA.iconUrl" :width="120" fit="fill" />
           <div class="tips">您的回收站为空哦</div>
         </div>
       </div>
@@ -78,6 +75,7 @@ import Icon from '@/components/Icon.vue'
 import Confirm from '@/utils/Confirm'
 import { ElMessage } from 'element-plus'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
+import { NO_DATA } from '@/enums/IconEnum'
 
 /**
  * 列定义
@@ -121,10 +119,19 @@ const tableData = ref<GetRecycleBinListByPageResponse>({
   total: 0,
   totalPage: 0
 })
-const tableOptions = {
-  extHeight: 20,
+
+
+// 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
+const topHeight = 60 + 20 + 30 + 46
+
+const tableHeight = ref(
+  window.innerHeight - topHeight - 20
+)
+
+const tableOptions = ref({
+  tableHeight: tableHeight.value,
   selectType: 'checkbox'
-}
+})
 
 /**
  * 加载Ref

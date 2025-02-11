@@ -44,7 +44,9 @@ public class SaTokenFilter implements Filter {
     private final Set<String> urlCheckPathSet = Set.of(
             "/api/v1/file/getImage",
             "/api/v1/file/getVideo",
-            "/api/v1/file/getFile"
+            "/api/v1/file/getFile",
+            "/api/v1/file/getThumbnail",
+            "/api/v1/user/getAvatar"
     );
 
     @Override

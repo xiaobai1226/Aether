@@ -9,4 +9,4 @@
  **********************************************************************************************************************/
 
 -- 插入超级管理员
-INSERT INTO `user` (username, user_password, total_storage) VALUES ('admin', '$2a$10$PzrHSSsB94Yt4KbV.KRY3eisgQuf9i5J5BSOL0o29/V78WcmoSEfe', 5242880);
+INSERT INTO `user` (username, password, total_storage) VALUES ('admin', '$2a$10$PzrHSSsB94Yt4KbV.KRY3eisgQuf9i5J5BSOL0o29/V78WcmoSEfe', 5242880);

@@ -156,6 +156,20 @@ export const getThumbnail = (thumbnail: string): AxiosPromise<ArrayBuffer> => {
 }
 
 /**
+ * 获取缩略图Url
+ */
+export const getThumbnailUrl = (thumbnail: string): string => {
+  // 从pinia获取token数据
+  const accountStore = useAccountStore()
+  const { tokenName, tokenPrefix, token } = accountStore.accountInfo
+  // 按照后端要求拼接token数据
+  const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
+  const sign = btoa(tokenString)
+
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getThumbnail?thumbnail=' + thumbnail + '&sign=' + sign
+}
+
+/**
  * 获取图片
  */
 export const getImage = (id: number): AxiosPromise<ArrayBuffer> => {
@@ -244,4 +258,11 @@ export const createDownloadSign = (ids: string): AxiosPromise => {
   return httpInstance.post(url, data, {
     showSuccessMsg: false
   } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 获取下载URL
+ */
+export const getDownloadUrl = (sign: string): string => {
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/download?sign=' + sign
 }

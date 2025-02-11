@@ -6,20 +6,21 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.core.constant.FolderNameConsts;
+import com.xiaobai1226.aether.common.enums.CategoryEnum;
+import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.DownloadRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.domain.dto.common.PageResult;
 import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.*;
-import com.xiaobai1226.aether.core.enums.UserFileCategoryEnum;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
-import com.xiaobai1226.aether.core.util.FileUtils;
+import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.domain.dto.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.DownloadedFile;
@@ -47,6 +48,7 @@ import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 @Component(tag = API_V1)
 @Mapping("/file")
 @Valid
+@Slf4j
 public class FileController {
 
     @Inject
@@ -84,11 +86,11 @@ public class FileController {
             parentId = parentUserFile.getId();
         }
 
-        if (userFileVO.getSortField() == null) {
-            userFileVO.setSortField(1);
+        if (userFileVO.getSortingField() == null) {
+            userFileVO.setSortingField(0);
         }
-        if (userFileVO.getSortOrder() == null) {
-            userFileVO.setSortOrder(1);
+        if (userFileVO.getSortingMethod() == null) {
+            userFileVO.setSortingMethod(0);
         }
         return userFileService.getFileList(userId, parentId, userFileVO);
     }
@@ -231,6 +233,8 @@ public class FileController {
 
             throw e;
         } catch (Exception e) {
+            log.error(e.getMessage());
+
             // 报异常清理缓存
             userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(), uploadFileCacheDTO);
 
@@ -518,8 +522,23 @@ public class FileController {
             // TODO 这没写
         }
 
-        ctx.contentType("image/jpg");
-        FileUtils.readFile(ctx, thumbnailFilePath);
+//        ctx.contentType("image/jpg");
+//        FileUtils.readFile(ctx, thumbnailFilePath);
+
+        try {
+            var file = FileUtil.file(thumbnailFilePath);
+
+            var downloadedFile = new DownloadedFile(file);
+
+            // 不做为附件下载（按需配置）
+            downloadedFile.asAttachment(false);
+
+            //也可用接口输出
+            ctx.outputAsFile(downloadedFile);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+            throw new FailResultException(SYSTEM_ERROR);
+        }
     }
 
     /**
@@ -534,7 +553,7 @@ public class FileController {
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
 
-            if (userFileDO == null || !UserFileCategoryEnum.isPicture(userFileDO.getCategory())) {
+            if (userFileDO == null || !CategoryEnum.isPictureBySuffix(userFileDO.getSuffix())) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
 
@@ -561,6 +580,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -577,7 +597,7 @@ public class FileController {
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
 
-            if (userFileDO == null || !UserFileCategoryEnum.isVideo(userFileDO.getCategory())) {
+            if (userFileDO == null || !CategoryEnum.isVideoBySuffix(userFileDO.getSuffix())) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
 
@@ -604,6 +624,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -647,6 +668,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -713,6 +735,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
