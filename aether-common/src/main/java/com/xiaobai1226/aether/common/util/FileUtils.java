@@ -125,10 +125,12 @@ public class FileUtils {
                 try (InputStream inputStream = new BufferedInputStream(new FileInputStream(sourceFile))) {
                     IoUtil.copy(inputStream, outputStream, NioUtil.DEFAULT_BUFFER_SIZE);
                 } catch (IOException e) {
+                    log.error(e.getMessage());
                     throw new IORuntimeException(e);
                 }
             }
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new IORuntimeException(e);
         }
     }

@@ -40,7 +40,7 @@ public class ImageUtils {
             FFmpeg.atPath().addInput(UrlInput.fromPath(Paths.get(srcImagePath))).setOverwriteOutput(true).addArguments("-vf", "scale=" + width + ":-1").addArguments("-q:v", "2") // 这里"-1"表示，高度将会自动按照输入视频的长宽比进行调整
                     .addOutput(UrlOutput.toPath(Paths.get(destImagePath))).execute();
         } catch (Exception e) {
-            log.info("生成缩略图失败，失败原因：{}", e.getMessage());
+            log.error("生成缩略图失败，失败原因：{}", e.getMessage());
             FileUtil.del(destImagePath);
             return false;
         }

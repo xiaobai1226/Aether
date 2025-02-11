@@ -1,9 +1,16 @@
 /**
+ * 使用 import.meta.glob 动态导入图标文件
+ */
+const iconImports = import.meta.glob('/src/assets/icon-image/*.png', { eager: true })
+
+/**
  * 获取URL
  * @param iconName icon名称
  */
 const url = (iconName: string): string => {
-  return new URL('../assets/icon-image/' + iconName + '.png', import.meta.url).href
+  const key = `/src/assets/icon-image/${iconName}.png`
+  const iconImport = iconImports[key] as { default: string }
+  return iconImport ? iconImport.default : ''
 }
 
 /**

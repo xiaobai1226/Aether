@@ -20,6 +20,7 @@ import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.domain.dto.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.DownloadedFile;
@@ -47,6 +48,7 @@ import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 @Component(tag = API_V1)
 @Mapping("/file")
 @Valid
+@Slf4j
 public class FileController {
 
     @Inject
@@ -231,6 +233,8 @@ public class FileController {
 
             throw e;
         } catch (Exception e) {
+            log.error(e.getMessage());
+
             // 报异常清理缓存
             userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(), uploadFileCacheDTO);
 
@@ -532,6 +536,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -575,6 +580,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -618,6 +624,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -661,6 +668,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -727,6 +735,7 @@ public class FileController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }

@@ -10,6 +10,7 @@ import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.domain.dto.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.DownloadedFile;
@@ -36,6 +37,7 @@ import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.SUCCESS_M
 @Component(tag = API_V1)
 @Mapping("/user")
 @Valid
+@Slf4j
 public class UserController {
 
     @Inject("${project.path.root}")
@@ -111,6 +113,7 @@ public class UserController {
             //也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
+            log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
