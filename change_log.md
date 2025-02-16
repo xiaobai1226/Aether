@@ -1,5 +1,11 @@
 # 修改记录
 
+## 0.7.0
+
+### feat
+
+1. 使用ImageMagick, 增加对heic图片的支持
+
 ## 0.6.3
 
 ### feat & fix

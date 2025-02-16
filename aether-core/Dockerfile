@@ -1,8 +1,8 @@
 # 使用 OpenJDK 21 作为基础镜像
 FROM openjdk:21-slim
 
-# 更新 apt 源并安装 FFmpeg
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+# 更新 apt 源并安装 FFmpeg Imagemagick
+RUN apt update && apt install -y ffmpeg imagemagick && rm -rf /var/lib/apt/lists/*
 
 ENV JAVA_OPTS="-server -Xmx512m -Xms512m  -Djava.awt.headless=true -Dreactor.netty.pool.leasingStrategy=lifo"
 
