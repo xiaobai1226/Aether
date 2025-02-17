@@ -16,6 +16,6 @@ WORKDIR /root/aether
 # 将项目构建生成的 jar 文件复制到容器中
 COPY ./build/libs/aether.jar /root/aether/aether.jar
 
-ENTRYPOINT exec java $JAVA_OPTS -jar aether.jar --solon.config.add=./config/app.yml --env=pro
+ENTRYPOINT exec java $JAVA_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -jar aether.jar
 
 #MAINTAINER www.microwu.com <microwu@microwu.com>

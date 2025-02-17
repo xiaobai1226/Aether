@@ -5,6 +5,11 @@
 ### feat
 
 1. 使用ImageMagick, 增加对heic图片的支持
+2. 使用ImagesMagick生成图片缩略图，替代ffmpeg
+
+### fix
+
+1. 修复头像无法展示的Bug
 
 ## 0.6.3
 

@@ -417,10 +417,10 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 图片生成缩略图
         if (CategoryEnum.isPictureByName(uploadTempFileDTO.getFileName())) {
-            var result = ImageUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150, -1);
+            var result = ImageUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150, -1);
             thumbnailFileName = result ? thumbnailFileName : null;
         } else if (CategoryEnum.isVideoByName(uploadTempFileDTO.getFileName())) { // 视频生成缩略图
-            var result = VideoUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150);
+            var result = VideoUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150);
             thumbnailFileName = result ? thumbnailFileName : null;
         } else {
             thumbnailFileName = null;
