@@ -1,6 +1,7 @@
-project:
-  path:
-    root: D:\programme\test\aether
+#project:
+#  path:
+#    #    root: D:\programme\test\aether
+#    root: /Users/baipengfei/programme/tools/aether
 
 
 solon.logging.appender:
@@ -13,14 +14,14 @@ redis.ds1:
   config: |
     singleServerConfig:
       password:
-      address: "redis://localhost:6379"
+      address: "redis://redis7:6379"
       # 数据库索引
       database: 0
 
 # mybatis plus配置
 # 配置数据源
 database.db1:
-  jdbcUrl: jdbc:mysql://localhost:3306/aether?useUnicode=true&characterEncoding=utf8&autoReconnect=true&rewriteBatchedStatements=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+  jdbcUrl: jdbc:mysql://mysql8:3306/aether?useUnicode=true&characterEncoding=utf8&autoReconnect=true&rewriteBatchedStatements=true&serverTimezone=GMT%2B8&allowMultiQueries=true
   driverClassName: com.mysql.cj.jdbc.Driver
   username: root
   password: 123456

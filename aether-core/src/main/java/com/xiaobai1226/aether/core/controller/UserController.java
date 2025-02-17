@@ -15,6 +15,7 @@ import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
+import org.noear.solon.core.util.ResourceUtil;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
@@ -100,7 +101,8 @@ public class UserController {
             // 判断文件是否存在
             if (!FileUtil.exist(avatarPath)) {
                 avatarPath = FileUtils.generatePath("avatar", SystemConsts.DEFAULT_AVATAR_FILE_NAME);
-                res = UserController.class.getClassLoader().getResource(avatarPath);
+//                res = UserController.class.getClassLoader().getResource(avatarPath);
+                res = ResourceUtil.getResourceByFile(avatarPath);
             }
 
             var file = (res == null) ? FileUtil.file(avatarPath) : FileUtil.file(res);

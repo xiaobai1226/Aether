@@ -1,6 +1,8 @@
 package com.xiaobai1226.aether.common.util;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.util.RuntimeUtil;
 import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
 import com.github.kokorin.jaffree.ffmpeg.UrlInput;
 import com.github.kokorin.jaffree.ffmpeg.UrlOutput;
@@ -46,5 +48,36 @@ public class ImageUtils {
         }
 
         return true;
+    }
+
+    /**
+     * Heic转为Webp格式
+     */
+    public static byte[] heic2Webp(String srcImagePath) {
+        // 构建 ImageMagick 命令，输出到标准输出流
+        String command = String.format("convert %s -quality 85 WEBP:-", srcImagePath);
+
+        try {
+            // 执行命令
+            Process process = RuntimeUtil.exec(command);
+
+            // 使用 Hutool 的流工具类简化读取（替代手动循环）
+            var inputStream = process.getInputStream();
+            byte[] webpBytes = IoUtil.readBytes(inputStream);
+
+            // 等待命令执行完成
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                String errorOutput = RuntimeUtil.getErrorResult(process);
+                log.error("Heic转Webp失败，错误信息：" + errorOutput);
+                return null;
+            }
+
+            // 返回 WebP 图片的字节数组
+            return webpBytes;
+        } catch (Exception e) {
+            log.error("Heic转Webp失败，发生异常：" + e.getMessage());
+            return null;
+        }
     }
 }

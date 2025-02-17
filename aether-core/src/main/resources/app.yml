@@ -1,6 +1,10 @@
 # 主配置文件指定
 solon.env: dev
 
+project:
+  path:
+    root: /root/aether/data
+
 solon:
   app:
     name: Aether
