@@ -269,15 +269,15 @@ defineExpose({ clearSelection, restoreSelection, sort })
         <!--              </div>-->
         <!-- 操作栏 -->
         <span class="op">
-                <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
-  <!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
-                  <span class="iconfont icon-download" @click="emit('download', row)">下载</span>
-                  <span class="iconfont icon-delete" @click="emit('del-file', row)">删除</span>
-                  <span class="iconfont icon-edit" @click="emit('show-edit-panel', index)">重命名</span>
-                  <span class="iconfont icon-move" @click="emit('move-file', row)">移动</span>
-                  <span class="iconfont icon-copy" @click="emit('copy-file', row)">复制</span>
-                </template>
-              </span>
+          <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
+<!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
+            <span class="iconfont icon-download" @click="emit('download', row)">下载</span>
+            <span class="iconfont icon-delete" @click="emit('del-file', row)">删除</span>
+            <span class="iconfont icon-edit" @click="emit('show-edit-panel', index)">重命名</span>
+            <span class="iconfont icon-move" @click="emit('move-file', row)">移动</span>
+            <span class="iconfont icon-copy" @click="emit('copy-file', row)">复制</span>
+          </template>
+        </span>
       </div>
     </template>
     <!-- 文件大小 -->

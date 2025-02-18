@@ -13,7 +13,12 @@ public enum FileTypeEnum {
     /**
      * Heic图片类型
      */
-    HEIC("heic");
+    HEIC("heic"),
+
+    /**
+     * Svg图片类型
+     */
+    SVG("svg");
 
     /**
      * suffix
@@ -25,5 +30,12 @@ public enum FileTypeEnum {
      */
     public static Boolean isHeic(String suffix) {
         return Objects.equals(HEIC.suffix, suffix);
+    }
+
+    /**
+     * 是否是SVG格式
+     */
+    public static Boolean isSvg(String suffix) {
+        return Objects.equals(SVG.suffix, suffix);
     }
 }

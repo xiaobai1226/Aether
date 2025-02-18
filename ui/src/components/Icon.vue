@@ -82,8 +82,8 @@ watch(() => props, () => {
 </script>
 
 <template>
-<span :style="{width: width + 'px', height: width + 'px', 'border-radius': borderRadius + 'px'}" class="icon">
-  <img :src="thumbnailUrl" :style="{'object-fit': fit}" />
+<span :style="{width: width + 'px', height: width + 'px'}" class="icon">
+  <img :src="thumbnailUrl" :style="{'object-fit': fit, 'border-radius': borderRadius + 'px'}" />
 </span>
 </template>
 
@@ -94,8 +94,10 @@ watch(() => props, () => {
   overflow: hidden;
 
   img {
-    width: 100%;
-    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
   }
 }
 </style>

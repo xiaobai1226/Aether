@@ -2,8 +2,16 @@ package com.xiaobai1226.aether.common.util;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.RuntimeUtil;
+import cn.hutool.core.util.StrUtil;
+import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
+import com.github.kokorin.jaffree.ffmpeg.UrlInput;
+import com.github.kokorin.jaffree.ffmpeg.UrlOutput;
+import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import lombok.extern.slf4j.Slf4j;
+
+import java.nio.file.Paths;
 
 /**
  * 图片工具类
@@ -19,7 +27,8 @@ public class ImageUtils {
         // 获取宽度命令
 //        String getWidthCommand = String.format("identify -format \"%%w\" %s", srcImagePath);
         // ImageMagick生成缩略图命令
-        String command = String.format("convert %s -resize 150x -quality 80 %s", srcImagePath, destImagePath);
+        String imageMagickCommand = String.format("convert %s -resize 150x -quality 80 %s", srcImagePath, destImagePath);
+//        String ffmpegCommand = String.format("ffmpeg -i %s -vf scale=150:-1 -qscale:v 5 %s", srcImagePath, destImagePath);
 
         try {
             // 执行命令并获取图片宽度
@@ -43,8 +52,22 @@ public class ImageUtils {
                 FileUtil.touch(destImagePath);
             }
 
+            var suffix = FileNameUtil.extName(srcImagePath);
+            // 如果是svg
+            if (StrUtil.isNotEmpty(suffix) && FileTypeEnum.isSvg(suffix.toLowerCase())) {
+                FFmpeg.atPath()
+                        .addInput(UrlInput.fromPath(Paths.get(srcImagePath)))
+                        .setOverwriteOutput(true)
+                        .addArguments("-vf", "scale=" + width + ":-1")
+                        .addArguments("-qscale:v", "5")
+                        .addOutput(UrlOutput.toPath(Paths.get(destImagePath)))
+                        .execute();
+
+                return true;
+            }
+
             // 执行命令
-            Process process = RuntimeUtil.exec(command);
+            Process process = RuntimeUtil.exec(imageMagickCommand);
 
             // 等待命令执行完成
             int exitCode = process.waitFor();
@@ -54,9 +77,6 @@ public class ImageUtils {
                 FileUtil.del(destImagePath);
                 return false;
             }
-
-//            FFmpeg.atPath().addInput(UrlInput.fromPath(Paths.get(srcImagePath))).setOverwriteOutput(true).addArguments("-vf", "scale=" + width + ":-1").addArguments("-q:v", "2") // 这里"-1"表示，高度将会自动按照输入视频的长宽比进行调整
-//                    .addOutput(UrlOutput.toPath(Paths.get(destImagePath))).execute();
         } catch (Exception e) {
             log.error("生成缩略图失败，失败原因：{}", e.getMessage());
             FileUtil.del(destImagePath);
