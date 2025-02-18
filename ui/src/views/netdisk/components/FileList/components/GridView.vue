@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue'
 import Utils from '@/utils/Utils'
 import Grid from '@/components/Grid.vue'
 import type { UserFileInfo } from '@/api/v1/file/types'
-import Icon from '@/components/Icon.vue'
+import Icon, { type IconConfig } from '@/components/Icon.vue'
 
 /**
  * 父类回调方法
@@ -65,18 +65,53 @@ const props = defineProps({
   },
 
   /**
-   * icon宽度
+   * 显示模式 0 缩略 1 大图
    */
-  iconWidth: {
+  mode: {
     type: Number,
     default: 0
-  },
-  // 图片填充方式
-  iconFit: {
-    type: String,
-    default: 'cover'
   }
 })
+
+/**
+ * 缩略模式Icon配置
+ */
+const thumbnailIconConfig: IconConfig = {
+  width: 60,
+  borderRadius: 8,
+  fit: 'cover',
+  imgWidth: '100%',
+  imgHeight: '100%'
+}
+
+/**
+ * 大图模式Icon配置
+ */
+const largeIconConfig: IconConfig = {
+  width: 128,
+  borderRadius: 8,
+  fit: 'contain',
+  imgWidth: 'auto',
+  imgHeight: 'auto',
+  imgMaxWidth: '100%',
+  imgMaxHeight: '100%'
+}
+
+/**
+ * 获取Icon宽度
+ * @param thumbnail
+ */
+const getIconWidth = (thumbnail: string): number => {
+  if (props.mode === 0) {
+    if (thumbnail) {
+      return 64
+    } else {
+      return 60
+    }
+  } else {
+    return 128
+  }
+}
 
 // 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
 const topHeight = 60 + 20 + 30 + 46
@@ -223,7 +258,8 @@ defineExpose({ clearSelection })
           </div>
           <div class="content">
             <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
-                  :width="iconWidth" :border-radius="8" :fit="iconFit" />
+                  :icon-config="mode === 0 ? thumbnailIconConfig : largeIconConfig"
+                  :width="getIconWidth(userFile.thumbnail)" />
             <el-tooltip placement="bottom" effect="light" :hide-after="0">
               <div>
                 <div class="name">{{ userFile.name }}</div>

@@ -19,13 +19,13 @@
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
         <!-- 缩略模式 -->
         <GridView ref="thumbnailViewRef" v-else-if="netdiskConfig.displayMode.id === Thumbnail.id"
-                  :width="128" :height="170" :iconWidth="60"
+                  :width="128" :height="170" :mode="0"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
         <!-- 大图模式 -->
         <GridView ref="largeViewRef" v-else-if="netdiskConfig.displayMode.id === Large.id"
-                  :width="168" :height="245" :iconWidth="128" icon-fit="contain"
+                  :width="168" :height="245" :mode="1"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
                   @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
