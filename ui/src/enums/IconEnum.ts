@@ -45,6 +45,7 @@ export const IconEnum: IconEnumType = {
   DELETE: { iconUrl: url('delete'), suffixSet: new Set([]) } as const,
   UPLOAD: { iconUrl: url('upload'), suffixSet: new Set([]) } as const,
   PAUSE: { iconUrl: url('pause'), suffixSet: new Set([]) } as const,
+  PLAY: { iconUrl: url('play'), suffixSet: new Set([]) } as const,
   MUSIC: {
     iconUrl: url('music'),
     suffixSet: new Set(['mp3', 'wav', 'wma', 'mp2', 'flac', 'midi', 'ra', 'ape', 'aac', 'cda'])
@@ -90,6 +91,7 @@ export const {
   DELETE,
   UPLOAD,
   PAUSE,
+  PLAY,
   CODE,
   CSS,
   DMG,

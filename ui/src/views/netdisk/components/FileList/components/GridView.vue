@@ -5,6 +5,7 @@ import Utils from '@/utils/Utils'
 import Grid from '@/components/Grid.vue'
 import type { UserFileInfo } from '@/api/v1/file/types'
 import Icon, { type IconConfig } from '@/components/Icon.vue'
+import { PLAY } from '@/enums/IconEnum'
 
 /**
  * 父类回调方法
@@ -257,9 +258,12 @@ defineExpose({ clearSelection })
             </div>
           </div>
           <div class="content">
-            <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
-                  :icon-config="mode === 0 ? thumbnailIconConfig : largeIconConfig"
-                  :width="getIconWidth(userFile.thumbnail)" />
+            <div class="icon">
+              <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
+                    :icon-config="mode === 0 ? thumbnailIconConfig : largeIconConfig"
+                    :width="getIconWidth(userFile.thumbnail)" />
+              <Icon class="play" :icon-url="PLAY.iconUrl" :width="mode === 0 ? 14 : 20" />
+            </div>
             <el-tooltip placement="bottom" effect="light" :hide-after="0">
               <div>
                 <div class="name">{{ userFile.name }}</div>
@@ -371,6 +375,21 @@ defineExpose({ clearSelection })
 
   .content {
     margin-top: 4px;
+
+    .icon {
+      display: flex; /* 使用flex布局使两个组件并列 */
+      justify-content: center; /* 水平居中对齐两个组件 */
+      align-items: center; /* 垂直居中对齐两个组件 */
+      position: relative;
+
+      .play {
+        position: absolute; /* 使组件2绝对定位 */
+        top: 50%; /* 垂直居中 */
+        left: 50%; /* 水平居中 */
+        transform: translate(-50%, -50%); /* 精确居中 */
+        z-index: 1; /* 确保组件2在组件1之上 */
+      }
+    }
 
     .name {
       font-size: 12px;

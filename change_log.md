@@ -6,6 +6,9 @@
 
 1. 使用ImageMagick, 增加对heic图片的支持
 2. 使用ImagesMagick生成图片缩略图，替代ffmpeg
+3. 优化Icon圆角
+4. 视频缩略图展示增加三角
+5. 优化视频缩略图生成逻辑
 
 ### fix
 
