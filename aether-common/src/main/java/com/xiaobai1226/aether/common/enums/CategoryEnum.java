@@ -79,6 +79,9 @@ public enum CategoryEnum {
      * 是否是图片
      */
     public static Boolean isPictureBySuffix(String suffix) {
+        if (suffix == null) {
+            return false;
+        }
         return PICTURE.suffixSet.contains(suffix);
     }
 
@@ -94,6 +97,9 @@ public enum CategoryEnum {
      * 是否是视频
      */
     public static Boolean isVideoBySuffix(String suffix) {
+        if (suffix == null) {
+            return false;
+        }
         return VIDEO.suffixSet.contains(suffix);
     }
 

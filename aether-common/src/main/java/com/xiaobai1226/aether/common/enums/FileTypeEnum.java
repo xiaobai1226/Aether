@@ -18,7 +18,12 @@ public enum FileTypeEnum {
     /**
      * Svg图片类型
      */
-    SVG("svg");
+    SVG("svg"),
+
+    /**
+     * Gif图片类型
+     */
+    GIF("gif");
 
     /**
      * suffix
@@ -37,5 +42,12 @@ public enum FileTypeEnum {
      */
     public static Boolean isSvg(String suffix) {
         return Objects.equals(SVG.suffix, suffix);
+    }
+
+    /**
+     * 是否是GIF格式
+     */
+    public static Boolean isGif(String suffix) {
+        return Objects.equals(GIF.suffix, suffix);
     }
 }

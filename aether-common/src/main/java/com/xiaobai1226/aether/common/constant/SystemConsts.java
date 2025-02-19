@@ -71,6 +71,11 @@ public class SystemConsts {
     public static final String THUMBNAIL_SUFFIX = ".jpg";
 
     /**
+     * 缩略图后缀
+     */
+    public static final String THUMBNAIL_GIF_SUFFIX = ".gif";
+
+    /**
      * 默认头像文件名
      */
     public static final String DEFAULT_AVATAR_FILE_NAME = "default_avatar" + AVATAR_SUFFIX;

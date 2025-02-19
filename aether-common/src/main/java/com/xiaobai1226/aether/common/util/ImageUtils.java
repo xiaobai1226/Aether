@@ -26,8 +26,6 @@ public class ImageUtils {
     public static Boolean generateThumbnail(String srcImagePath, String destImagePath, int width, int height) {
         // 获取宽度命令
 //        String getWidthCommand = String.format("identify -format \"%%w\" %s", srcImagePath);
-        // ImageMagick生成缩略图命令
-        String imageMagickCommand = String.format("convert %s -resize 150x -quality 80 %s", srcImagePath, destImagePath);
 //        String ffmpegCommand = String.format("ffmpeg -i %s -vf scale=150:-1 -qscale:v 5 %s", srcImagePath, destImagePath);
 
         try {
@@ -53,17 +51,24 @@ public class ImageUtils {
             }
 
             var suffix = FileNameUtil.extName(srcImagePath);
+
             // 如果是svg
             if (StrUtil.isNotEmpty(suffix) && FileTypeEnum.isSvg(suffix.toLowerCase())) {
                 FFmpeg.atPath()
                         .addInput(UrlInput.fromPath(Paths.get(srcImagePath)))
                         .setOverwriteOutput(true)
                         .addArguments("-vf", "scale=" + width + ":-1")
-                        .addArguments("-qscale:v", "5")
+                        .addArguments("-q:v", "5")
                         .addOutput(UrlOutput.toPath(Paths.get(destImagePath)))
                         .execute();
 
                 return true;
+            }
+
+            // ImageMagick生成缩略图命令
+            String imageMagickCommand = String.format("convert %s -resize 150x> -quality 80 %s", srcImagePath, destImagePath);
+            if (FileTypeEnum.isGif(suffix.toLowerCase())) {
+                imageMagickCommand = String.format("convert %s -coalesce -thumbnail 150x> -layers optimize %s", srcImagePath, destImagePath);
             }
 
             // 执行命令
