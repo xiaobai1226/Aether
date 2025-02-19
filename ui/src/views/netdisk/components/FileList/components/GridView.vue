@@ -5,7 +5,7 @@ import Utils from '@/utils/Utils'
 import Grid from '@/components/Grid.vue'
 import type { UserFileInfo } from '@/api/v1/file/types'
 import Icon, { type IconConfig } from '@/components/Icon.vue'
-import { PLAY } from '@/enums/IconEnum'
+import { PLAY, VIDEO } from '@/enums/IconEnum'
 
 /**
  * 父类回调方法
@@ -262,7 +262,8 @@ defineExpose({ clearSelection })
               <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
                     :icon-config="mode === 0 ? thumbnailIconConfig : largeIconConfig"
                     :width="getIconWidth(userFile.thumbnail)" />
-              <Icon class="play" :icon-url="PLAY.iconUrl" :width="mode === 0 ? 14 : 20" />
+              <Icon class="play" v-if="(userFile.suffix && VIDEO.suffixSet.has(userFile.suffix))"
+                    :icon-url="PLAY.iconUrl" :width="mode === 0 ? 14 : 20" />
             </div>
             <el-tooltip placement="bottom" effect="light" :hide-after="0">
               <div>
