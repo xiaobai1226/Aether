@@ -4,7 +4,8 @@ import { computed, ref, watch } from 'vue'
 import Utils from '@/utils/Utils'
 import Grid from '@/components/Grid.vue'
 import type { UserFileInfo } from '@/api/v1/file/types'
-import Icon from '@/components/Icon.vue'
+import Icon, { type IconConfig } from '@/components/Icon.vue'
+import { PLAY, VIDEO } from '@/enums/IconEnum'
 
 /**
  * 父类回调方法
@@ -65,18 +66,53 @@ const props = defineProps({
   },
 
   /**
-   * icon宽度
+   * 显示模式 0 缩略 1 大图
    */
-  iconWidth: {
+  mode: {
     type: Number,
     default: 0
-  },
-  // 图片填充方式
-  iconFit: {
-    type: String,
-    default: 'cover'
   }
 })
+
+/**
+ * 缩略模式Icon配置
+ */
+const thumbnailIconConfig: IconConfig = {
+  width: 60,
+  borderRadius: 8,
+  fit: 'cover',
+  imgWidth: '100%',
+  imgHeight: '100%'
+}
+
+/**
+ * 大图模式Icon配置
+ */
+const largeIconConfig: IconConfig = {
+  width: 128,
+  borderRadius: 8,
+  fit: 'contain',
+  imgWidth: 'auto',
+  imgHeight: 'auto',
+  imgMaxWidth: '100%',
+  imgMaxHeight: '100%'
+}
+
+/**
+ * 获取Icon宽度
+ * @param thumbnail
+ */
+const getIconWidth = (thumbnail: string): number => {
+  if (props.mode === 0) {
+    if (thumbnail) {
+      return 64
+    } else {
+      return 60
+    }
+  } else {
+    return 128
+  }
+}
 
 // 顶部 60，内容区域距离顶部20，内容上下间距15*2 分页区域高度46
 const topHeight = 60 + 20 + 30 + 46
@@ -222,8 +258,13 @@ defineExpose({ clearSelection })
             </div>
           </div>
           <div class="content">
-            <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
-                  :width="iconWidth" :border-radius="8" :fit="iconFit" />
+            <div class="icon">
+              <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
+                    :icon-config="mode === 0 ? thumbnailIconConfig : largeIconConfig"
+                    :width="getIconWidth(userFile.thumbnail)" />
+              <Icon class="play" v-if="(userFile.suffix && VIDEO.suffixSet.has(userFile.suffix))"
+                    :icon-url="PLAY.iconUrl" :width="mode === 0 ? 14 : 20" />
+            </div>
             <el-tooltip placement="bottom" effect="light" :hide-after="0">
               <div>
                 <div class="name">{{ userFile.name }}</div>
@@ -335,6 +376,21 @@ defineExpose({ clearSelection })
 
   .content {
     margin-top: 4px;
+
+    .icon {
+      display: flex; /* 使用flex布局使两个组件并列 */
+      justify-content: center; /* 水平居中对齐两个组件 */
+      align-items: center; /* 垂直居中对齐两个组件 */
+      position: relative;
+
+      .play {
+        position: absolute; /* 使组件2绝对定位 */
+        top: 50%; /* 垂直居中 */
+        left: 50%; /* 水平居中 */
+        transform: translate(-50%, -50%); /* 精确居中 */
+        z-index: 1; /* 确保组件2在组件1之上 */
+      }
+    }
 
     .name {
       font-size: 12px;

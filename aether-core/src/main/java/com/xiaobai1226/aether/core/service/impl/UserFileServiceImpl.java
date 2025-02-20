@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
 import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
+import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
 import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
@@ -409,18 +410,18 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             }
         }
 
-//        String thumbnailFileName = null;
-        String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH + FileUtils.replaceFileExtName(finalFileName, SystemConsts.THUMBNAIL_SUFFIX);
+        var thumbnailSuffix = FileTypeEnum.isGif(FileNameUtil.extName(finalFileName).toLowerCase()) ? SystemConsts.THUMBNAIL_GIF_SUFFIX : SystemConsts.THUMBNAIL_SUFFIX;
+        String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH + FileUtils.replaceFileExtName(finalFileName, thumbnailSuffix);
         // 设置文件存储全路径
         var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnailFileName);
         uploadFileCacheDTO.setThumbnailFilePath(thumbnailFilePath);
 
         // 图片生成缩略图
         if (CategoryEnum.isPictureByName(uploadTempFileDTO.getFileName())) {
-            var result = ImageUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150, -1);
+            var result = ImageUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150, -1);
             thumbnailFileName = result ? thumbnailFileName : null;
         } else if (CategoryEnum.isVideoByName(uploadTempFileDTO.getFileName())) { // 视频生成缩略图
-            var result = VideoUtils.generateThumbnail(finalFilePath, thumbnailFilePath, 150);
+            var result = VideoUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150);
             thumbnailFileName = result ? thumbnailFileName : null;
         } else {
             thumbnailFileName = null;

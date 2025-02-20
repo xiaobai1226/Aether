@@ -1,7 +1,27 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { type PropType, ref, watch } from 'vue'
 import { getThumbnailUrl } from '@/api/v1/file'
 import { IconEnum, FOLDER, OTHER } from '@/enums/IconEnum'
+
+/**
+ * 配置定义
+ */
+export interface IconConfig {
+  // 图标宽度
+  width: Number,
+  // 图标圆角弧度
+  borderRadius: Number,
+  // 图片填充方式
+  fit: String,
+  // 图片宽度
+  imgWidth: String,
+  // 图片高度
+  imgHeight: String,
+  // 图片最大宽度
+  imgMaxWidth?: String,
+  // 图片最大高度
+  imgMaxHeight?: String
+}
 
 const props = defineProps({
   // 文件类型 0 文件夹 1 文件
@@ -20,21 +40,21 @@ const props = defineProps({
   thumbnail: {
     type: String
   },
+  // Icon配置
+  iconConfig: {
+    type: Object as PropType<IconConfig>,
+    default: () => ({
+      width: 32,
+      borderRadius: 4,
+      fit: 'cover',
+      imgWidth: '100%',
+      imgHeight: '100%'
+    })
+  },
   // 图标宽度
-  width: {
-    type: Number,
-    default: 32
-  },
-  // 图标圆角弧度
-  borderRadius: {
-    type: Number,
-    default: 4
-  },
+  width: Number,
   // 图片填充方式
-  fit: {
-    type: String,
-    default: 'cover'
-  }
+  fit: String
 })
 
 const thumbnailUrl = ref('')
@@ -82,20 +102,19 @@ watch(() => props, () => {
 </script>
 
 <template>
-<span :style="{width: width + 'px', height: width + 'px', 'border-radius': borderRadius + 'px'}" class="icon">
-  <img :src="thumbnailUrl" :style="{'object-fit': fit}" />
+<span :style="{width: (width ? width : iconConfig.width) + 'px', height: (width ? width : iconConfig.width) + 'px'}"
+      class="icon">
+  <img :src="thumbnailUrl"
+       :style="{'object-fit': (fit ? fit : iconConfig.fit), 'border-radius': iconConfig.borderRadius + 'px', width: iconConfig.imgWidth, height: iconConfig.imgHeight, 'max-width': iconConfig.imgMaxWidth, 'max-height': iconConfig.imgMaxHeight }" />
 </span>
 </template>
 
 <style scoped lang="scss">
 .icon {
   text-align: center;
-  display: inline-block;
+  display: inline-flex; /* 使用 Flexbox */
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
   overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-  }
 }
 </style>

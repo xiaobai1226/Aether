@@ -8,6 +8,8 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
+import com.xiaobai1226.aether.common.enums.FileTypeEnum;
+import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.core.dao.redis.DownloadRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.domain.dto.common.PageResult;
@@ -32,6 +34,7 @@ import java.util.*;
 import java.util.Date;
 import java.util.stream.Collectors;
 
+import static cn.hutool.http.ContentType.OCTET_STREAM;
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
 import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.*;
@@ -570,9 +573,20 @@ public class FileController {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
 
-            var file = FileUtil.file(fileFullPath);
+            DownloadedFile downloadedFile;
 
-            var downloadedFile = new DownloadedFile(file, userFileDO.getName());
+            if (FileTypeEnum.isHeic(fileDO.getSuffix())) {
+                var webpBytes = ImageUtils.heic2Webp(fileFullPath);
+
+                if (webpBytes == null) {
+                    throw new FailResultException(SYSTEM_ERROR);
+                }
+                
+                downloadedFile = new DownloadedFile(OCTET_STREAM.getValue(), webpBytes, userFileDO.getName());
+            } else {
+                var file = FileUtil.file(fileFullPath);
+                downloadedFile = new DownloadedFile(file, userFileDO.getName());
+            }
 
             //不做为附件下载（按需配置）
             downloadedFile.asAttachment(false);
