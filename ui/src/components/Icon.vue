@@ -60,6 +60,7 @@ const props = defineProps({
 const thumbnailUrl = ref('')
 
 const getImage = () => {
+
   // 如果指定了iconUrl
   if (props.iconUrl) {
     thumbnailUrl.value = props.iconUrl
@@ -81,6 +82,10 @@ const getImage = () => {
     return
   }
 
+  getFinalImage()
+}
+
+const getFinalImage = () => {
   // 如果后缀不为空
   if (props.suffix) {
     for (const key in IconEnum) {
@@ -102,11 +107,11 @@ watch(() => props, () => {
 </script>
 
 <template>
-<span :style="{width: (width ? width : iconConfig.width) + 'px', height: (width ? width : iconConfig.width) + 'px'}"
-      class="icon">
-  <img :src="thumbnailUrl"
-       :style="{'object-fit': (fit ? fit : iconConfig.fit), 'border-radius': iconConfig.borderRadius + 'px', width: iconConfig.imgWidth, height: iconConfig.imgHeight, 'max-width': iconConfig.imgMaxWidth, 'max-height': iconConfig.imgMaxHeight }" />
-</span>
+  <span :style="{width: (width ? width : iconConfig.width) + 'px', height: (width ? width : iconConfig.width) + 'px'}"
+        class="icon">
+    <el-image :src="thumbnailUrl" lazy @error="getFinalImage()"
+              :style="{'object-fit': (fit ? fit : iconConfig.fit), 'border-radius': iconConfig.borderRadius + 'px', width: iconConfig.imgWidth, height: iconConfig.imgHeight, 'max-width': iconConfig.imgMaxWidth, 'max-height': iconConfig.imgMaxHeight }" />
+  </span>
 </template>
 
 <style scoped lang="scss">
