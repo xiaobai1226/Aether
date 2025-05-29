@@ -24,6 +24,10 @@
                 v-if="item.status === STATUS.uploading.value || item.status === STATUS.pause.value">
               {{ Utils.sizeToStr(item.uploadedSize) }} / {{ Utils.sizeToStr(item.totalSize) }}
             </span>
+          <!-- 完成时间 -->
+          <span class="finish-time" v-if="item.finishTime && (item.status === STATUS.upload_finish.value || item.status === STATUS.upload_seconds.value)">
+            {{ item.finishTime }}
+          </span>
         </div>
       </div>
       <div class="op">
@@ -123,6 +127,12 @@ const uploaderStore = useUploaderStore()
         margin-left: 5px;
         font-size: 12px;
         color: rgb(112, 111, 111);
+      }
+
+      .finish-time {
+        margin-left: 10px;
+        font-size: 12px;
+        color: #666;
       }
     }
 

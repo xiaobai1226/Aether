@@ -298,9 +298,12 @@ export const useUploaderStore = defineStore('uploader', () => {
             currentUploadFile.currentChunkIndex = i
             if (statusString == STATUS.upload_seconds.value || statusString == STATUS.upload_finish.value) {
               currentUploadFile.uploadProgress = 100
+              
+              // 添加完成时间
+              currentUploadFile.finishTime = new Date().toLocaleString()
 
               // 将数据写入上传成功列表
-              uploadSuccessFileList.value.push(currentUploadFile)
+              uploadSuccessFileList.value.unshift(currentUploadFile)
 
               // 从上传列表中去除
               const index: number = uploadingFileList.value.findIndex((uploadFile) => uploadFile.uid === currentUploadFile.uid)

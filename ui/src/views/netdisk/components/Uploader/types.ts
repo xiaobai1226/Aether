@@ -29,7 +29,9 @@ export interface UploadFileItem {
   // 任务ID
   taskId: string,
   // 回调方法
-  uploadedCallback: (uploadPath?: string) => void
+  uploadedCallback: (uploadPath?: string) => void,
+  // 完成时间
+  finishTime?: string
 }
 
 // 定义STATUS对象
