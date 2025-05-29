@@ -10,6 +10,10 @@ subprojects {
     version = appVersion
     description = "家庭网盘项目"
     java.sourceCompatibility = JavaVersion.VERSION_21
+
+    tasks.withType<JavaCompile> {
+        options.encoding = "UTF-8"
+    }
 }
 
 allprojects {
