@@ -120,8 +120,16 @@ httpInstance.interceptors.response.use(
 
         ElMessage.warning(msg)
 
-        // 返回登录页
-        router.push({ path: '/login' })
+        // 保存当前路由信息并跳转到登录页
+        const currentRoute = router.currentRoute.value
+        if (currentRoute.path !== '/login') {
+          router.push({
+            path: '/login',
+            query: {
+              redirect: currentRoute.fullPath
+            }
+          })
+        }
       }
 
       // 根据 showErrMsg 判断是否需要显示错误提示
