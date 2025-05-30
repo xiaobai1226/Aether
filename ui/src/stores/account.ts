@@ -22,7 +22,12 @@ export const useAccountStore = defineStore('account', () => {
     return new Promise<void>((resolve, reject) => {
       login(loginInfo)
         .then((response) => {
-          accountInfo.value = response.data
+          // 如果服务器返回的数据中没有昵称，使用用户名作为昵称
+          const userData = response.data;
+          if (!userData.nickname) {
+            userData.nickname = loginInfo.username;
+          }
+          accountInfo.value = userData;
           resolve()
         })
         .catch((error) => {
