@@ -109,7 +109,7 @@ watch(() => props, () => {
 <template>
   <span :style="{width: (width ? width : iconConfig.width) + 'px', height: (width ? width : iconConfig.width) + 'px'}"
         class="icon">
-    <el-image :src="thumbnailUrl" lazy @error="getFinalImage()"
+    <el-image :src="thumbnailUrl" @error="getFinalImage()"
               :style="{'object-fit': (fit ? fit : iconConfig.fit), 'border-radius': iconConfig.borderRadius + 'px', width: iconConfig.imgWidth, height: iconConfig.imgHeight, 'max-width': iconConfig.imgMaxWidth, 'max-height': iconConfig.imgMaxHeight }" />
   </span>
 </template>
