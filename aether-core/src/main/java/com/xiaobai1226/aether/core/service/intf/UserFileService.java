@@ -1,15 +1,16 @@
 package com.xiaobai1226.aether.core.service.intf;
 
-import com.baomidou.mybatisplus.solon.service.IService;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.xiaobai1226.aether.core.domain.dto.*;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.domain.entity.FileDO;
-import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.UploadFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFolderVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.FileDO;
+import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
+
 import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 

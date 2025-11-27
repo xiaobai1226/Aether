@@ -1,4 +1,4 @@
-package com.xiaobai1226.aether.domain.dto.common;
+package com.xiaobai1226.aether.dao.domain.dto;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AccessLevel;

@@ -12,7 +12,7 @@ import org.noear.solon.web.cors.CrossFilter;
  * @author bai
  */
 @SolonMain
-@Import(scanPackages = "com.xiaobai1226.aether.admin")
+@Import(scanPackages = "com.xiaobai1226.aether")
 public class AetherCoreApp {
 
     public static void main(String[] args) {

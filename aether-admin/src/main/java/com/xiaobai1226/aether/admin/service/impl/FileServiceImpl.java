@@ -4,28 +4,25 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
-import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xiaobai1226.aether.admin.domain.vo.FileVO;
 import com.xiaobai1226.aether.admin.service.intf.FileService;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
-import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.common.util.VideoUtils;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.mapper.FileMapper;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.domain.entity.FileDO;
-import com.xiaobai1226.aether.domain.entity.UserFileDO;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
-import org.noear.solon.data.annotation.Tran;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,7 +30,6 @@ import java.util.stream.Stream;
 
 import static com.xiaobai1226.aether.common.enums.CategoryEnum.PICTURE;
 import static com.xiaobai1226.aether.common.enums.CategoryEnum.VIDEO;
-import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
 
 /**
  * 文件service实现类

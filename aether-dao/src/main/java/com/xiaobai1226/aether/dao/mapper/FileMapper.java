@@ -1,7 +1,7 @@
 package com.xiaobai1226.aether.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.xiaobai1226.aether.domain.entity.FileDO;
+import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 
 /**
  * 文件表Mapper

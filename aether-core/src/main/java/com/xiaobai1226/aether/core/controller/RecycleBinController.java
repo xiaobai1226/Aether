@@ -3,13 +3,14 @@ package com.xiaobai1226.aether.core.controller;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
+
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
 import com.xiaobai1226.aether.core.domain.vo.DeleteRecycleBinVO;
 import com.xiaobai1226.aether.core.domain.vo.RestoreRecycleBinVO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.validation.annotation.Valid;

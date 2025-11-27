@@ -4,30 +4,21 @@
 //version = appVersion
 
 dependencies {
-    implementation(platform("org.noear:solon-parent:${DependenciesVersion.solonVersion}"))
     implementation("org.noear:solon-web")
     implementation("org.noear:solon-boot-jetty")
     implementation("org.noear:solon-view-thymeleaf")
     implementation("org.noear:solon-web-webdav:${DependenciesVersion.solonVersion}")
-    implementation("org.noear:solon.logging.logback")
-    implementation("org.noear:solon.validation")
-    implementation("org.noear:mybatis-plus-extension-solon-plugin")
+    implementation("org.noear:solon-logging-logback")
     implementation("org.noear:sa-token-solon-plugin")
     implementation("org.noear:redisson-solon-plugin")
-
-    implementation("com.zaxxer:HikariCP:${DependenciesVersion.hikariCPVersion}")
-    implementation("cn.hutool:hutool-all:${DependenciesVersion.hutoolVersion}")
-    implementation("org.projectlombok:lombok:${DependenciesVersion.lombokVersion}")
-    annotationProcessor("org.projectlombok:lombok:${DependenciesVersion.lombokVersion}")
-    implementation("com.mysql:mysql-connector-j:${DependenciesVersion.mysqlConnectorJVersion}")
+    // Caffeine缓存
+    implementation("com.github.ben-manes.caffeine:caffeine:${DependenciesVersion.caffeineVersion}")    
 
     // 内部模块
     implementation(project(":aether-common"))
     implementation(project(":aether-admin"))
     implementation(project(":aether-domain"))
     implementation(project(":aether-dao"))
-
-    testImplementation("org.noear:solon-test")
 }
 
 tasks.withType<JavaCompile> {

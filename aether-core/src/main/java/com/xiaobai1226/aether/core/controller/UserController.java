@@ -53,7 +53,7 @@ public class UserController {
      */
     @Post
     @Mapping("/updateUserPassword")
-    public Result updateUserPassword(@Validated UpdatePasswordVO updatePasswordVO) {
+    public Result<Void> updateUserPassword(@Validated UpdatePasswordVO updatePasswordVO) {
         // 获取当前会话账号id, 并转化为`int`类型
         final var userId = StpUtil.getLoginIdAsInt();
 

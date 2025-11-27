@@ -5,7 +5,6 @@ import com.xiaobai1226.aether.common.domain.dto.Result;
 
 /**
  * 失败结果异常类
- * TODO 警告待处理
  *
  * @author bai
  */
@@ -14,7 +13,7 @@ public class FailResultException extends RuntimeException {
     /**
      * 结果类
      */
-    private Result result;
+    private Result<Void> result;
 
     public FailResultException(ResultCodeEnum resultCode) {
         super();
@@ -26,7 +25,7 @@ public class FailResultException extends RuntimeException {
         this.result = Result.fail(resultCode, msg);
     }
 
-    public Result getResult() {
+    public Result<Void> getResult() {
         return result;
     }
 }

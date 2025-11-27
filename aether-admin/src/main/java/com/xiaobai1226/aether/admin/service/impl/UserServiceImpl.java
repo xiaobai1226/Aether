@@ -4,16 +4,18 @@ import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
-import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
+
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xiaobai1226.aether.admin.domain.vo.AddUserVO;
+import com.xiaobai1226.aether.admin.domain.vo.UpdateUserVO;
 import com.xiaobai1226.aether.admin.domain.vo.UserVO;
 import com.xiaobai1226.aether.admin.service.intf.UserService;
 import com.xiaobai1226.aether.common.exception.FailResultException;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.UserDO;
 import com.xiaobai1226.aether.dao.mapper.UserMapper;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.domain.entity.UserDO;
-import com.xiaobai1226.aether.domain.vo.AddUserVO;
-import com.xiaobai1226.aether.domain.vo.UpdateUserVO;
+
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 

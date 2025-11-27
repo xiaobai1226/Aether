@@ -1,10 +1,10 @@
 package com.xiaobai1226.aether.core.service.intf;
 
-import com.baomidou.mybatisplus.solon.service.IService;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
-import com.xiaobai1226.aether.domain.entity.RecycleBinDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.RecycleBinDO;
 
 import java.util.List;
 

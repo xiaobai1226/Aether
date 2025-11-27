@@ -2,10 +2,12 @@
  * 依赖版本
  */
 object DependenciesVersion {
-    val solonVersion = "3.0.9-M1"
-    val lombokVersion = "1.18.36"
-    val hutoolVersion = "5.8.36"
+    val solonVersion = "3.7.0"
+    val lombokVersion = "1.18.40"
+    val hutoolVersion = "5.8.40"
     val jaffreeVersion = "2024.08.29"
-    val hikariCPVersion = "6.2.1"
-    val mysqlConnectorJVersion = "9.2.0"
+    val caffeineVersion = "3.2.2"
+    val mybatisPlusVersion = "3.5.12"
+    val hikariCPVersion = "7.0.2"
+    val mysqlConnectorJVersion = "9.4.0"
 }

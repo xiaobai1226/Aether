@@ -1,13 +1,14 @@
 package com.xiaobai1226.aether.admin.controller;
 
+import com.xiaobai1226.aether.admin.domain.vo.AddUserVO;
+import com.xiaobai1226.aether.admin.domain.vo.UpdateUserVO;
 import com.xiaobai1226.aether.admin.domain.vo.UserVO;
 import com.xiaobai1226.aether.admin.service.intf.UserService;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import com.xiaobai1226.aether.common.exception.FailResultException;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.domain.entity.UserDO;
-import com.xiaobai1226.aether.domain.vo.AddUserVO;
-import com.xiaobai1226.aether.domain.vo.UpdateUserVO;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.UserDO;
+
 import org.noear.solon.annotation.*;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;

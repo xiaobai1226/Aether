@@ -1,8 +1,8 @@
 package com.xiaobai1226.aether.core.service.intf;
 
 import com.xiaobai1226.aether.core.domain.dto.UserSpaceUsageDTO;
-import com.xiaobai1226.aether.domain.entity.UserDO;
 import com.xiaobai1226.aether.core.domain.vo.RegisterVO;
+import com.xiaobai1226.aether.dao.domain.entity.UserDO;
 
 /**
  * 用户服务接口

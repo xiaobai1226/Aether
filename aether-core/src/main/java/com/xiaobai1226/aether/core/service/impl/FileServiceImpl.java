@@ -3,12 +3,13 @@ package com.xiaobai1226.aether.core.service.impl;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
+
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
-import com.xiaobai1226.aether.domain.entity.FileDO;
 import com.xiaobai1226.aether.core.mapper.FileMapper;
 import com.xiaobai1226.aether.core.service.intf.FileService;
+import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;

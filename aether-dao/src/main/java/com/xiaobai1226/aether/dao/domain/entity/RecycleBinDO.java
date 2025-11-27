@@ -1,4 +1,4 @@
-package com.xiaobai1226.aether.domain.entity;
+package com.xiaobai1226.aether.dao.domain.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;

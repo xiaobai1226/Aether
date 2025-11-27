@@ -4,8 +4,9 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.admin.domain.vo.FileVO;
 import com.xiaobai1226.aether.admin.service.intf.FileService;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.domain.entity.FileDO;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.FileDO;
+
 import org.noear.solon.annotation.*;
 import org.noear.solon.validation.annotation.Valid;
 

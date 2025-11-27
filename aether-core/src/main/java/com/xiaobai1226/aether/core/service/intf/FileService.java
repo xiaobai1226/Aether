@@ -1,6 +1,6 @@
 package com.xiaobai1226.aether.core.service.intf;
 
-import com.xiaobai1226.aether.domain.entity.FileDO;
+import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 
 /**
  * 文件服务接口

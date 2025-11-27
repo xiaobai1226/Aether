@@ -1,8 +1,8 @@
 package com.xiaobai1226.aether.admin.service.intf;
 
 import com.xiaobai1226.aether.admin.domain.vo.FileVO;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.domain.entity.FileDO;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 
 import java.util.List;
 
