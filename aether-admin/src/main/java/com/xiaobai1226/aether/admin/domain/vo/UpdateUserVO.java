@@ -20,7 +20,7 @@ public class UpdateUserVO {
      * 用户ID
      */
     @NotNull(message = ERROR_USER_ID_EMPTY)
-    private Integer id;
+    private Long id;
 
     /**
      * 用户名
@@ -42,7 +42,7 @@ public class UpdateUserVO {
     /**
      * 密码
      */
-    private Integer roleId;
+    private Long roleId;
 
     /**
      * 用户状态

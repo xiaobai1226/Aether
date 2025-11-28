@@ -28,7 +28,7 @@ public interface FileService {
      * @param thumbnail  缩略图
      * @return 主键ID
      */
-    Integer addFile(String fileName, String filePath, Long fileSize, String identifier, String thumbnail);
+    Long addFile(String fileName, String filePath, Long fileSize, String identifier, String thumbnail);
 
     /**
      * 合并文件
@@ -46,7 +46,7 @@ public interface FileService {
      *
      * @param id ID
      */
-    FileDO getFileById(Integer id);
+    FileDO getFileById(Long id);
 
 //    Integer mergeFiless(Integer userId, String taskId);
 }

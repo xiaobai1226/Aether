@@ -28,7 +28,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 分享ID
      * @author bai
      */
-    String create(List<Integer> userFileIds, String extractionCode, Integer validityPeriod, Integer userId);
+    String create(List<Long> userFileIds, String extractionCode, Integer validityPeriod, Long userId);
 
     /**
      * 分页获取分享文件及文件夹列表
@@ -38,7 +38,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 获取到的分享文件数据
      * @author bai
      */
-    Page<ShareDO> getShareDOListByPage(Integer userId, PageVO shareFileVO);
+    Page<ShareDO> getShareDOListByPage(Long userId, PageVO shareFileVO);
 
     /**
      * 获取分享文件及文件夹列表
@@ -48,7 +48,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 获取到的分享文件数据
      * @author bai
      */
-    List<ShareDO> getShareDOList(Integer userId, List<String> shareIds);
+    List<ShareDO> getShareDOList(Long userId, List<String> shareIds);
 
     /**
      * 获取分享文件及文件夹列表
@@ -58,7 +58,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 获取到的分享文件数据
      * @author bai
      */
-    PageResult<ShareFileDTO> getShareFileList(Integer userId, PageVO shareFileVO);
+    PageResult<ShareFileDTO> getShareFileList(Long userId, PageVO shareFileVO);
 
     /**
      * 取消分享文件
@@ -67,7 +67,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @param shareIds 分享ID集合
      * @author bai
      */
-    void cancelShareFile(Integer userId, List<String> shareIds);
+    void cancelShareFile(Long userId, List<String> shareIds);
 
     /**
      * 获取分享信息

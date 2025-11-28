@@ -33,7 +33,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    UserFileDO getParentFolderByPath(Integer userId, Integer parentId, String path);
+    UserFileDO getParentFolderByPath(Long userId, Long parentId, String path);
 
     /**
      * 根据path获取父文件夹ID，如果不存在则创建这个文件夹
@@ -44,7 +44,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹ID
      * @author bai
      */
-    Integer getParentFolderByPathOrCreate(Integer userId, Integer parentId, String path);
+    Long getParentFolderByPathOrCreate(Long userId, Long parentId, String path);
 
     /**
      * 根据path获取用户文件数据
@@ -54,7 +54,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    UserFileDTO getUserFileDTOByPath(Integer userId, String path);
+    UserFileDTO getUserFileDTOByPath(Long userId, String path);
 
     /**
      * 获取文件及文件夹列表
@@ -65,7 +65,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 获取到的用户文件数据
      * @author bai
      */
-    PageResult<UserFileDTO> getFileList(Integer userId, Integer parentId, UserFileVO userFileVO);
+    PageResult<UserFileDTO> getFileList(Long userId, Long parentId, UserFileVO userFileVO);
 
     /**
      * 根据文件名称获取文件数据
@@ -78,8 +78,8 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-//    UserFileDO getUserFileByName(String fileName, Integer userId, Integer parentId, UserFileStatusEnum userFileStatus, UserFileItemTypeEnum itemType);
-    UserFileDO getUserFileByName(String fileName, Integer userId, Integer parentId, UserFileStatusEnum userFileStatus);
+//    UserFileDO getUserFileByName(String fileName, Long userId, Long parentId, UserFileStatusEnum userFileStatus, UserFileItemTypeEnum itemType);
+    UserFileDO getUserFileByName(String fileName, Long userId, Long parentId, UserFileStatusEnum userFileStatus);
 
     /**
      * 新建文件夹
@@ -90,7 +90,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹ID
      * @author bai
      */
-    Integer newFolder(String folderName, Integer parentId, Integer userId);
+    Long newFolder(String folderName, Long parentId, Long userId);
 
     /**
      * 根据文件ID获取文件数据
@@ -101,7 +101,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    UserFileDO getUserFileByIdAndUserId(Integer id, Integer userId, UserFileStatusEnum userFileStatus);
+    UserFileDO getUserFileByIdAndUserId(Long id, Long userId, UserFileStatusEnum userFileStatus);
 
     /**
      * 重命名
@@ -112,7 +112,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param userFileStatus 文件状态
      * @return 修改结果
      */
-    Boolean updateFileNameById(Integer id, Integer userId, String newName, UserFileStatusEnum userFileStatus);
+    Boolean updateFileNameById(Long id, Long userId, String newName, UserFileStatusEnum userFileStatus);
 
     /**
      * 重命名
@@ -124,7 +124,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param userFileStatus 文件状态
      * @return 修改结果
      */
-    Boolean rename(Integer id, Integer userId, String newName, UserFileDO userFileDO, UserFileStatusEnum userFileStatus);
+    Boolean rename(Long id, Long userId, String newName, UserFileDO userFileDO, UserFileStatusEnum userFileStatus);
 
     /**
      * 秒传文件（当文件已存在时使用）
@@ -136,7 +136,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 上传结果
      * @author bai
      */
-    UploadResultDTO secondUploadFile(Integer userId, Integer parentId, UploadFileVO uploadFileVO, FileDO fileDO);
+    UploadResultDTO secondUploadFile(Long userId, Long parentId, UploadFileVO uploadFileVO, FileDO fileDO);
 
     /**
      * 分片上传文件
@@ -149,7 +149,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 上传结果
      * @author bai
      */
-    UploadResultDTO splitUploadFile(UploadedFile file, Integer userId, Integer parentId, UploadFileVO uploadFileVO, UploadFileCacheDTO uploadFileCacheDTO) throws IOException;
+    UploadResultDTO splitUploadFile(UploadedFile file, Long userId, Long parentId, UploadFileVO uploadFileVO, UploadFileCacheDTO uploadFileCacheDTO) throws IOException;
 
     /**
      * 取消上传
@@ -158,7 +158,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param taskId 任务ID
      * @author bai
      */
-    void cancelUploadFile(Integer userId, String taskId);
+    void cancelUploadFile(Long userId, String taskId);
 
     /**
      * 清除缓存数据
@@ -169,7 +169,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param uploadFileCacheDTO 上传文件缓存相关信息
      * @author bai
      */
-    void clearUploadFileCache(Integer userId, String taskId, Long fileSize, UploadFileCacheDTO uploadFileCacheDTO);
+    void clearUploadFileCache(Long userId, String taskId, Long fileSize, UploadFileCacheDTO uploadFileCacheDTO);
 
     /**
      * 获取文件夹列表
@@ -180,7 +180,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 查询到结果
      * @author bai
      */
-    PageResult<UserFileDO> getFolderList(Integer userId, Integer parentId, UserFolderVO userFolderVO);
+    PageResult<UserFileDO> getFolderList(Long userId, Long parentId, UserFolderVO userFolderVO);
 
     /**
      * 根据文件ID集合获取文件数据
@@ -191,7 +191,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    List<UserFileDO> getUserFileByIdsAndUserId(List<Integer> ids, Integer userId, UserFileStatusEnum userFileStatus);
+    List<UserFileDO> getUserFileByIdsAndUserId(List<Long> ids, Long userId, UserFileStatusEnum userFileStatus);
 
     /**
      * 获取所有子文件夹（包括子文件夹的子文件夹）
@@ -199,7 +199,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param userId 用户ID
      * @param ids    文件或文件夹ID集合
      */
-    List<Integer> getAllSubfolders(Integer userId, List<Integer> ids);
+    List<Long> getAllSubfolders(Long userId, List<Long> ids);
 
     /**
      * 根据文件名称获取文件数量
@@ -212,7 +212,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    Long getCountByNames(List<String> fileNames, Integer userId, Integer parentId, UserFileStatusEnum userFileStatus, UserFileItemTypeEnum itemType);
+    Long getCountByNames(List<String> fileNames, Long userId, Long parentId, UserFileStatusEnum userFileStatus, UserFileItemTypeEnum itemType);
 
     /**
      * 根据id集合修改parentId
@@ -222,7 +222,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param userId         用户ID
      * @param userFileStatus 文件状态
      */
-    void updateParentIdByIds(List<Integer> sourceIds, Integer targetId, Integer userId, UserFileStatusEnum userFileStatus);
+    void updateParentIdByIds(List<Long> sourceIds, Long targetId, Long userId, UserFileStatusEnum userFileStatus);
 
     /**
      * 根据文件ID集合获取文件集合
@@ -233,7 +233,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    List<UserFileDTO> getUserFileDTOListByIds(List<Integer> ids, Integer userId, UserFileStatusEnum userFileStatus);
+    List<UserFileDTO> getUserFileDTOListByIds(List<Long> ids, Long userId, UserFileStatusEnum userFileStatus);
 
     /**
      * 根据文件ID集合获取文件树集合
@@ -244,7 +244,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    List<UserFileTreeDTO> getUserFileTreeListByIds(List<Integer> ids, Integer userId, UserFileStatusEnum userFileStatus);
+    List<UserFileTreeDTO> getUserFileTreeListByIds(List<Long> ids, Long userId, UserFileStatusEnum userFileStatus);
 
     /**
      * 获取子文件树
@@ -253,7 +253,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param userId           用户ID
      * @author bai
      */
-    void getSubUserFileTree(Integer userId, List<UserFileTreeDTO> userFileTreeList);
+    void getSubUserFileTree(Long userId, List<UserFileTreeDTO> userFileTreeList);
 
     /**
      * 获取文件树占用空间
@@ -271,7 +271,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param sourceUserFileTreeDTOList 源文件或文件夹对象集合
      * @param totalSize                 总占用空间
      */
-    void copy(Integer targetId, Integer userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long totalSize);
+    void copy(Long targetId, Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long totalSize);
 
     /**
      * 删除文件或文件夹
@@ -279,7 +279,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param delUserFileTreeList 要删除的文件或文件夹ID集合
      * @param userId              用户ID
      */
-    void delete(List<UserFileTreeDTO> delUserFileTreeList, Integer userId);
+    void delete(List<UserFileTreeDTO> delUserFileTreeList, Long userId);
 
     /**
      * 修改文件状态
@@ -288,7 +288,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param userId         用户ID
      * @param userFileStatus 文件状态
      */
-    void updateUserFileStatusById(List<Integer> ids, Integer userId, UserFileStatusEnum userFileStatus);
+    void updateUserFileStatusById(List<Long> ids, Long userId, UserFileStatusEnum userFileStatus);
 
 
     /**
@@ -300,7 +300,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 获取到的用户文件数据
      * @author bai
      */
-    List<UserFileDO> getUserFileListByUserIdAndParentId(Integer userId, Integer parentId, Integer userFileStatus);
+    List<UserFileDO> getUserFileListByUserIdAndParentId(Long userId, Long parentId, Integer userFileStatus);
 
     /**
      * 根据path与itemType获取父文件数据
@@ -310,7 +310,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    UserFileDO getParentUserFileByPathAndItemType(Integer userId, String path);
+    UserFileDO getParentUserFileByPathAndItemType(Long userId, String path);
 
     /**
      * 根据文件ID获取文件数据
@@ -321,7 +321,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    UserFileDO getUserFileById(Integer id, Integer userId, Integer userFileStatus);
+    UserFileDO getUserFileById(Long id, Long userId, Integer userFileStatus);
 
     /**
      * 根据文件ID集合获取文件数据
@@ -332,7 +332,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @return 文件夹数据
      * @author bai
      */
-    List<UserFileTreeDTO> getUserFileTreeDTOByIdsAndUserId(List<Integer> ids, Integer userId, Integer userFileStatus);
+    List<UserFileTreeDTO> getUserFileTreeDTOByIdsAndUserId(List<Long> ids, Long userId, Integer userFileStatus);
 
     /**
      * 根据文件ID集合递归获取文件数据
@@ -341,7 +341,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param userId                    用户ID
      * @author bai
      */
-    void recursiveGetUserFileTreeDTO(List<UserFileTreeDTO> sourceUserFileTreeDTOList, Integer userId);
+    void recursiveGetUserFileTreeDTO(List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long userId);
 
     /**
      * 根据文件路径模糊查询文件数据
@@ -362,7 +362,7 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param newPath            新路径
      * @param userFileStatusEnum 文件状态
      */
-//    Integer updateFilePathByParentId(Integer parentId, Integer userId, String newPath, UserFileStatusEnum userFileStatusEnum);
+//    Long updateFilePathByParentId(Long parentId, Long userId, String newPath, UserFileStatusEnum userFileStatusEnum);
 
     /**
      * 下载
@@ -371,5 +371,5 @@ public interface UserFileService extends IService<UserFileDO> {
      * @param userId              用户ID
      * @return DownloadedFile对象
      */
-    DownloadedFile download(List<UserFileTreeDTO> userFileTreeDTOList, Integer userId) throws IOException;
+    DownloadedFile download(List<UserFileTreeDTO> userFileTreeDTOList, Long userId) throws IOException;
 }

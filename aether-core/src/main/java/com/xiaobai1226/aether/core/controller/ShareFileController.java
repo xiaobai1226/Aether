@@ -58,9 +58,9 @@ public class ShareFileController {
     @Mapping("/create")
     public Result<CreateShareFileDTO> create(@Validated CreateShareFileVO createShareFileVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
-        var ids = Arrays.stream(createShareFileVO.getIds().split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().toList();
+        var ids = Arrays.stream(createShareFileVO.getIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().toList();
 
         if (CollUtil.isEmpty(ids)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_SHARE_CONTENT_EMPTY);
@@ -91,7 +91,7 @@ public class ShareFileController {
     @Mapping("/getShareListByPage")
     public PageResult<ShareFileDTO> getShareListByPage(PageVO shareFileVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         return shareFileService.getShareFileList(userId, shareFileVO);
     }
@@ -103,7 +103,7 @@ public class ShareFileController {
     @Mapping("/cancel")
     public Result<CreateShareFileDTO> cancel(@Body CancelShareFileVO cancelShareFileVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         var shareIds = Arrays.stream(cancelShareFileVO.getIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
 
@@ -147,7 +147,7 @@ public class ShareFileController {
 //        Integer userId = null;
 //        if (StpUtil.isLogin()) {
 //            // 获取当前会话账号id, 并转化为`int`类型
-//            userId = StpUtil.getLoginIdAsInt();
+//            userId = StpUtil.getLoginIdAsLong();
 //        }
 //
 //        var shareInfo = shareRedisDAO.getShareInfo(shareId);
@@ -238,7 +238,7 @@ public class ShareFileController {
     @Mapping("/save2NetDisk")
     public void saveToNetDisk(Save2NetdiskVO save2NetdiskVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         var shareInfo = shareRedisDAO.getShareInfo(save2NetdiskVO.getShareId());
         if (shareInfo == null) {
@@ -250,7 +250,7 @@ public class ShareFileController {
             throw new FailResultException(PARAM_IS_INVALID, "不能分享给自己");
         }
 
-        List<Integer> sourceIds = Arrays.stream(save2NetdiskVO.getIdsStr().split(",")).mapToInt(Integer::parseInt).boxed().toList();
+        List<Long> sourceIds = Arrays.stream(save2NetdiskVO.getIdsStr().split(",")).mapToLong(Long::parseLong).boxed().toList();
 
         if (sourceIds.isEmpty()) {
             throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
@@ -266,7 +266,7 @@ public class ShareFileController {
 
         // 校验目标文件夹是否存在
         UserFileDO targetUserFileDO = null;
-        var targetId = 0;
+        Long targetId = 0L;
         // 如果不是根目录则判断目标文件夹是否存在
         if (save2NetdiskVO.getPath() != null) {
             targetUserFileDO = userFileService.getParentUserFileByPathAndItemType(userId, save2NetdiskVO.getPath());

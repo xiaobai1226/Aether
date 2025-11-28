@@ -33,7 +33,7 @@ public class NetdiskFileSystem implements FileSystem {
     private UserFileService userFileService;
 
     @Override
-    public FileInfo fileInfo(String reqPath, Integer userId) {
+    public FileInfo fileInfo(String reqPath, Long userId) {
         if (Objects.equals(reqPath, "")) {
             return new FileInfo() {
                 @Override
@@ -78,9 +78,9 @@ public class NetdiskFileSystem implements FileSystem {
     }
 
     @Override
-    public List<FileInfo> fileList(String reqPath, Integer userId) {
+    public List<FileInfo> fileList(String reqPath, Long userId) {
 
-        var parentId = 0;
+        Long parentId = 0L;
         if (StrUtil.isNotEmpty(reqPath)) {
             var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, reqPath);
             if (parentUserFile == null) {
@@ -110,7 +110,7 @@ public class NetdiskFileSystem implements FileSystem {
     }
 
     @Override
-    public InputStream fileInputStream(String reqPath, long start, long length, Integer userId) {
+    public InputStream fileInputStream(String reqPath, long start, long length, Long userId) {
         var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
         var fileFullPath = FileUtils.generatePath(rootPath, userFileDTO.getPath());
         InputStream in = FileUtil.getInputStream(fileFullPath);
@@ -122,7 +122,7 @@ public class NetdiskFileSystem implements FileSystem {
     }
 
     @Override
-    public boolean putFile(String reqPath, InputStream in, Integer userId) {
+    public boolean putFile(String reqPath, InputStream in, Long userId) {
         return false;
     }
 

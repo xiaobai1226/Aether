@@ -17,7 +17,7 @@ public class UserDO {
      * 主键ID
      */
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     /**
      * 用户名
@@ -47,7 +47,7 @@ public class UserDO {
     /**
      * 角色ID 0 普通用户 1 超级管理员
      */
-    private Integer roleId;
+    private Long roleId;
 
     /**
      * 创建时间

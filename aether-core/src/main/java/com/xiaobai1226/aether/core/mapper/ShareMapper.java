@@ -23,7 +23,7 @@ public interface ShareMapper extends BaseMapper<ShareDO> {
      * @param userId 用户ID
      * @return 文件列表
      */
-    IPage<String> getShareIdListByPage(IPage<String> page, @Param("userId") Integer userId);
+    IPage<String> getShareIdListByPage(IPage<String> page, @Param("userId") Long userId);
 
     /**
      * 获取分享文件列表
@@ -32,7 +32,7 @@ public interface ShareMapper extends BaseMapper<ShareDO> {
      * @param userId   用户ID
      * @return 文件列表
      */
-    List<ShareFileDTO> getShareFileDTOListByShareId(@Param("userId") Integer userId, @Param("shareIds") List<String> shareIds);
+    List<ShareFileDTO> getShareFileDTOListByShareId(@Param("userId") Long userId, @Param("shareIds") List<String> shareIds);
 
     /**
      * 分页获取分享文件列表
@@ -41,5 +41,5 @@ public interface ShareMapper extends BaseMapper<ShareDO> {
      * @param page     分页对象 为null则为不分页
      * @return 文件列表
      */
-    IPage<ShareFileDTO> getShareFileDTOListByShareIdAndPage(IPage<String> page, @Param("userId") Integer userId, @Param("shareIds") List<String> shareIds);
+    IPage<ShareFileDTO> getShareFileDTOListByShareIdAndPage(IPage<String> page, @Param("userId") Long userId, @Param("shareIds") List<String> shareIds);
 }

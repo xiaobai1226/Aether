@@ -17,7 +17,7 @@ public class ShareUserFileDO {
      * 主键ID
      */
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     /**
      * 分享ID
@@ -27,5 +27,5 @@ public class ShareUserFileDO {
     /**
      * 用户文件ID
      */
-    private Integer userFileId;
+    private Long userFileId;
 }

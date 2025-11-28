@@ -78,9 +78,9 @@ public class FileController {
     @Mapping("/getFileListByPage")
     public PageResult<UserFileDTO> getFileListByPage(UserFileVO userFileVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
-        var parentId = 0;
+        var parentId = 0L;
         if (userFileVO.getCategory() == null && StrUtil.isNotEmpty(userFileVO.getPath())) {
             var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, userFileVO.getPath());
             if (parentUserFile == null) {
@@ -105,11 +105,11 @@ public class FileController {
      */
     @Post
     @Mapping("/newFolder")
-    public Result newFolder(@Validated NewFolderVO newFolderVO) {
+    public Result<Void> newFolder(@Validated NewFolderVO newFolderVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsInt();
+        var userId = StpUtil.getLoginIdAsLong();
 
-        var parentId = 0;
+        long parentId = 0;
         if (StrUtil.isNotEmpty(newFolderVO.getPath())) {
             var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, newFolderVO.getPath());
             if (parentUserFile == null) {
@@ -130,9 +130,9 @@ public class FileController {
      */
     @Post
     @Mapping("/rename")
-    public Result rename(@Validated FileRenameVO fileRenameVO) {
+    public Result<Void> rename(@Validated FileRenameVO fileRenameVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsInt();
+        var userId = StpUtil.getLoginIdAsLong();
 
         var userFileDO = userFileService.getUserFileByIdAndUserId(fileRenameVO.getId(), userId, NORMAL);
 
@@ -169,9 +169,9 @@ public class FileController {
     @Mapping(path = "/uploadFile")
     public UploadResultDTO uploadFile(@Validated UploadFileVO uploadFileVO, UploadedFile file) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
-        Integer parentId = 0;
+        Long parentId = 0L;
         if (StrUtil.isNotEmpty(uploadFileVO.getPath())) {
             var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, uploadFileVO.getPath());
             if (parentUserFile == null) {
@@ -255,7 +255,7 @@ public class FileController {
     @Mapping(path = "/cancelUploadFile")
     public void cancelUploadFile(@Validated @NotNull(message = ERROR_TASK_ID_EMPTY) String taskId) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
         userFileService.cancelUploadFile(userId, taskId);
     }
 
@@ -266,9 +266,9 @@ public class FileController {
     @Mapping("/getFolderListByPage")
     public PageResult<UserFileDO> getFolderListByPage(@Validated UserFolderVO userFolderVO) {
         // 获取当前会话账号id, 并转化为`long`类型
-        var userId = StpUtil.getLoginIdAsInt();
+        var userId = StpUtil.getLoginIdAsLong();
 
-        var parentId = 0;
+        Long parentId = 0L;
         if (StrUtil.isNotEmpty(userFolderVO.getPath())) {
             var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, userFolderVO.getPath());
             if (parentUserFile == null) {
@@ -287,15 +287,15 @@ public class FileController {
      */
     @Post
     @Mapping("/move")
-    public Result move(@Validated MoveVO moveVO) {
+    public Result<Void> move(@Validated MoveVO moveVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsInt();
+        var userId = StpUtil.getLoginIdAsLong();
 
         if (moveVO == null || StrUtil.isEmpty(moveVO.getSourceIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
         }
 
-        List<Integer> sourceIds = Arrays.stream(moveVO.getSourceIds().split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().collect(Collectors.toList());
+        List<Long> sourceIds = Arrays.stream(moveVO.getSourceIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().collect(Collectors.toList());
 
         if (CollUtil.isEmpty(sourceIds)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
@@ -308,7 +308,7 @@ public class FileController {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
         }
 
-        var targetId = 0;
+        Long targetId = 0L;
         // 如果不是根目录则判断目标文件夹是否存在
         if (StrUtil.isNotEmpty(moveVO.getTargetPath())) {
             var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, moveVO.getTargetPath());
@@ -328,7 +328,7 @@ public class FileController {
         // 要移动的文件夹名称集合
         var sourceFolderNames = new ArrayList<String>();
         // 要移动的文件夹ID集合
-        var sourceFolderIds = new ArrayList<Integer>();
+        var sourceFolderIds = new ArrayList<Long>();
 
         sourceUserFileDOList.forEach(sourceUserFileDO -> {
             if (UserFileItemTypeEnum.isFile(sourceUserFileDO.getItemType())) {
@@ -380,15 +380,15 @@ public class FileController {
      */
     @Post
     @Mapping("/copy")
-    public Result copy(@Validated CopyVO copyVO) {
+    public Result<Void> copy(@Validated CopyVO copyVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsInt();
+        var userId = StpUtil.getLoginIdAsLong();
 
         if (copyVO == null || StrUtil.isEmpty(copyVO.getSourceIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
         }
 
-        List<Integer> sourceIds = Arrays.stream(copyVO.getSourceIds().split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().collect(Collectors.toList());
+        List<Long> sourceIds = Arrays.stream(copyVO.getSourceIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().collect(Collectors.toList());
 
         if (CollUtil.isEmpty(sourceIds)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
@@ -400,7 +400,7 @@ public class FileController {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
         }
 
-        var targetId = 0;
+        Long targetId = 0L;
         // 如果不是根目录则判断目标文件夹是否存在
         if (StrUtil.isNotEmpty(copyVO.getTargetPath())) {
             var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, copyVO.getTargetPath());
@@ -419,7 +419,7 @@ public class FileController {
         // 要复制的文件夹名称集合
         var sourceFolderNames = new ArrayList<String>();
         // 要复制的文件夹ID集合
-        var sourceFolderIds = new ArrayList<Integer>();
+        var sourceFolderIds = new ArrayList<Long>();
 
         sourceUserFileTreeList.forEach(sourceUserFileDO -> {
             if (UserFileItemTypeEnum.isFile(sourceUserFileDO.getItemType())) {
@@ -481,15 +481,15 @@ public class FileController {
      */
     @Post
     @Mapping("/delete")
-    public Result delete(@Validated DeleteVO deleteVO) {
+    public Result<Void> delete(@Validated DeleteVO deleteVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         if (deleteVO == null || StrUtil.isEmpty(deleteVO.getIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
         }
 
-        List<Integer> ids = Arrays.stream(deleteVO.getIds().split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().collect(Collectors.toList());
+        List<Long> ids = Arrays.stream(deleteVO.getIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().collect(Collectors.toList());
 
         if (CollUtil.isEmpty(ids)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
@@ -549,9 +549,9 @@ public class FileController {
      */
     @Get
     @Mapping("/getImage")
-    public void getImage(Context ctx, @Param("id") Integer id) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsInt();
+    public void getImage(Context ctx, @Param("id") Long id) {
+        // 获取当前会话账号id, 并转化为`long`类型
+        var userId = StpUtil.getLoginIdAsLong();
 
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
@@ -604,9 +604,9 @@ public class FileController {
      */
     @Get
     @Mapping("/getVideo")
-    public void getVideo(Context ctx, @Param("id") Integer id) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsInt();
+    public void getVideo(Context ctx, @Param("id") Long id) {
+        // 获取当前会话账号id, 并转化为`long`类型
+        var userId = StpUtil.getLoginIdAsLong();
 
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
@@ -648,9 +648,9 @@ public class FileController {
      */
     @Get
     @Mapping("/getFile")
-    public void getFile(Context ctx, @Param("id") Integer id) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsInt();
+    public void getFile(Context ctx, @Param("id") Long id) {
+        // 获取当前会话账号id, 并转化为`long`类型
+        var userId = StpUtil.getLoginIdAsLong();
 
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
@@ -698,9 +698,9 @@ public class FileController {
     public String createDownloadSign(@Validated @NotBlank(message = ERROR_DOWNLOAD_CONTENT_EMPTY) String ids) {
 
         // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsInt();
+        var userId = StpUtil.getLoginIdAsLong();
 
-        List<Integer> idList = Arrays.stream(ids.split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().collect(Collectors.toList());
+        List<Long> idList = Arrays.stream(ids.split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().collect(Collectors.toList());
 
         if (CollUtil.isEmpty(idList)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_DOWNLOAD_CONTENT_EMPTY);

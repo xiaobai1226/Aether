@@ -31,7 +31,7 @@ public interface RecycleBinService extends IService<RecycleBinDO> {
      * @return 获取到的用户文件数据
      * @author bai
      */
-    PageResult<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO);
+    PageResult<RecycleBinFileDTO> getRecycleBinList(Long userId, PageVO recycleBinVO);
 
     /**
      * 清空回收站
@@ -39,7 +39,7 @@ public interface RecycleBinService extends IService<RecycleBinDO> {
      * @param userId 用户ID
      * @author bai
      */
-    void delete(Integer userId, List<String> recycleIds);
+    void delete(Long userId, List<String> recycleIds);
 
     /**
      * 还原回收站
@@ -47,5 +47,5 @@ public interface RecycleBinService extends IService<RecycleBinDO> {
      * @param userId 用户ID
      * @author bai
      */
-    void restore(Integer userId, List<String> recycleIds);
+    void restore(Long userId, List<String> recycleIds);
 }

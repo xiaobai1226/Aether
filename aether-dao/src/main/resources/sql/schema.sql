@@ -18,13 +18,13 @@ CREATE DATABASE IF NOT EXISTS aether;
 -- ----------------------------
 DROP TABLE IF EXISTS user;
 CREATE TABLE user (
-    id int unsigned AUTO_INCREMENT COMMENT '用户ID' PRIMARY KEY,
+    id bigint unsigned AUTO_INCREMENT COMMENT '用户ID' PRIMARY KEY,
     username varchar(15) NOT NULL COMMENT '用户名',
     nickname varchar(20) NULL COMMENT '昵称',
     #     email           varchar(150)                         NULL COMMENT '邮箱',
     #     avatar          varchar(150)                         NULL COMMENT '头像',
     password varchar(70) NULL COMMENT '密码',
-    role_id int unsigned NOT NULL DEFAULT 0 COMMENT '角色ID 0 普通用户 1 超级管理员',
+    role_id bigint unsigned NOT NULL DEFAULT 0 COMMENT '角色ID 0 普通用户 1 超级管理员',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
     last_login_time datetime NULL COMMENT '最近一次登录时间',
@@ -39,7 +39,7 @@ CREATE TABLE user (
 -- ----------------------------
 DROP TABLE IF EXISTS file;
 CREATE TABLE file (
-    id int unsigned AUTO_INCREMENT COMMENT '主键ID' PRIMARY KEY,
+    id bigint unsigned AUTO_INCREMENT COMMENT '主键ID' PRIMARY KEY,
     name varchar(300) NOT NULL COMMENT '文件名称',
     path varchar(200) NOT NULL COMMENT '文件路径',
     size bigint unsigned NOT NULL COMMENT '文件大小',
@@ -58,10 +58,10 @@ CREATE TABLE file (
 -- ----------------------------
 DROP TABLE IF EXISTS user_file;
 CREATE TABLE user_file (
-    id int unsigned auto_increment COMMENT '主键ID' PRIMARY KEY,
-    parent_id int unsigned DEFAULT 0 NOT NULL COMMENT '父目录ID，0为根目录',
-    file_id int unsigned NULL COMMENT '文件ID，NULL为空文件或文件夹',
-    user_id int unsigned NOT NULL COMMENT '所属用户ID',
+    id bigint unsigned auto_increment COMMENT '主键ID' PRIMARY KEY,
+    parent_id bigint unsigned DEFAULT 0 NOT NULL COMMENT '父目录ID，0为根目录',
+    file_id bigint unsigned NULL COMMENT '文件ID，NULL为空文件或文件夹',
+    user_id bigint unsigned NOT NULL COMMENT '所属用户ID',
     item_type tinyint(1) NOT NULL COMMENT '类型 0 目录 1 文件',
     file_status tinyint(1) DEFAULT 1 NOT NULL COMMENT '文件状态 1 正常 0 回收站',
     name varchar(300) NOT NULL COMMENT '文件夹或文件名称',
@@ -77,11 +77,11 @@ CREATE TABLE user_file (
 -- ----------------------------
 DROP TABLE IF EXISTS recycle_bin;
 CREATE TABLE recycle_bin (
-    id int unsigned auto_increment COMMENT '主键ID' PRIMARY KEY,
+    id bigint unsigned auto_increment COMMENT '主键ID' PRIMARY KEY,
     recycle_id varchar(50) NOT NULL COMMENT '回收ID',
     is_root tinyint(1) unsigned NOT NULL COMMENT '是否为顶层目录 0 否 1 是',
-    user_file_id int unsigned NOT NULL COMMENT '用户文件ID',
-    user_id int unsigned NOT NULL COMMENT '所属用户ID',
+    user_file_id bigint unsigned NOT NULL COMMENT '用户文件ID',
+    user_id bigint unsigned NOT NULL COMMENT '所属用户ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间'
 ) COMMENT '回收站表' ENGINE = InnoDB CHARACTER SET = utf8;
 -- ----------------------------
@@ -96,7 +96,7 @@ CREATE TABLE share (
     download_num int unsigned DEFAULT 0 NOT NULL COMMENT '下载次数',
     save_num int unsigned DEFAULT 0 NOT NULL COMMENT '保存次数',
     validity_period int NOT NULL COMMENT '有效期，单位 天，0为永久',
-    user_id int unsigned NOT NULL COMMENT '所属用户ID',
+    user_id bigint unsigned NOT NULL COMMENT '所属用户ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间'
 ) COMMENT '分享文件表' ENGINE = InnoDB CHARACTER SET = utf8;
 -- ----------------------------
@@ -105,7 +105,7 @@ CREATE TABLE share (
 -- ----------------------------
 DROP TABLE IF EXISTS share_user_file;
 CREATE TABLE share_user_file (
-    id int unsigned auto_increment COMMENT '主键ID' PRIMARY KEY,
+    id bigint unsigned auto_increment COMMENT '主键ID' PRIMARY KEY,
     share_id varchar(50) NOT NULL COMMENT '分享ID',
-    user_file_id int unsigned NOT NULL COMMENT '用户文件ID'
+    user_file_id bigint unsigned NOT NULL COMMENT '用户文件ID'
 ) COMMENT '分享文件中间表' ENGINE = InnoDB CHARACTER SET = utf8;

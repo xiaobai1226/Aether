@@ -42,5 +42,5 @@ public interface FileService {
     /**
      * 更新File缩略图
      */
-    Boolean updateFileThumbnail(Integer id, String thumbnail);
+    Boolean updateFileThumbnail(Long id, String thumbnail);
 }

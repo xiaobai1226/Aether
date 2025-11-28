@@ -72,7 +72,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
 
     @Override
     @Tran
-    public String create(List<Integer> userFileIds, String extractionCode, Integer validityPeriod, Integer userId) {
+    public String create(List<Long> userFileIds, String extractionCode, Integer validityPeriod, Long userId) {
         var shareId = IdUtil.simpleUUID();
 
         var insertResult = shareMapper.insert(new ShareDO().setId(shareId).setExtractionCode(extractionCode).setValidityPeriod(validityPeriod).setUserId(userId));
@@ -99,7 +99,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
     }
 
     @Override
-    public Page<ShareDO> getShareDOListByPage(Integer userId, PageVO shareFileVO) {
+    public Page<ShareDO> getShareDOListByPage(Long userId, PageVO shareFileVO) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(shareMapper).eq(ShareDO::getUserId, userId).orderByDesc(ShareDO::getCreateTime);
 
         Page<ShareDO> page = new Page<>(shareFileVO.getPageNum(), shareFileVO.getPageSize());
@@ -108,14 +108,14 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
     }
 
     @Override
-    public List<ShareDO> getShareDOList(Integer userId, List<String> shareIds) {
+    public List<ShareDO> getShareDOList(Long userId, List<String> shareIds) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(shareMapper).eq(ShareDO::getUserId, userId).in(ShareDO::getId, shareIds);
 
         return lambdaQuery.list();
     }
 
     @Override
-    public PageResult<ShareFileDTO> getShareFileList(Integer userId, PageVO shareFileVO) {
+    public PageResult<ShareFileDTO> getShareFileList(Long userId, PageVO shareFileVO) {
         var shareDOListPage = getShareDOListByPage(userId, shareFileVO);
 
         if (shareDOListPage == null || CollUtil.isEmpty(shareDOListPage.getRecords())) {
@@ -133,7 +133,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
             throw new FailResultException(SYSTEM_ERROR);
         }
 
-        var userFileIds = new ArrayList<Integer>();
+        var userFileIds = new ArrayList<Long>();
 
         for (var shareUserFileDO : shareUserFileDOList) {
             userFileIds.add(shareUserFileDO.getUserFileId());
@@ -201,7 +201,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
 
     @Override
     @Tran
-    public void cancelShareFile(Integer userId, List<String> shareIds) {
+    public void cancelShareFile(Long userId, List<String> shareIds) {
         var delCount = shareMapper.deleteBatchIds(shareIds);
 
         if (delCount != shareIds.size()) {

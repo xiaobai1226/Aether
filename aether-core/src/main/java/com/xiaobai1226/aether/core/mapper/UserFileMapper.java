@@ -34,7 +34,7 @@ public interface UserFileMapper extends BaseMapper<UserFileDO> {
      * @param userFileDO 用户文件数据属性
      * @return 文件列表
      */
-    List<UserFileDTO> getUserFileDTOByIds(@Param("userFileDO") UserFileDO userFileDO, @Param("ids") List<Integer> ids);
+    List<UserFileDTO> getUserFileDTOByIds(@Param("userFileDO") UserFileDO userFileDO, @Param("ids") List<Long> ids);
 
     /**
      * 获取文件根据parentId与名称
@@ -51,7 +51,7 @@ public interface UserFileMapper extends BaseMapper<UserFileDO> {
      * @param userFileDO 用户文件数据属性
      * @return 文件列表
      */
-    List<UserFileTreeDTO> getUserFileTreeDTOByIdsAndUserId(@Param("userFileDO") UserFileDO userFileDO, @Param("ids") List<Integer> ids);
+    List<UserFileTreeDTO> getUserFileTreeDTOByIdsAndUserId(@Param("userFileDO") UserFileDO userFileDO, @Param("ids") List<Long> ids);
 
     /**
      * 获取文件列表
@@ -69,5 +69,5 @@ public interface UserFileMapper extends BaseMapper<UserFileDO> {
      * @param userId 用户ID
      * @return 已使用空间
      */
-    Long getUsedStorage(Integer userId);
+    Long getUsedStorage(Long userId);
 }

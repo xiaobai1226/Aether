@@ -72,7 +72,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
     }
 
     @Override
-    public PageResult<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO) {
+    public PageResult<RecycleBinFileDTO> getRecycleBinList(Long userId, PageVO recycleBinVO) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper).eq(RecycleBinDO::getUserId, userId).eq(RecycleBinDO::getRoot, 1);
 
         // 1 文件名 2 删除时间 3 文件大小 4 有效时间
@@ -103,7 +103,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             return null;
         }
 
-        var userFileIds = new ArrayList<Integer>();
+        var userFileIds = new ArrayList<Long>();
         for (var recycleBin : recycleBinListPage.getRecords()) {
             userFileIds.add(recycleBin.getUserFileId());
         }
@@ -138,7 +138,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
     @Tran
     @Override
-    public void delete(Integer userId, List<String> recycleIds) {
+    public void delete(Long userId, List<String> recycleIds) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
         var recycleBinWrapper = lambdaQuery.eq(RecycleBinDO::getUserId, userId);
 
@@ -155,9 +155,9 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         }
 
         // 回收站文件ID
-        var recycleBinIds = new ArrayList<Integer>();
+        var recycleBinIds = new ArrayList<Long>();
         // 用户文件ID
-        var userFileIds = new ArrayList<Integer>();
+        var userFileIds = new ArrayList<Long>();
         for (var recycleBinDO : recycleBinDOList) {
             userFileIds.add(recycleBinDO.getUserFileId());
             recycleBinIds.add(recycleBinDO.getId());
@@ -176,7 +176,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             throw new FailResultException(SYSTEM_ERROR);
         }
 
-        var fileIds = new HashSet<Integer>();
+        var fileIds = new HashSet<Long>();
         var totalSize = 0L;
         for (var userFile : userFileList) {
             if (UserFileItemTypeEnum.isFile(userFile.getItemType()) && userFile.getFileId() != null) {
@@ -210,7 +210,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         var userFileDOList = userFileLambdaQuery.in(UserFileDO::getFileId, fileIds).list();
 
 
-        var delFileIds = new HashSet<Integer>();
+        var delFileIds = new HashSet<Long>();
         // 如果为空，直接返回
         if (CollUtil.isEmpty(userFileDOList)) {
             delFileIds = fileIds;
@@ -255,7 +255,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
     @Tran
     @Override
-    public void restore(Integer userId, List<String> recycleIds) {
+    public void restore(Long userId, List<String> recycleIds) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
         var recycleBinDOList = lambdaQuery.eq(RecycleBinDO::getUserId, userId).in(RecycleBinDO::getRecycleId, recycleIds).list();
 
@@ -265,11 +265,11 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         }
 
         // 回收ID
-        var recycleBinIds = new ArrayList<Integer>();
+        var recycleBinIds = new ArrayList<Long>();
         // 用户文件ID
-        var userFileIds = new ArrayList<Integer>();
+        var userFileIds = new ArrayList<Long>();
         // 根文件ID
-        var rootUserFileIdSet = new HashSet<Integer>();
+        var rootUserFileIdSet = new HashSet<Long>();
         for (var recycleBinDO : recycleBinDOList) {
             userFileIds.add(recycleBinDO.getUserFileId());
             recycleBinIds.add(recycleBinDO.getId());
@@ -319,7 +319,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             // 如果父目录不存在
             if (!parentExist) {
                 // 如果父目录不存在，则将parentId改为根节点
-                parentId = 0;
+                parentId = 0L;
             }
 
             // 是否重名
@@ -358,7 +358,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             // 如果父目录不存在
             if (!parentExist) {
                 // 如果父目录不存在，则将父目录改为根节点
-                userFileService.updateParentIdByIds(List.of(userFileDO.getId()), 0, userId, DEL);
+                userFileService.updateParentIdByIds(List.of(userFileDO.getId()), 0L, userId, DEL);
             }
         }
 

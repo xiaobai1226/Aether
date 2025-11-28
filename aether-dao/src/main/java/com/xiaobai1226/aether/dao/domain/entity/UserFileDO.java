@@ -19,22 +19,22 @@ public class UserFileDO {
      * 主键ID
      */
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     /**
      * 父目录ID，0为根目录
      */
-    private Integer parentId;
+    private Long parentId;
 
     /**
      * 文件ID，NULL为空文件，文件夹此列一定为空
      */
-    private Integer fileId;
+    private Long fileId;
 
     /**
      * 所属用户ID
      */
-    private Integer userId;
+    private Long userId;
 
     /**
      * 文件类型 0 目录 1 文件

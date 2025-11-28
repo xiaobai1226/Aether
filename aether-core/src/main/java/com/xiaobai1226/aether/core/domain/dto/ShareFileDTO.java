@@ -23,7 +23,7 @@ public class ShareFileDTO extends ShareDO {
     /**
      * 父目录ID，0为根目录
      */
-    private Integer parentId;
+    private Long parentId;
 
     /**
      * 文件大小

@@ -32,7 +32,7 @@ public class NetdiskWebdavHandler extends WebdavAbstractHandler {
 //    }
 
     @Override
-    public Integer user(Context ctx) {
+    public Long user(Context ctx) {
         String authHeader = ctx.header("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Basic ")) {

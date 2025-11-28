@@ -18,7 +18,7 @@ public class RecycleBinDO {
      * 主键ID
      */
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     /**
      * 回收ID
@@ -34,12 +34,12 @@ public class RecycleBinDO {
     /**
      * 用户文件ID
      */
-    private Integer userFileId;
+    private Long userFileId;
 
     /**
      * 所属用户ID
      */
-    private Integer userId;
+    private Long userId;
 
     /**
      * 创建时间

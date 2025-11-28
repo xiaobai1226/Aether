@@ -36,7 +36,7 @@ public abstract class WebdavAbstractHandler implements Handler {
      * @param ctx
      * @return
      */
-    public abstract Integer user(Context ctx);
+    public abstract Long user(Context ctx);
 
     /**
      * 文件管理系统
@@ -65,7 +65,7 @@ public abstract class WebdavAbstractHandler implements Handler {
             ctx.headerSet("Access-Control-Allow-Credentials", "true");
             ctx.headerSet("Access-Control-Max-Age", "3600");
 
-            Integer userId = this.user(ctx);
+            Long userId = this.user(ctx);
 
             if (userId == null) {
                 ctx.headerSet("WWW-Authenticate", "Basic realm=\"webos\"");
@@ -152,7 +152,7 @@ public abstract class WebdavAbstractHandler implements Handler {
         return -2;
     }
 
-    private int handlePropfind(Context ctx, Integer userId) throws Exception {
+    private int handlePropfind(Context ctx, Long userId) throws Exception {
         String reqPath = this.stripPrefix(ctx.path());
         FileInfo fi = this.fileSystem().fileInfo(reqPath, userId);
         if (fi == null) {
@@ -244,7 +244,7 @@ public abstract class WebdavAbstractHandler implements Handler {
         return flag ? 201 : 405;
     }
 
-    private int handlePut(Context ctx, Integer userId) throws Exception {
+    private int handlePut(Context ctx, Long userId) throws Exception {
         long length = Convert.toLong(ctx.header("Content-Length"), 0L);
         boolean needLength = true;
         String chunked = ctx.header("Transfer-Encoding");
@@ -269,7 +269,7 @@ public abstract class WebdavAbstractHandler implements Handler {
         return 0;
     }
 
-    private int handleGetHeadPost(Context ctx, Integer userId) {
+    private int handleGetHeadPost(Context ctx, Long userId) {
         String reqPath = stripPrefix(ctx.path());
         String url = this.fileSystem().fileUrl(reqPath);
         if (StrUtil.isNotBlank(url)) {
@@ -349,7 +349,7 @@ public abstract class WebdavAbstractHandler implements Handler {
         return 0;
     }
 
-    private int handleOptions(Context ctx, Integer userId) {
+    private int handleOptions(Context ctx, Long userId) {
         String reqPath = stripPrefix(ctx.path());
         String allow = "OPTIONS, LOCK, PUT, MKCOL";
         FileInfo fi = this.fileSystem().fileInfo(reqPath, userId);

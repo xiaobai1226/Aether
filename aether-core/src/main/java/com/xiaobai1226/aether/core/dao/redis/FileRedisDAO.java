@@ -37,7 +37,7 @@ public class FileRedisDAO {
      * @param taskId            任务id
      * @param uploadFileTempDTO 上传文件信息
      */
-    public void putUploadTempFileInfo(Integer userId, String taskId, UploadFileTempDTO uploadFileTempDTO) {
+    public void putUploadTempFileInfo(Long userId, String taskId, UploadFileTempDTO uploadFileTempDTO) {
         var uploadFileTempMap = BeanUtil.beanToMap(uploadFileTempDTO);
 
         // 将信息写入Redis
@@ -55,7 +55,7 @@ public class FileRedisDAO {
      * @param taskId    任务id
      * @param chunkSize 上传文件信息
      */
-    public void updateUploadedSize(Integer userId, String taskId, Long chunkSize) {
+    public void updateUploadedSize(Long userId, String taskId, Long chunkSize) {
         // 获取redisson的map对象
         RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.UPLOAD, RedisKeyConsts.TEMP, userId, taskId));
 
@@ -81,7 +81,7 @@ public class FileRedisDAO {
      * @param taskId 任务id
      * @return id对应的图形验证码数据
      */
-    public UploadFileTempDTO getUploadTempFileInfo(Integer userId, String taskId) {
+    public UploadFileTempDTO getUploadTempFileInfo(Long userId, String taskId) {
         // 获取redisson的map对象
         RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.UPLOAD, RedisKeyConsts.TEMP, userId, taskId));
 
@@ -99,7 +99,7 @@ public class FileRedisDAO {
      * @param userId 用户id
      * @param taskId 任务id
      */
-    public Boolean delUploadTempFileInfo(Integer userId, String taskId) {
+    public Boolean delUploadTempFileInfo(Long userId, String taskId) {
         // 获取redisson的map对象
         RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.UPLOAD, RedisKeyConsts.TEMP, userId, taskId));
         // 删除键值对

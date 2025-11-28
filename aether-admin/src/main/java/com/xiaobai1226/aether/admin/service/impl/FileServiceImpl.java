@@ -114,7 +114,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public Boolean updateFileThumbnail(Integer id, String thumbnail) {
+    public Boolean updateFileThumbnail(Long id, String thumbnail) {
         var lambdaUpdateWrapper = new LambdaUpdateWrapper<FileDO>();
         lambdaUpdateWrapper.set(FileDO::getThumbnail, thumbnail).eq(FileDO::getId, id);
         var updateNameCount = fileMapper.update(null, lambdaUpdateWrapper);

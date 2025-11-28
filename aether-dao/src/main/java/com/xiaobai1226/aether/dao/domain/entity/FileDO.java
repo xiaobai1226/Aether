@@ -17,7 +17,7 @@ public class FileDO {
      * 主键ID
      */
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     /**
      * 文件名

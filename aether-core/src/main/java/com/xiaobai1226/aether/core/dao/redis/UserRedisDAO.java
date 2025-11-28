@@ -31,7 +31,7 @@ public class UserRedisDAO {
      * @param userId   用户id
      * @param fileSize 文件大小
      */
-    public void incrementUploadingFileSize(Integer userId, Long fileSize) {
+    public void incrementUploadingFileSize(Long userId, Long fileSize) {
         RAtomicLong rAtomicLongAdd = redisClient.getAtomicLong(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.USER, RedisKeyConsts.UPLOADING, RedisKeyConsts.USED_STORAGE, userId));
         // 对值进行加法操作
         rAtomicLongAdd.addAndGet(fileSize);
@@ -45,7 +45,7 @@ public class UserRedisDAO {
      * @param userId   用户id
      * @param fileSize 文件大小
      */
-    public void decrementUploadingFileSize(Integer userId, Long fileSize) {
+    public void decrementUploadingFileSize(Long userId, Long fileSize) {
         RAtomicLong rAtomicLongDecrement = redisClient.getAtomicLong(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.USER, RedisKeyConsts.UPLOADING, RedisKeyConsts.USED_STORAGE, userId));
         // 对值进行减法操作
         var newValue = rAtomicLongDecrement.addAndGet(-fileSize);
@@ -61,7 +61,7 @@ public class UserRedisDAO {
      * @param userId 用户id
      * @return 上传中文件大小
      */
-    public Long getUploadingFileSize(Integer userId) {
+    public Long getUploadingFileSize(Long userId) {
         // 从Redis中获取信息
         RAtomicLong rAtomicLong = redisClient.getAtomicLong(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.USER, RedisKeyConsts.UPLOADING, RedisKeyConsts.USED_STORAGE, userId));
 

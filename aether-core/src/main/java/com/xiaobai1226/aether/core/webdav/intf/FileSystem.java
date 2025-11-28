@@ -9,17 +9,17 @@ import java.util.List;
  * @author 高压锅里的小白
  */
 public interface FileSystem {
-    FileInfo fileInfo(String reqPath, Integer userId);
+    FileInfo fileInfo(String reqPath, Long userId);
 
     String fileMime(FileInfo fi);
 
-    List<FileInfo> fileList(String reqPath, Integer userId);
+    List<FileInfo> fileList(String reqPath, Long userId);
 
     String findEtag(String reqPath, FileInfo fi);
 
-    InputStream fileInputStream(String reqPath, long start, long length, Integer userId);
+    InputStream fileInputStream(String reqPath, long start, long length, Long userId);
 
-    boolean putFile(String reqPath, InputStream in, Integer userId);
+    boolean putFile(String reqPath, InputStream in, Long userId);
 
     boolean del(String reqPath);
 

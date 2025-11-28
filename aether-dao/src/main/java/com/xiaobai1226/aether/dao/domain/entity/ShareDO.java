@@ -46,7 +46,7 @@ public class ShareDO {
     /**
      * 所属用户ID
      */
-    private Integer userId;
+    private Long userId;
 
     /**
      * 创建时间

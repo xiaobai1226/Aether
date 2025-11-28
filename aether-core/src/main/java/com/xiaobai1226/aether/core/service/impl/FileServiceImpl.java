@@ -42,7 +42,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public Integer addFile(String fileName, String filePath, Long fileSize, String identifier, String thumbnail) {
+    public Long addFile(String fileName, String filePath, Long fileSize, String identifier, String thumbnail) {
         var fileDO = new FileDO();
         fileDO.setName(fileName);
         fileDO.setPath(filePath);
@@ -87,7 +87,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public FileDO getFileById(Integer id) {
+    public FileDO getFileById(Long id) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(fileMapper);
         lambdaQuery.eq(FileDO::getId, id);
 

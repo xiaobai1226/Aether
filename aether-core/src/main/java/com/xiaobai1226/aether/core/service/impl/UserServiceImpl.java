@@ -39,14 +39,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateUserLastLoginTime(Integer userId) {
+    public void updateUserLastLoginTime(Long userId) {
         var lambdaUpdate = new LambdaUpdateWrapper<UserDO>();
         lambdaUpdate.eq(UserDO::getId, userId).set(UserDO::getLastLoginTime, DateUtil.now());
         userMapper.update(null, lambdaUpdate);
     }
 
     @Override
-    public UserSpaceUsageDTO getUserSpaceUsage(Integer userId) {
+    public UserSpaceUsageDTO getUserSpaceUsage(Long userId) {
         var userDO = userMapper.selectById(userId);
         var remainStorage = userDO.getTotalStorage() - userDO.getUsedStorage();
         var uploadingUsedStorage = userRedisDAO.getUploadingFileSize(userId);
@@ -60,7 +60,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Integer updatePasswordById(Integer id, String password) {
+    public Integer updatePasswordById(Long id, String password) {
         var lambdaUpdate = new LambdaUpdateWrapper<UserDO>();
         lambdaUpdate.eq(UserDO::getId, id).set(UserDO::getPassword, BCrypt.hashpw(password));
         return userMapper.update(null, lambdaUpdate);
@@ -105,13 +105,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Integer updateUsedStorage(Integer userId, Long usedStorage) {
+    public Integer updateUsedStorage(Long userId, Long usedStorage) {
         // TODO 确认好我到底使不使用这个字段后再开发
         return null;
     }
 
     @Override
-    public Integer updateTotalStorage(Integer userId, Long totalStorage) {
+    public Integer updateTotalStorage(Long userId, Long totalStorage) {
         return null;
     }
 }

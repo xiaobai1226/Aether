@@ -13,7 +13,7 @@ public class UploadFileTempDTO {
     /**
      * 父文件夹ID
      */
-    private Integer parentId;
+    private Long parentId;
 
     /**
      * 文件名称

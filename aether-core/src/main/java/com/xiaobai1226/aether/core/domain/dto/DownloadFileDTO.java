@@ -17,11 +17,11 @@ public class DownloadFileDTO {
     /**
      * 要下载的文件ID集合
      */
-    private List<Integer> ids;
+    private List<Long> ids;
 
     /**
      * 用户ID
      */
-    private Integer userId;
+    private Long userId;
 
 }

@@ -47,7 +47,7 @@ public class RecycleBinController {
     @Mapping("/getRecycleBinListByPage")
     public PageResult<RecycleBinFileDTO> getRecycleBinListByPage(PageVO recycleBinVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         if (recycleBinVO.getSortField() == null) {
             recycleBinVO.setSortField(1);
@@ -66,7 +66,7 @@ public class RecycleBinController {
     @Mapping("/delete")
     public Result delete(@Validated DeleteRecycleBinVO deleteRecycleBinVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         var recycleIds = Arrays.stream(deleteRecycleBinVO.getRecycleIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
 
@@ -86,7 +86,7 @@ public class RecycleBinController {
     @Mapping("/restore")
     public Result restore(@Validated RestoreRecycleBinVO restoreRecycleBinVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         List<String> recycleIds = Arrays.stream(restoreRecycleBinVO.getRecycleIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
 

@@ -26,7 +26,7 @@ public interface UserService {
      * @param userId 用户ID
      * @author bai
      */
-    void updateUserLastLoginTime(Integer userId);
+    void updateUserLastLoginTime(Long userId);
 
     /**
      * 查询用户空间使用情况
@@ -34,7 +34,7 @@ public interface UserService {
      * @param userId 用户ID
      * @return 用户空间使用情况
      */
-    UserSpaceUsageDTO getUserSpaceUsage(Integer userId);
+    UserSpaceUsageDTO getUserSpaceUsage(Long userId);
 
     /**
      * 修改用户
@@ -53,7 +53,7 @@ public interface UserService {
      * @return 修改结果的条数
      * @author bai
      */
-    Integer updatePasswordById(Integer id, String password);
+    Integer updatePasswordById(Long id, String password);
 
 
 
@@ -104,7 +104,7 @@ public interface UserService {
      * @param usedStorage 已使用存储空间
      * @return 修改结果的条数
      */
-    Integer updateUsedStorage(Integer userId, Long usedStorage);
+    Integer updateUsedStorage(Long userId, Long usedStorage);
 
     /**
      * 更新用户总存储空间
@@ -113,5 +113,5 @@ public interface UserService {
      * @param totalStorage 总存储空间
      * @return 修改结果的条数
      */
-    Integer updateTotalStorage(Integer userId, Long totalStorage);
+    Integer updateTotalStorage(Long userId, Long totalStorage);
 }

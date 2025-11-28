@@ -55,7 +55,7 @@ public class UserController {
     @Mapping("/updateUserPassword")
     public Result<Void> updateUserPassword(@Validated UpdatePasswordVO updatePasswordVO) {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         var resultCount = userService.updatePasswordById(userId, updatePasswordVO.getPassword());
 
@@ -154,7 +154,7 @@ public class UserController {
     @Mapping("/getUserSpaceUsage")
     public UserSpaceUsageDTO getUserSpaceUsage() {
         // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+        final var userId = StpUtil.getLoginIdAsLong();
 
         return userService.getUserSpaceUsage(userId);
     }
