@@ -291,12 +291,42 @@ const showEditPanel = (index: number) => {
   })
 
   nextTick().then(() => {
-    const inputElement = document.querySelector('.el-message-box__input input') as HTMLInputElement
-    if (inputElement) {
-      // 选择输入框中的文字
-      inputElement.select()
-      inputElement.setSelectionRange(0, selectEndIndex)
-    }
+    // 等待 MessageBox 完全渲染
+    setTimeout(() => {
+      const inputElement = document.querySelector('.el-message-box__input input') as HTMLInputElement
+      if (inputElement) {
+        // 保存原始的 select 方法
+        const originalSelect = inputElement.select.bind(inputElement)
+        
+        // 覆盖 select 方法，使其使用我们的选中范围而不是全选
+        inputElement.select = function() {
+          inputElement.setSelectionRange(0, selectEndIndex)
+        }
+        
+        // 立即设置选中范围
+        inputElement.setSelectionRange(0, selectEndIndex)
+        inputElement.focus()
+        
+        // 监听输入框的 focus 事件，确保聚焦时使用我们的选中范围
+        const handleFocus = () => {
+          // 使用 requestAnimationFrame 确保在浏览器下一帧执行
+          requestAnimationFrame(() => {
+            inputElement.setSelectionRange(0, selectEndIndex)
+          })
+        }
+        
+        inputElement.addEventListener('focus', handleFocus)
+        
+        // 清理：恢复原始方法并移除事件监听
+        const cleanup = () => {
+          inputElement.select = originalSelect
+          inputElement.removeEventListener('focus', handleFocus)
+        }
+        
+        // 500ms 后清理
+        setTimeout(cleanup, 500)
+      }
+    }, 50)
   })
 
 }

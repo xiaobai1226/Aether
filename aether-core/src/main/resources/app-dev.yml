@@ -1,8 +1,7 @@
-#project:
-#  path:
-#    #    root: D:\programme\test\aether
-#    root: /Users/baipengfei/programme/tools/aether
-
+project:
+ path:
+   #    root: D:\programme\test\aether
+   root: /Users/a58/programme/project/aether/data
 
 solon:
   logging.appender:
