@@ -145,6 +145,9 @@ export const useUploaderStore = defineStore('uploader', () => {
     const file = getUploadingFileByUid(uid)
 
     if (!file) {
+      // 文件不存在，释放上传数量
+      uploadingNum.value--
+      startOneWaitingUpload()
       return
     }
 
@@ -153,6 +156,7 @@ export const useUploaderStore = defineStore('uploader', () => {
       // 计算MD5
       const md5FileUid = await computeMD5(file)
       if (md5FileUid == null) {
+        // MD5计算失败，已在computeMD5中处理，直接返回
         return
       }
     }
@@ -207,7 +211,22 @@ export const useUploaderStore = defineStore('uploader', () => {
       fileReader.onerror = () => {
         resultFile.md5Progress = -1
         resultFile.status = STATUS.fail.value
-        resolve(fileItem.uid)
+        resultFile.errorMsg = 'MD5计算失败'
+
+        // 将数据写入上传失败列表
+        uploadFailFileList.value.push(resultFile)
+
+        // 从上传列表中去除
+        const index: number = uploadingFileList.value.findIndex((uploadFile) => uploadFile.uid === resultFile.uid)
+        if (index !== -1) {
+          clearUploadRecord(resultFile.uid, index, 1)
+        }
+
+        // 释放上传数量并启动下一个等待的
+        uploadingNum.value--
+        startOneWaitingUpload()
+
+        resolve(null)
       }
     }).catch((error) => {
       // console.log(error);
@@ -277,7 +296,13 @@ export const useUploaderStore = defineStore('uploader', () => {
             currentUploadFile.uploadedSize = i * chunkSize + loaded
             const uploadProgress = Math.floor((currentUploadFile.uploadedSize / fileSize) * 100)
             currentUploadFile.uploadProgress = uploadProgress ? uploadProgress : 0
-          }).then(({ data }) => {
+          }).then((response) => {
+            // 安全地检查响应数据
+            if (!response || !response.data) {
+              throw new Error('响应数据格式错误')
+            }
+
+            const { data } = response
             currentUploadFile.taskId = data.taskId
             let statusString = STATUS.fail.value
             if (data.status === 0) {
@@ -323,7 +348,15 @@ export const useUploaderStore = defineStore('uploader', () => {
               startOneWaitingUpload()
             }
           }).catch((error) => {
-            currentUploadFile.errorMsg = error.response.data.msg
+            // 安全地获取错误消息
+            let errorMsg = '上传失败'
+            if (error?.response?.data?.msg) {
+              errorMsg = error.response.data.msg
+            } else if (error?.message) {
+              errorMsg = error.message
+            }
+
+            currentUploadFile.errorMsg = errorMsg
             currentUploadFile.status = STATUS.fail.value
 
             // 将数据写入上传失败列表
@@ -361,7 +394,10 @@ export const useUploaderStore = defineStore('uploader', () => {
     if (file && uploadingNum.value < 3) {
       uploadingNum.value++
 
-      file.status = STATUS.uploading.value
+      // 如果MD5已计算过，直接设置为uploading，否则设置为init
+      if (file.md5 && file.currentChunkIndex > 0) {
+        file.status = STATUS.uploading.value
+      }
       md5AndUploadFile(file.uid, file.currentChunkIndex, file.uploadedCallback)
     }
   }
@@ -408,6 +444,10 @@ export const useUploaderStore = defineStore('uploader', () => {
     const file = getUploadingFileByUid(uid)
     if (file && file.status === STATUS.uploading.value) {
       file.status = STATUS.pause.value
+      // 注意：这里不立即释放 uploadingNum
+      // 原因：正在上传的分片会继续完成，完成时会在 then 回调中释放（第346行）
+      // 这样可以避免双重释放，同时不浪费当前分片已传输的数据
+      // 如果分片卡住，会在 catch 中或超时时释放
     }
   }
 
@@ -418,6 +458,24 @@ export const useUploaderStore = defineStore('uploader', () => {
     const file = getUploadingFileByUid(uid)
     if (file && file.status === STATUS.pause.value) {
       cancelUploadFile(file.taskId).then(() => {
+        file.status = STATUS.cancel.value
+        file.currentChunkIndex = 0
+        file.uploadProgress = 0
+        file.uploadedSize = 0
+
+        // 将数据写入上传失败列表
+        uploadFailFileList.value.push(file)
+
+        // 从上传列表中去除
+        const index: number = uploadingFileList.value.findIndex((uploadFile) => uploadFile.uid === file.uid)
+        if (index !== -1) {
+          clearUploadRecord(file.uid, index, 1)
+        }
+
+        // 注意：取消时不需要释放 uploadingNum，因为在暂停时已经释放了
+      }).catch((error) => {
+        console.error('取消上传失败:', error)
+        // 即使取消失败，也要清理状态
         file.status = STATUS.cancel.value
         file.currentChunkIndex = 0
         file.uploadProgress = 0
