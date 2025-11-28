@@ -3,12 +3,14 @@ package com.xiaobai1226.aether.core.webdav.impl;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.core.domain.dto.UserFileDTO;
+
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.core.webdav.intf.FileInfo;
 import com.xiaobai1226.aether.core.webdav.intf.FileSystem;
+import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
+
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.Utils;

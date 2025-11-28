@@ -3,8 +3,9 @@ package com.xiaobai1226.aether.core.dao.redis;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.xiaobai1226.aether.core.constant.RedisKeyConsts;
-import com.xiaobai1226.aether.core.domain.dto.ShareFileDTO;
 import com.xiaobai1226.aether.core.util.RedisKeyGenerator;
+import com.xiaobai1226.aether.dao.domain.dto.ShareFileDTO;
+
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.redisson.api.RMap;

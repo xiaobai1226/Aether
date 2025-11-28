@@ -2,10 +2,10 @@ package com.xiaobai1226.aether.core.service.intf;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.xiaobai1226.aether.core.domain.dto.ShareFileDTO;
 import com.xiaobai1226.aether.core.domain.dto.ShareInfoDTO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.dto.ShareFileDTO;
 import com.xiaobai1226.aether.dao.domain.entity.ShareDO;
 import com.xiaobai1226.aether.dao.domain.entity.ShareUserFileDO;
 

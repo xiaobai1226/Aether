@@ -33,10 +33,9 @@ sa-token:
 mybatis.db1:
   # 支持包名 或 类名 //支持 ** 和 *
   typeAliases:
-    - "com.xiaobai1226.aether.domain.entity"
+    - "com.xiaobai1226.aether.dao.domain.entity"
   #支 持包名 或 类名 或 xml（.xml结尾）//支持 ** 和 *
   mappers:
-    - "com.xiaobai1226.aether.core.mapper"
     - "com.xiaobai1226.aether.dao.mapper"
     - "classpath:mapper/*.xml"
   configuration:

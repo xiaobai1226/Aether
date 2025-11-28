@@ -8,6 +8,8 @@ import com.xiaobai1226.aether.core.domain.vo.UserFolderVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
+import com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO;
 import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 

@@ -14,6 +14,7 @@ import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.ShareFileService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.dto.ShareFileDTO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;

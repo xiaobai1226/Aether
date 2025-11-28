@@ -1,4 +1,4 @@
-package com.xiaobai1226.aether.core.domain.dto;
+package com.xiaobai1226.aether.dao.domain.dto;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

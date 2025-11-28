@@ -1,4 +1,4 @@
-package com.xiaobai1226.aether.core.domain.dto;
+package com.xiaobai1226.aether.dao.domain.dto;
 
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 
