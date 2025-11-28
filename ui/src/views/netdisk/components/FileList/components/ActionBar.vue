@@ -67,6 +67,24 @@ let reloadTimer: ReturnType<typeof setTimeout> | null = null
 const RELOAD_DEBOUNCE_DELAY = 500
 
 /**
+ * 标准化路径
+ * 将 undefined、null、空字符串统一转换为 null（表示根目录）
+ * 去除路径末尾的斜杠，确保路径格式一致
+ */
+const normalizePath = (path?: string | null): string | null => {
+  // undefined、null、空字符串都视为根目录
+  if (!path) {
+    return null
+  }
+  
+  // 去除末尾的斜杠（如果有）
+  const trimmedPath = path.endsWith('/') ? path.slice(0, -1) : path
+  
+  // 如果去除斜杠后变成空字符串，说明原路径是 "/"，视为根目录
+  return trimmedPath || null
+}
+
+/**
  * 上传完成后重新加载
  * 
  * 核心逻辑：
@@ -76,9 +94,9 @@ const RELOAD_DEBOUNCE_DELAY = 500
  * 4. 确保最后一个上传完成的文件会触发刷新
  */
 const uploadFinishReload = (uploadPath?: string) => {
-  // 标准化路径：undefined 和空字符串都视为 null（根目录）
-  const normalizedUploadPath = uploadPath ? uploadPath : null
-  const normalizedCurrentPath = props.currentPath ? props.currentPath : null
+  // 标准化路径，确保比较的一致性
+  const normalizedUploadPath = normalizePath(uploadPath)
+  const normalizedCurrentPath = normalizePath(props.currentPath)
 
   // 如果上传路径和当前路径不一致，不刷新
   if (normalizedUploadPath !== normalizedCurrentPath) {
