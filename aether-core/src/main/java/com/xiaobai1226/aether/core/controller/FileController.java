@@ -1,6 +1,5 @@
 package com.xiaobai1226.aether.core.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
@@ -10,6 +9,7 @@ import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import com.xiaobai1226.aether.common.util.ImageUtils;
+import com.xiaobai1226.aether.core.annotation.CurrentUserId;
 import com.xiaobai1226.aether.core.dao.redis.DownloadRedisDAO;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.core.domain.vo.*;
@@ -76,10 +76,7 @@ public class FileController {
      */
     @Get
     @Mapping("/getFileListByPage")
-    public PageResult<UserFileDTO> getFileListByPage(UserFileVO userFileVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
-
+    public PageResult<UserFileDTO> getFileListByPage(UserFileVO userFileVO, @CurrentUserId Long userId) {
         var parentId = 0L;
         if (userFileVO.getCategory() == null && StrUtil.isNotEmpty(userFileVO.getPath())) {
             var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, userFileVO.getPath());
@@ -105,9 +102,7 @@ public class FileController {
      */
     @Post
     @Mapping("/newFolder")
-    public Result<Void> newFolder(@Validated NewFolderVO newFolderVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsLong();
+    public Result<Void> newFolder(@Validated NewFolderVO newFolderVO, @CurrentUserId Long userId) {
 
         long parentId = 0;
         if (StrUtil.isNotEmpty(newFolderVO.getPath())) {
@@ -130,9 +125,7 @@ public class FileController {
      */
     @Post
     @Mapping("/rename")
-    public Result<Void> rename(@Validated FileRenameVO fileRenameVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsLong();
+    public Result<Void> rename(@Validated FileRenameVO fileRenameVO, @CurrentUserId Long userId) {
 
         var userFileDO = userFileService.getUserFileByIdAndUserId(fileRenameVO.getId(), userId, NORMAL);
 
@@ -140,15 +133,20 @@ public class FileController {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
-//        var existUserFileDO = userFileService.getUserFileByName(fileRenameVO.getNewName(), userId, userFileDO.getParentId(), NORMAL, UserFileItemTypeEnum.getEnumByFlag(userFileDO.getItemType()));
-        var existUserFileDO = userFileService.getUserFileByName(fileRenameVO.getNewName(), userId, userFileDO.getParentId(), NORMAL);
+        // var existUserFileDO =
+        // userFileService.getUserFileByName(fileRenameVO.getNewName(), userId,
+        // userFileDO.getParentId(), NORMAL,
+        // UserFileItemTypeEnum.getEnumByFlag(userFileDO.getItemType()));
+        var existUserFileDO = userFileService.getUserFileByName(fileRenameVO.getNewName(), userId,
+                userFileDO.getParentId(), NORMAL);
 
         if (existUserFileDO != null) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NAME_EXIST);
         }
 
         // 修改名称
-        var result = userFileService.rename(fileRenameVO.getId(), userId, fileRenameVO.getNewName(), userFileDO, NORMAL);
+        var result = userFileService.rename(fileRenameVO.getId(), userId, fileRenameVO.getNewName(), userFileDO,
+                NORMAL);
 
         if (!result) {
             throw new FailResultException(BAD_REQUEST_ERROR, ERROR_RENAME);
@@ -167,9 +165,7 @@ public class FileController {
      */
     @Post
     @Mapping(path = "/uploadFile")
-    public UploadResultDTO uploadFile(@Validated UploadFileVO uploadFileVO, UploadedFile file) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public UploadResultDTO uploadFile(@Validated UploadFileVO uploadFileVO, UploadedFile file, @CurrentUserId Long userId) {
 
         Long parentId = 0L;
         if (StrUtil.isNotEmpty(uploadFileVO.getPath())) {
@@ -198,7 +194,8 @@ public class FileController {
         // 如果taskId为空，则生成taskId
         if (StrUtil.isBlank(uploadFileVO.getTaskId())) {
             // 生成taskId
-            String task = userId + uploadFileVO.getIdentifier() + DateUtil.format(new Date(), "yyyyMMddHHmmssSSS") + RandomUtil.randomString(6);
+            String task = userId + uploadFileVO.getIdentifier() + DateUtil.format(new Date(), "yyyyMMddHHmmssSSS")
+                    + RandomUtil.randomString(6);
             uploadFileVO.setTaskId(task);
         }
 
@@ -232,14 +229,16 @@ public class FileController {
             return userFileService.splitUploadFile(file, userId, parentId, uploadFileVO, uploadFileCacheDTO);
         } catch (FailResultException e) {
             // 报异常清理缓存
-            userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(), uploadFileCacheDTO);
+            userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
+                    uploadFileCacheDTO);
 
             throw e;
         } catch (Exception e) {
             log.error(e.getMessage());
 
             // 报异常清理缓存
-            userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(), uploadFileCacheDTO);
+            userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
+                    uploadFileCacheDTO);
 
             throw new FailResultException(SYSTEM_ERROR);
         }
@@ -253,9 +252,7 @@ public class FileController {
      */
     @Post
     @Mapping(path = "/cancelUploadFile")
-    public void cancelUploadFile(@Validated @NotNull(message = ERROR_TASK_ID_EMPTY) String taskId) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public void cancelUploadFile(@Validated @NotNull(message = ERROR_TASK_ID_EMPTY) String taskId, @CurrentUserId Long userId) {
         userFileService.cancelUploadFile(userId, taskId);
     }
 
@@ -264,9 +261,7 @@ public class FileController {
      */
     @Get
     @Mapping("/getFolderListByPage")
-    public PageResult<UserFileDO> getFolderListByPage(@Validated UserFolderVO userFolderVO) {
-        // 获取当前会话账号id, 并转化为`long`类型
-        var userId = StpUtil.getLoginIdAsLong();
+    public PageResult<UserFileDO> getFolderListByPage(@Validated UserFolderVO userFolderVO, @CurrentUserId Long userId) {
 
         Long parentId = 0L;
         if (StrUtil.isNotEmpty(userFolderVO.getPath())) {
@@ -287,15 +282,14 @@ public class FileController {
      */
     @Post
     @Mapping("/move")
-    public Result<Void> move(@Validated MoveVO moveVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsLong();
+    public Result<Void> move(@Validated MoveVO moveVO, @CurrentUserId Long userId) {
 
         if (moveVO == null || StrUtil.isEmpty(moveVO.getSourceIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
         }
 
-        List<Long> sourceIds = Arrays.stream(moveVO.getSourceIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().collect(Collectors.toList());
+        List<Long> sourceIds = Arrays.stream(moveVO.getSourceIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong)
+                .boxed().collect(Collectors.toList());
 
         if (CollUtil.isEmpty(sourceIds)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
@@ -380,15 +374,14 @@ public class FileController {
      */
     @Post
     @Mapping("/copy")
-    public Result<Void> copy(@Validated CopyVO copyVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsLong();
+    public Result<Void> copy(@Validated CopyVO copyVO, @CurrentUserId Long userId) {
 
         if (copyVO == null || StrUtil.isEmpty(copyVO.getSourceIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
         }
 
-        List<Long> sourceIds = Arrays.stream(copyVO.getSourceIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().collect(Collectors.toList());
+        List<Long> sourceIds = Arrays.stream(copyVO.getSourceIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong)
+                .boxed().collect(Collectors.toList());
 
         if (CollUtil.isEmpty(sourceIds)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
@@ -481,15 +474,14 @@ public class FileController {
      */
     @Post
     @Mapping("/delete")
-    public Result<Void> delete(@Validated DeleteVO deleteVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public Result<Void> delete(@Validated DeleteVO deleteVO, @CurrentUserId Long userId) {
 
         if (deleteVO == null || StrUtil.isEmpty(deleteVO.getIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
         }
 
-        List<Long> ids = Arrays.stream(deleteVO.getIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().collect(Collectors.toList());
+        List<Long> ids = Arrays.stream(deleteVO.getIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed()
+                .collect(Collectors.toList());
 
         if (CollUtil.isEmpty(ids)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
@@ -518,15 +510,16 @@ public class FileController {
     @Mapping("/getThumbnail")
     public void getThumbnail(Context ctx, @Param("thumbnail") String thumbnail) {
         // 设置文件存储全路径
-        final var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnail);
+        final var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
+                thumbnail);
 
         // 判断文件是否存在
         if (!FileUtil.exist(thumbnailFilePath)) {
             // TODO 这没写
         }
 
-//        ctx.contentType("image/jpg");
-//        FileUtils.readFile(ctx, thumbnailFilePath);
+        // ctx.contentType("image/jpg");
+        // FileUtils.readFile(ctx, thumbnailFilePath);
 
         try {
             var file = FileUtil.file(thumbnailFilePath);
@@ -536,7 +529,7 @@ public class FileController {
             // 不做为附件下载（按需配置）
             downloadedFile.asAttachment(false);
 
-            //也可用接口输出
+            // 也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -549,9 +542,7 @@ public class FileController {
      */
     @Get
     @Mapping("/getImage")
-    public void getImage(Context ctx, @Param("id") Long id) {
-        // 获取当前会话账号id, 并转化为`long`类型
-        var userId = StpUtil.getLoginIdAsLong();
+    public void getImage(Context ctx, @Param("id") Long id, @CurrentUserId Long userId) {
 
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
@@ -581,17 +572,17 @@ public class FileController {
                 if (webpBytes == null) {
                     throw new FailResultException(SYSTEM_ERROR);
                 }
-                
+
                 downloadedFile = new DownloadedFile(OCTET_STREAM.getValue(), webpBytes, userFileDO.getName());
             } else {
                 var file = FileUtil.file(fileFullPath);
                 downloadedFile = new DownloadedFile(file, userFileDO.getName());
             }
 
-            //不做为附件下载（按需配置）
+            // 不做为附件下载（按需配置）
             downloadedFile.asAttachment(false);
 
-            //也可用接口输出
+            // 也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -604,9 +595,7 @@ public class FileController {
      */
     @Get
     @Mapping("/getVideo")
-    public void getVideo(Context ctx, @Param("id") Long id) {
-        // 获取当前会话账号id, 并转化为`long`类型
-        var userId = StpUtil.getLoginIdAsLong();
+    public void getVideo(Context ctx, @Param("id") Long id, @CurrentUserId Long userId) {
 
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
@@ -632,10 +621,10 @@ public class FileController {
 
             var downloadedFile = new DownloadedFile(file, userFileDO.getName());
 
-            //不做为附件下载（按需配置）
+            // 不做为附件下载（按需配置）
             downloadedFile.asAttachment(false);
 
-            //也可用接口输出
+            // 也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -648,9 +637,7 @@ public class FileController {
      */
     @Get
     @Mapping("/getFile")
-    public void getFile(Context ctx, @Param("id") Long id) {
-        // 获取当前会话账号id, 并转化为`long`类型
-        var userId = StpUtil.getLoginIdAsLong();
+    public void getFile(Context ctx, @Param("id") Long id, @CurrentUserId Long userId) {
 
         try {
             var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
@@ -676,10 +663,10 @@ public class FileController {
 
             var downloadedFile = new DownloadedFile(file, userFileDO.getName());
 
-            //不做为附件下载（按需配置）
+            // 不做为附件下载（按需配置）
             downloadedFile.asAttachment(false);
 
-            //也可用接口输出
+            // 也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -695,12 +682,10 @@ public class FileController {
      */
     @Post
     @Mapping("/createDownloadSign")
-    public String createDownloadSign(@Validated @NotBlank(message = ERROR_DOWNLOAD_CONTENT_EMPTY) String ids) {
+    public String createDownloadSign(@Validated @NotBlank(message = ERROR_DOWNLOAD_CONTENT_EMPTY) String ids, @CurrentUserId Long userId) {
 
-        // 获取当前会话账号id, 并转化为`int`类型
-        var userId = StpUtil.getLoginIdAsLong();
-
-        List<Long> idList = Arrays.stream(ids.split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().collect(Collectors.toList());
+        List<Long> idList = Arrays.stream(ids.split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed()
+                .collect(Collectors.toList());
 
         if (CollUtil.isEmpty(idList)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_DOWNLOAD_CONTENT_EMPTY);
@@ -735,9 +720,11 @@ public class FileController {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_SIGN);
             }
 
-            var userFileTreeDTOList = userFileService.getUserFileTreeListByIds(downloadFileDTO.getIds(), downloadFileDTO.getUserId(), NORMAL);
+            var userFileTreeDTOList = userFileService.getUserFileTreeListByIds(downloadFileDTO.getIds(),
+                    downloadFileDTO.getUserId(), NORMAL);
 
-            if (CollUtil.isEmpty(userFileTreeDTOList) || userFileTreeDTOList.size() != downloadFileDTO.getIds().size()) {
+            if (CollUtil.isEmpty(userFileTreeDTOList)
+                    || userFileTreeDTOList.size() != downloadFileDTO.getIds().size()) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
 
@@ -746,7 +733,7 @@ public class FileController {
 
             var downloadedFile = userFileService.download(userFileTreeDTOList, downloadFileDTO.getUserId());
 
-            //也可用接口输出
+            // 也可用接口输出
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -754,76 +741,89 @@ public class FileController {
         }
     }
 
-//    private void getImage2(HttpServletResponse response, String imageFolder, String imageName) {
-//        if (StringTools.isEmpty(imageFolder) || StringTools.isEmpty(imageName) || StringTools.pathIsOk(imageFolder) || !StringTools.pathIsOk(imageName)) {
-//            return;
-//        }
-//        String imageSuffix = StringTools.getFileSuffix(imageName);
-//        String filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE + imageFolder + "/" + imageName;
-//        imageSuffix = imageSuffix.replace(".", "");
-//        String contentType = "image/" + imageSuffix;
-//        response.setContentType(contentType);
-//        response.setHeader("Cache-Control", "max-age=2592000");
-//        readFile(response, filePath);
-//    }
+    // private void getImage2(HttpServletResponse response, String imageFolder,
+    // String imageName) {
+    // if (StringTools.isEmpty(imageFolder) || StringTools.isEmpty(imageName) ||
+    // StringTools.pathIsOk(imageFolder) || !StringTools.pathIsOk(imageName)) {
+    // return;
+    // }
+    // String imageSuffix = StringTools.getFileSuffix(imageName);
+    // String filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE +
+    // imageFolder + "/" + imageName;
+    // imageSuffix = imageSuffix.replace(".", "");
+    // String contentType = "image/" + imageSuffix;
+    // response.setContentType(contentType);
+    // response.setHeader("Cache-Control", "max-age=2592000");
+    // readFile(response, filePath);
+    // }
 
     /**
      * 获取视频
      */
-//    @GetMapping("/ts/getVideoInfo/{fileId}")
-//    public void getVideo(HttpServletResponse response, @PathVariable("fileId") String fileId) {
-//        getFile2(response, fileId, null);
-//    }
+    // @GetMapping("/ts/getVideoInfo/{fileId}")
+    // public void getVideo(HttpServletResponse response, @PathVariable("fileId")
+    // String fileId) {
+    // getFile2(response, fileId, null);
+    // }
 
     /**
      * 获取文件
      */
-//    public void getFile2(HttpServletResponse response, String fileId, String userId) {
-//        String filePath = null;
-//
-//        if (fileId.endsWith(".ts")) {
-//            String[] tsArray = fileId.split("_");
-//            String realFileId = tsArray[0];
-//            FileInfo fileInfo = fileInfoService.getFileInfoByFileIdAndUserId(realFileId, userId);
-//            if (null == fileInfo) {
-//                return;
-//            }
-//            String fileName = fileInfo.getFilePath();
-//            fileName = StringTools.getFileNameNoSuffix(fileName) + "/" + fileId;
-//            filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE + fileName;
-//        } else {
-//            FileInfo fileInfo = fileInfoService.getFileInfoByFileIdAndUserId(fileId, userId);
-//            if (null == fileInfo) {
-//                return;
-//            }
-//            if (FileCategoryEnums.VIDEO.getCategory().equals(fileInfo.getFileCategory())) {
-//                String fileNameNoSuffix = StringTools.getFileNameNoSuffix(fileInfo.getFilePath());
-//                filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE + fileNameNoSuffix + "/" + Constants.M3U8_NAME;
-//            } else {
-//                filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE + fileInfo.getFilePath();
-//            }
-//
-//            File file = new File(filePath);
-//            if (!file.exists()) {
-//                return;
-//            }
-//        }
-//
-//        readFile(response, filePath);
-//    }
+    // public void getFile2(HttpServletResponse response, String fileId, String
+    // userId) {
+    // String filePath = null;
+    //
+    // if (fileId.endsWith(".ts")) {
+    // String[] tsArray = fileId.split("_");
+    // String realFileId = tsArray[0];
+    // FileInfo fileInfo = fileInfoService.getFileInfoByFileIdAndUserId(realFileId,
+    // userId);
+    // if (null == fileInfo) {
+    // return;
+    // }
+    // String fileName = fileInfo.getFilePath();
+    // fileName = StringTools.getFileNameNoSuffix(fileName) + "/" + fileId;
+    // filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE +
+    // fileName;
+    // } else {
+    // FileInfo fileInfo = fileInfoService.getFileInfoByFileIdAndUserId(fileId,
+    // userId);
+    // if (null == fileInfo) {
+    // return;
+    // }
+    // if (FileCategoryEnums.VIDEO.getCategory().equals(fileInfo.getFileCategory()))
+    // {
+    // String fileNameNoSuffix =
+    // StringTools.getFileNameNoSuffix(fileInfo.getFilePath());
+    // filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE +
+    // fileNameNoSuffix + "/" + Constants.M3U8_NAME;
+    // } else {
+    // filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE +
+    // fileInfo.getFilePath();
+    // }
+    //
+    // File file = new File(filePath);
+    // if (!file.exists()) {
+    // return;
+    // }
+    // }
+    //
+    // readFile(response, filePath);
+    // }
 
     /**
      * 获取文件
      */
-//    @GetMapping("/getFile/{fileId}")
-//    public void getFile(HttpServletResponse response, @PathVariable("fileId") String fileId) {
-//        getFile2(response, fileId, null);
-//    }
+    // @GetMapping("/getFile/{fileId}")
+    // public void getFile(HttpServletResponse response, @PathVariable("fileId")
+    // String fileId) {
+    // getFile2(response, fileId, null);
+    // }
 
     /**
      * 视频有根据文件ID获取面包屑导航的接口，视频中把所有文件信息都返回了，不合理，按自己的方式改造
      */
-//    public void getFile() {
-//        // TODO 待做，看视频
-//    }
+    // public void getFile() {
+    // // TODO 待做，看视频
+    // }
 }

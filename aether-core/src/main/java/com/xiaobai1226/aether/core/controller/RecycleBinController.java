@@ -1,6 +1,6 @@
 package com.xiaobai1226.aether.core.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.xiaobai1226.aether.core.annotation.CurrentUserId;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 
@@ -45,9 +45,7 @@ public class RecycleBinController {
      */
     @Get
     @Mapping("/getRecycleBinListByPage")
-    public PageResult<RecycleBinFileDTO> getRecycleBinListByPage(PageVO recycleBinVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public PageResult<RecycleBinFileDTO> getRecycleBinListByPage(PageVO recycleBinVO, @CurrentUserId Long userId) {
 
         if (recycleBinVO.getSortField() == null) {
             recycleBinVO.setSortField(1);
@@ -64,9 +62,7 @@ public class RecycleBinController {
      */
     @Post
     @Mapping("/delete")
-    public Result delete(@Validated DeleteRecycleBinVO deleteRecycleBinVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public Result delete(@Validated DeleteRecycleBinVO deleteRecycleBinVO, @CurrentUserId Long userId) {
 
         var recycleIds = Arrays.stream(deleteRecycleBinVO.getRecycleIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
 
@@ -84,9 +80,7 @@ public class RecycleBinController {
      */
     @Post
     @Mapping("/restore")
-    public Result restore(@Validated RestoreRecycleBinVO restoreRecycleBinVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public Result restore(@Validated RestoreRecycleBinVO restoreRecycleBinVO, @CurrentUserId Long userId) {
 
         List<String> recycleIds = Arrays.stream(restoreRecycleBinVO.getRecycleIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
 

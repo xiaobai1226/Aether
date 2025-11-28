@@ -1,6 +1,6 @@
 package com.xiaobai1226.aether.core.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.xiaobai1226.aether.core.annotation.CurrentUserId;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -56,9 +56,7 @@ public class ShareFileController {
      */
     @Post
     @Mapping("/create")
-    public Result<CreateShareFileDTO> create(@Validated CreateShareFileVO createShareFileVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public Result<CreateShareFileDTO> create(@Validated CreateShareFileVO createShareFileVO, @CurrentUserId Long userId) {
 
         var ids = Arrays.stream(createShareFileVO.getIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().toList();
 
@@ -89,9 +87,7 @@ public class ShareFileController {
      */
     @Get
     @Mapping("/getShareListByPage")
-    public PageResult<ShareFileDTO> getShareListByPage(PageVO shareFileVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public PageResult<ShareFileDTO> getShareListByPage(PageVO shareFileVO, @CurrentUserId Long userId) {
 
         return shareFileService.getShareFileList(userId, shareFileVO);
     }
@@ -101,9 +97,7 @@ public class ShareFileController {
      */
     @Post
     @Mapping("/cancel")
-    public Result<CreateShareFileDTO> cancel(@Body CancelShareFileVO cancelShareFileVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public Result<CreateShareFileDTO> cancel(@Body CancelShareFileVO cancelShareFileVO, @CurrentUserId Long userId) {
 
         var shareIds = Arrays.stream(cancelShareFileVO.getIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
 
@@ -236,9 +230,7 @@ public class ShareFileController {
      */
     @Post
     @Mapping("/save2NetDisk")
-    public void saveToNetDisk(Save2NetdiskVO save2NetdiskVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public void saveToNetDisk(Save2NetdiskVO save2NetdiskVO, @CurrentUserId Long userId) {
 
         var shareInfo = shareRedisDAO.getShareInfo(save2NetdiskVO.getShareId());
         if (shareInfo == null) {

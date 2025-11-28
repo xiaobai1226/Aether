@@ -1,6 +1,6 @@
 package com.xiaobai1226.aether.core.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.xiaobai1226.aether.core.annotation.CurrentUserId;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
@@ -53,9 +53,7 @@ public class UserController {
      */
     @Post
     @Mapping("/updateUserPassword")
-    public Result<Void> updateUserPassword(@Validated UpdatePasswordVO updatePasswordVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public Result<Void> updateUserPassword(@Validated UpdatePasswordVO updatePasswordVO, @CurrentUserId Long userId) {
 
         var resultCount = userService.updatePasswordById(userId, updatePasswordVO.getPassword());
 
@@ -73,9 +71,7 @@ public class UserController {
      */
     @Get
     @Mapping("/getAvatar")
-    public void getAvatar(Context ctx) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginId();
+    public void getAvatar(Context ctx, @CurrentUserId Long userId) {
 
         // 头像目录
         final var avatarFolderPath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_AVATAR_FILE_FULL);
@@ -122,9 +118,7 @@ public class UserController {
      */
     @Post
     @Mapping(path = "/updateUserAvatar")
-    public Result updateUserAvatar(UploadedFile avatar) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginId();
+    public Result updateUserAvatar(UploadedFile avatar, @CurrentUserId Long userId) {
 
         final var avatarFolderPath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_AVATAR_FILE_FULL);
 
@@ -134,7 +128,7 @@ public class UserController {
         }
 
         // 设置头像存储全路径
-        var avatarPath = FileUtils.generatePath(avatarFolderPath, userId + SystemConsts.AVATAR_SUFFIX);
+        var avatarPath = FileUtils.generatePath(avatarFolderPath, userId.toString() + SystemConsts.AVATAR_SUFFIX);
 
         var avatarFile = FileUtil.file(avatarPath);
 
@@ -152,9 +146,7 @@ public class UserController {
      */
     @Get
     @Mapping("/getUserSpaceUsage")
-    public UserSpaceUsageDTO getUserSpaceUsage() {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsLong();
+    public UserSpaceUsageDTO getUserSpaceUsage(@CurrentUserId Long userId) {
 
         return userService.getUserSpaceUsage(userId);
     }

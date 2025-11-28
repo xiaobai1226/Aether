@@ -39,14 +39,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateUserLastLoginTime(Long userId) {
+    public void updateUserLastLoginTime(final Long userId) {
         var lambdaUpdate = new LambdaUpdateWrapper<UserDO>();
         lambdaUpdate.eq(UserDO::getId, userId).set(UserDO::getLastLoginTime, DateUtil.now());
         userMapper.update(null, lambdaUpdate);
     }
 
     @Override
-    public UserSpaceUsageDTO getUserSpaceUsage(Long userId) {
+    public UserSpaceUsageDTO getUserSpaceUsage(final Long userId) {
         var userDO = userMapper.selectById(userId);
         var remainStorage = userDO.getTotalStorage() - userDO.getUsedStorage();
         var uploadingUsedStorage = userRedisDAO.getUploadingFileSize(userId);
@@ -105,13 +105,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Integer updateUsedStorage(Long userId, Long usedStorage) {
+    public Integer updateUsedStorage(final Long userId, Long usedStorage) {
         // TODO 确认好我到底使不使用这个字段后再开发
         return null;
     }
 
     @Override
-    public Integer updateTotalStorage(Long userId, Long totalStorage) {
+    public Integer updateTotalStorage(final Long userId, Long totalStorage) {
         return null;
     }
 }

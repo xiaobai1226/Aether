@@ -72,7 +72,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
     }
 
     @Override
-    public PageResult<RecycleBinFileDTO> getRecycleBinList(Long userId, PageVO recycleBinVO) {
+    public PageResult<RecycleBinFileDTO> getRecycleBinList(final Long userId, PageVO recycleBinVO) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper).eq(RecycleBinDO::getUserId, userId).eq(RecycleBinDO::getRoot, 1);
 
         // 1 文件名 2 删除时间 3 文件大小 4 有效时间
@@ -138,7 +138,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
     @Tran
     @Override
-    public void delete(Long userId, List<String> recycleIds) {
+    public void delete(final Long userId, List<String> recycleIds) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
         var recycleBinWrapper = lambdaQuery.eq(RecycleBinDO::getUserId, userId);
 
@@ -255,7 +255,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
     @Tran
     @Override
-    public void restore(Long userId, List<String> recycleIds) {
+    public void restore(final Long userId, List<String> recycleIds) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
         var recycleBinDOList = lambdaQuery.eq(RecycleBinDO::getUserId, userId).in(RecycleBinDO::getRecycleId, recycleIds).list();
 

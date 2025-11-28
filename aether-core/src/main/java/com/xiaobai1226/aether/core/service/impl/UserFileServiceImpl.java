@@ -91,7 +91,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     private RecycleBinService recycleBinService;
 
     @Override
-    public UserFileDO getParentFolderByPath(Long userId, Long parentId, String path) {
+    public UserFileDO getParentFolderByPath(final Long userId, Long parentId, String path) {
         if (StrUtil.isEmpty(path)) {
             return null;
         }
@@ -129,7 +129,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public Long getParentFolderByPathOrCreate(Long userId, Long parentId, String path) {
+    public Long getParentFolderByPathOrCreate(final Long userId, Long parentId, String path) {
         if (StrUtil.isEmpty(path)) {
             return null;
         }
@@ -186,7 +186,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public UserFileDTO getUserFileDTOByPath(Long userId, String path) {
+    public UserFileDTO getUserFileDTOByPath(final Long userId, String path) {
         if (StrUtil.isEmpty(path)) {
             return null;
         }
@@ -223,7 +223,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public PageResult<UserFileDTO> getFileList(Long userId, Long parentId, UserFileVO userFileVO) {
+    public PageResult<UserFileDTO> getFileList(final Long userId, Long parentId, UserFileVO userFileVO) {
         var userFileDO = new UserFileDO().setUserId(userId).setFileStatus(NORMAL.flag());
 
         if (userFileVO == null) {
@@ -262,19 +262,19 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Override
 //    public UserFileDO getUserFileByName(String fileName, Integer userId, Integer parentId, UserFileStatusEnum userFileStatus, UserFileItemTypeEnum itemType) {
-    public UserFileDO getUserFileByName(String fileName, Long userId, Long parentId, UserFileStatusEnum userFileStatus) {
+    public UserFileDO getUserFileByName(String fileName, final Long userId, Long parentId, UserFileStatusEnum userFileStatus) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
 //        return lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getParentId, parentId).eq(UserFileDO::getName, fileName).eq(UserFileDO::getFileStatus, userFileStatus.flag()).eq(UserFileDO::getItemType, itemType.flag()).one();
         return lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getParentId, parentId).eq(UserFileDO::getName, fileName).eq(UserFileDO::getFileStatus, userFileStatus.flag()).one();
     }
 
     @Override
-    public Long newFolder(String folderName, Long parentId, Long userId) {
+    public Long newFolder(String folderName, Long parentId, final Long userId) {
         return addUserFile(userId, null, parentId, folderName, UserFileItemTypeEnum.FOLDER, NORMAL, null);
     }
 
     @Override
-    public UserFileDO getUserFileByIdAndUserId(Long id, Long userId, UserFileStatusEnum userFileStatus) {
+    public UserFileDO getUserFileByIdAndUserId(Long id, final Long userId, UserFileStatusEnum userFileStatus) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getId, id);
         if (userFileStatus != null) {
@@ -284,7 +284,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public Boolean updateFileNameById(Long id, Long userId, String newName, UserFileStatusEnum userFileStatus) {
+    public Boolean updateFileNameById(Long id, final Long userId, String newName, UserFileStatusEnum userFileStatus) {
         LambdaUpdateWrapper<UserFileDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<>();
         lambdaUpdateWrapper.set(UserFileDO::getName, newName).eq(UserFileDO::getId, id).eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, userFileStatus.flag());
         var updateNameResult = userFileMapper.update(null, lambdaUpdateWrapper);
@@ -293,7 +293,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public Boolean rename(Long id, Long userId, String newName, UserFileDO userFileDO, UserFileStatusEnum userFileStatus) {
+    public Boolean rename(Long id, final Long userId, String newName, UserFileDO userFileDO, UserFileStatusEnum userFileStatus) {
         LambdaUpdateWrapper<UserFileDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<>();
         lambdaUpdateWrapper.set(UserFileDO::getName, newName).eq(UserFileDO::getId, id).eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, userFileStatus.flag());
 
@@ -312,7 +312,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public UploadResultDTO secondUploadFile(Long userId, Long parentId, UploadFileVO uploadFileVO, FileDO fileDO) {
+    public UploadResultDTO secondUploadFile(final Long userId, Long parentId, UploadFileVO uploadFileVO, FileDO fileDO) {
         // 插入数据库
         addUserFile(userId, fileDO.getId(), parentId, uploadFileVO.getFileName(), FILE, NORMAL, fileDO.getSize());
         return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_SECOND.id());
@@ -320,7 +320,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Tran
     @Override
-    public UploadResultDTO splitUploadFile(UploadedFile file, Long userId, Long parentId, UploadFileVO uploadFileVO, UploadFileCacheDTO uploadFileCacheDTO) throws IOException {
+    public UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, Long parentId, UploadFileVO uploadFileVO, UploadFileCacheDTO uploadFileCacheDTO) throws IOException {
         UploadFileTempDTO uploadTempFileDTO;
 
         // 设置暂存临时目录
@@ -450,7 +450,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public void cancelUploadFile(Long userId, String taskId) {
+    public void cancelUploadFile(final Long userId, String taskId) {
 
         var uploadTempFileInfo = fileRedisDAO.getUploadTempFileInfo(userId, taskId);
 
@@ -466,7 +466,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public void clearUploadFileCache(Long userId, String taskId, Long fileSize, UploadFileCacheDTO uploadFileCacheDTO) {
+    public void clearUploadFileCache(final Long userId, String taskId, Long fileSize, UploadFileCacheDTO uploadFileCacheDTO) {
         // 删除缓存数据
         fileRedisDAO.delUploadTempFileInfo(userId, taskId);
         userRedisDAO.decrementUploadingFileSize(userId, fileSize);
@@ -476,7 +476,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public PageResult<UserFileDO> getFolderList(Long userId, Long parentId, UserFolderVO userFolderVO) {
+    public PageResult<UserFileDO> getFolderList(final Long userId, Long parentId, UserFolderVO userFolderVO) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         var userFolderListPage = lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getItemType, UserFileItemTypeEnum.FOLDER.flag()).eq(UserFileDO::getFileStatus, NORMAL.flag()).eq(UserFileDO::getParentId, parentId).orderByDesc(UserFileDO::getUpdateTime).page(new Page<>(userFolderVO.getPageNum(), userFolderVO.getPageSize()));
 
@@ -489,13 +489,13 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public List<UserFileDO> getUserFileByIdsAndUserId(List<Long> ids, Long userId, UserFileStatusEnum userFileStatus) {
+    public List<UserFileDO> getUserFileByIdsAndUserId(List<Long> ids, final Long userId, UserFileStatusEnum userFileStatus) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         return lambdaQuery.eq(UserFileDO::getUserId, userId).in(UserFileDO::getId, ids).eq(UserFileDO::getFileStatus, userFileStatus.flag()).list();
     }
 
     @Override
-    public List<Long> getAllSubfolders(Long userId, List<Long> ids) {
+    public List<Long> getAllSubfolders(final Long userId, List<Long> ids) {
 
         var totalSubfolderIds = new ArrayList<Long>();
 
@@ -527,14 +527,14 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public Long getCountByNames(List<String> fileNames, Long userId, Long parentId, UserFileStatusEnum userFileStatus, UserFileItemTypeEnum itemType) {
+    public Long getCountByNames(List<String> fileNames, final Long userId, Long parentId, UserFileStatusEnum userFileStatus, UserFileItemTypeEnum itemType) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         return lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getParentId, parentId).in(UserFileDO::getName, fileNames).eq(UserFileDO::getFileStatus, userFileStatus.flag()).eq(UserFileDO::getItemType, itemType.flag()).count();
     }
 
     @Tran
     @Override
-    public void updateParentIdByIds(List<Long> sourceIds, Long targetId, Long userId, UserFileStatusEnum userFileStatus) {
+    public void updateParentIdByIds(List<Long> sourceIds, Long targetId, final Long userId, UserFileStatusEnum userFileStatus) {
         LambdaUpdateWrapper<UserFileDO> lambdaUpdateWrapper = new LambdaUpdateWrapper<>();
         lambdaUpdateWrapper.set(UserFileDO::getParentId, targetId).in(UserFileDO::getId, sourceIds).eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, userFileStatus.flag());
         var updateNameCount = userFileMapper.update(null, lambdaUpdateWrapper);
@@ -545,7 +545,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public List<UserFileDTO> getUserFileDTOListByIds(List<Long> ids, Long userId, UserFileStatusEnum userFileStatus) {
+    public List<UserFileDTO> getUserFileDTOListByIds(List<Long> ids, final Long userId, UserFileStatusEnum userFileStatus) {
         var userFileDO = new UserFileDO().setUserId(userId).setFileStatus(userFileStatus.flag());
         var userFileDTOList = userFileMapper.getUserFileDTOByIds(userFileDO, ids);
         if (CollUtil.isEmpty(userFileDTOList)) {
@@ -556,7 +556,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public List<UserFileTreeDTO> getUserFileTreeListByIds(List<Long> ids, Long userId, UserFileStatusEnum userFileStatus) {
+    public List<UserFileTreeDTO> getUserFileTreeListByIds(List<Long> ids, final Long userId, UserFileStatusEnum userFileStatus) {
         var userFileDTOList = getUserFileDTOListByIds(ids, userId, userFileStatus);
         if (CollUtil.isEmpty(userFileDTOList)) {
             return null;
@@ -566,7 +566,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public void getSubUserFileTree(Long userId, List<UserFileTreeDTO> userFileTreeList) {
+    public void getSubUserFileTree(final Long userId, List<UserFileTreeDTO> userFileTreeList) {
         UserFileVO userFileVO;
         List<UserFileTreeDTO> subUserFileTreeList;
         for (var userFileTree : userFileTreeList) {
@@ -610,7 +610,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Tran
     @Override
-    public void copy(Long targetId, Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long totalSize) {
+    public void copy(Long targetId, final Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long totalSize) {
         if (totalSize > 0) {
             // 增加上传中文件大小（整个文件大小）
             userRedisDAO.incrementUploadingFileSize(userId, totalSize);
@@ -634,7 +634,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Tran
     @Override
-    public void delete(List<UserFileTreeDTO> delUserFileTreeList, Long userId) {
+    public void delete(List<UserFileTreeDTO> delUserFileTreeList, final Long userId) {
         var delIds = new ArrayList<Long>();
         var recycleBinDOList = new ArrayList<RecycleBinDO>();
 
@@ -656,7 +656,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Tran
     @Override
-    public void updateUserFileStatusById(List<Long> ids, Long userId, UserFileStatusEnum userFileStatus) {
+    public void updateUserFileStatusById(List<Long> ids, final Long userId, UserFileStatusEnum userFileStatus) {
         var lambdaUpdateWrapper = new LambdaUpdateWrapper<UserFileDO>();
         lambdaUpdateWrapper.set(UserFileDO::getFileStatus, userFileStatus.flag()).eq(UserFileDO::getUserId, userId).in(UserFileDO::getId, ids);
         var updateFileStatusCount = userFileMapper.update(null, lambdaUpdateWrapper);
@@ -815,13 +815,13 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
 
     @Override
-    public List<UserFileDO> getUserFileListByUserIdAndParentId(Long userId, Long parentId, Integer userFileStatus) {
+    public List<UserFileDO> getUserFileListByUserIdAndParentId(final Long userId, Long parentId, Integer userFileStatus) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         return lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getParentId, parentId).eq(UserFileDO::getFileStatus, userFileStatus).list();
     }
 
     @Override
-    public UserFileDO getParentUserFileByPathAndItemType(Long userId, String path) {
+    public UserFileDO getParentUserFileByPathAndItemType(final Long userId, String path) {
         if (StrUtil.isEmpty(path)) {
             return null;
         }
@@ -849,7 +849,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public List<UserFileTreeDTO> getUserFileTreeDTOByIdsAndUserId(List<Long> ids, Long userId, Integer userFileStatus) {
+    public List<UserFileTreeDTO> getUserFileTreeDTOByIdsAndUserId(List<Long> ids, final Long userId, Integer userFileStatus) {
         var userFileDO = new UserFileDO();
         userFileDO.setUserId(userId);
         userFileDO.setFileStatus(userFileStatus);
@@ -857,7 +857,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public void recursiveGetUserFileTreeDTO(List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long userId) {
+    public void recursiveGetUserFileTreeDTO(List<UserFileTreeDTO> sourceUserFileTreeDTOList, final Long userId) {
         for (UserFileTreeDTO sourceUserFileTreeDTO : sourceUserFileTreeDTOList) {
 
             if (Objects.equals(FILE.flag(), sourceUserFileTreeDTO.getItemType())) {
@@ -923,7 +923,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
      * @author bai
      */
     @Override
-    public UserFileDO getUserFileById(Long id, Long userId, Integer userFileStatus) {
+    public UserFileDO getUserFileById(Long id, final Long userId, Integer userFileStatus) {
 //        try {
 //            var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
 //            return lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getParentId, parentId).eq(UserFileDO::getItemType, itemType).eq(UserFileDO::getName, name).count();
@@ -946,7 +946,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
      * @author bai
      */
     @Override
-    public List<UserFileDO> getUserFileByLikeFilePath(String filePath, Long userId, Integer userFileStatus) {
+    public List<UserFileDO> getUserFileByLikeFilePath(String filePath, final Long userId, Integer userFileStatus) {
 //        try {
 //            return userFileDao.getUserFileByLikeFilePath(filePath, userId, userFileStatus);
 //        } catch (SQLException e) {
@@ -958,7 +958,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
 
     @Override
-    public DownloadedFile download(List<UserFileTreeDTO> userFileTreeDTOList, Long userId) throws IOException {
+    public DownloadedFile download(List<UserFileTreeDTO> userFileTreeDTOList, final Long userId) throws IOException {
         if (userFileTreeDTOList.size() == 1 && UserFileItemTypeEnum.isFile(userFileTreeDTOList.getFirst().getItemType())) {
             return new DownloadedFile(new File(FileUtils.generatePath(rootPath, userFileTreeDTOList.getFirst().getPath())), userFileTreeDTOList.getFirst().getName());
         } else {
