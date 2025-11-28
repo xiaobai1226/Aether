@@ -213,6 +213,7 @@ const showEditPanel = (index: number) => {
   let message = '新建文件夹'
   let inputValue = '新建文件夹'
   let selectEndIndex = inputValue.length
+  let isFile = false // 标识是否为文件，false 表示文件夹
 
   // 如果是重命名
   if (index !== -1) {
@@ -227,10 +228,13 @@ const showEditPanel = (index: number) => {
     selectEndIndex = inputValue.length
 
     if (currentData.itemType == 1) {
+      isFile = true // 文件
       let lastIndex = inputValue.lastIndexOf('.')
       if (lastIndex != -1) {
         selectEndIndex = lastIndex
       }
+    } else {
+      isFile = false // 文件夹
     }
   }
 
@@ -243,7 +247,8 @@ const showEditPanel = (index: number) => {
       // 校验名称格式
       const regex = new RegExp(RegexEnum.REGEX_FILE_NAME)
       if (!value) {
-        return ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY
+        // 根据是文件还是文件夹返回不同的错误提示
+        return isFile ? ResultErrorMsgEnum.ERROR_FILE_NAME_ONLY_EMPTY : ResultErrorMsgEnum.ERROR_FOLDER_NAME_EMPTY
       } else if (value.length > 255) {
         return ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string
       } else if (!regex.test(value)) {
