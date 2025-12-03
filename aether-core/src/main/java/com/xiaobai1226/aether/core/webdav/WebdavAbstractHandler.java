@@ -87,19 +87,19 @@ public abstract class WebdavAbstractHandler implements Handler {
                             status = this.handleGetHeadPost(ctx, userId);
                             break;
                         case "DELETE":
-                            status = this.handleDelete(ctx);
+                            status = this.handleDelete(ctx, userId);
                             break;
                         case "PUT":
                             status = this.handlePut(ctx, userId);
                             break;
                         case "MKCOL":
                         case "KCOL":
-                            status = this.handleMkcol(ctx);
+                            status = this.handleMkcol(ctx, userId);
                             break;
                         case "COPY":
                         case "MOVE":
                         case "OVE":
-                            status = this.handleCopyMove(ctx);
+                            status = this.handleCopyMove(ctx, userId);
                             break;
                         case "LOCK":
                             status = this.handleLock(ctx);
@@ -223,7 +223,7 @@ public abstract class WebdavAbstractHandler implements Handler {
         }
     }
 
-    private int handleCopyMove(Context ctx) {
+    private int handleCopyMove(Context ctx, Long userId) {
         String reqPath = stripPrefix(ctx.path());
         String descPath = stripPrefix(ctx.header("Destination"));
         if (StrUtil.equals(reqPath, descPath)) {
@@ -231,16 +231,16 @@ public abstract class WebdavAbstractHandler implements Handler {
         }
         boolean flag = false;
         if (ctx.method().equals("COPY") || ctx.method().equals("OPY")) {
-            flag = this.fileSystem().copy(reqPath, descPath);
+            flag = this.fileSystem().copy(reqPath, descPath, userId);
         } else if (ctx.method().equals("MOVE") || ctx.method().equals("OVE")) {
-            flag = this.fileSystem().move(reqPath, descPath);
+            flag = this.fileSystem().move(reqPath, descPath, userId);
         }
         return flag ? 201 : 404;
     }
 
-    private int handleMkcol(Context ctx) {
+    private int handleMkcol(Context ctx, Long userId) {
         String reqPath = stripPrefix(ctx.path());
-        boolean flag = this.fileSystem().mkdir(reqPath);
+        boolean flag = this.fileSystem().mkdir(reqPath, userId);
         return flag ? 201 : 405;
     }
 
@@ -260,9 +260,9 @@ public abstract class WebdavAbstractHandler implements Handler {
         return flag ? 204 : 405;
     }
 
-    private int handleDelete(Context ctx) {
+    private int handleDelete(Context ctx, Long userId) {
         String reqPath = stripPrefix(ctx.path());
-        boolean flag = this.fileSystem().del(reqPath);
+        boolean flag = this.fileSystem().del(reqPath, userId);
         if (!flag) {
             return 403;
         }
@@ -331,17 +331,33 @@ public abstract class WebdavAbstractHandler implements Handler {
             return 200;
         }
         long length = end - start + 1;
-        InputStream resIn;
-        if (this.range) {
-            ctx.headerSet("Content-Range", "bytes " + start + "-" + end + "/" + fi.size());
-            resIn = this.fileSystem().fileInputStream(reqPath, start, length, userId);
-        } else {
-            resIn = this.fileSystem().fileInputStream(reqPath, 0, 0, userId);
-        }
+        InputStream resIn = null;
         try {
+            if (this.range) {
+                ctx.headerSet("Content-Range", "bytes " + start + "-" + end + "/" + fi.size());
+                resIn = this.fileSystem().fileInputStream(reqPath, start, length, userId);
+            } else {
+                resIn = this.fileSystem().fileInputStream(reqPath, 0, 0, userId);
+            }
             ctx.output(resIn);
         } catch (Exception e) {
-
+            // 检查是否是客户端主动关闭连接导致的异常
+            String exceptionName = e.getClass().getSimpleName();
+            if (exceptionName.contains("Eof") || exceptionName.contains("Broken") || exceptionName.contains("Closed")) {
+                // 客户端主动关闭连接，这是正常情况，只记录debug日志
+                log.debug("Client closed connection while downloading {}: {}", reqPath, e.getMessage());
+            } else {
+                log.error("Error while streaming file {}: {}", reqPath, e.getMessage());
+            }
+        } finally {
+            // 确保流被正确关闭
+            if (resIn != null) {
+                try {
+                    resIn.close();
+                } catch (Exception e) {
+                    log.debug("Error closing input stream: {}", e.getMessage());
+                }
+            }
         }
         if (type == 2) {
             return 206;

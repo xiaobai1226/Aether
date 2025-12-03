@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.xiaobai1226.aether.core.dao.redis.ShareRedisDAO;
+import com.xiaobai1226.aether.core.cache.ShareCache;
 import com.xiaobai1226.aether.core.domain.dto.ShareInfoDTO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
@@ -65,10 +65,10 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
     private UserFileService userFileService;
 
     /**
-     * 分享文件Redis缓存
+     * 分享文件缓存
      */
     @Inject
-    private ShareRedisDAO shareRedisDAO;
+    private ShareCache shareCache;
 
     @Override
     @Tran
@@ -400,7 +400,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
 //        }
 //
 //        // TODO 将数据记录下来，短时间内打开不需要再次输入提取码，增加iP或设备信息，不然所有人打开这个都可以使用了
-//        shareRedisDAO.putShareInfo(checkExtractionCodeVO.getShareId(), finalShareFileDTO);
+//        shareCache.putShareInfo(checkExtractionCodeVO.getShareId(), finalShareFileDTO);
 //    }
 //
 //    @Override

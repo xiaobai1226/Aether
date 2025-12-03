@@ -6,7 +6,7 @@ import cn.hutool.core.util.StrUtil;
 
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
-import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
+import com.xiaobai1226.aether.core.cache.FileCache;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.mapper.FileMapper;
@@ -30,7 +30,7 @@ public class FileServiceImpl implements FileService {
     private FileMapper fileMapper;
 
     @Inject
-    private FileRedisDAO fileRedisDAO;
+    private FileCache fileCache;
 
     @Inject("${project.path.root}")
     private String rootPath;
@@ -97,7 +97,7 @@ public class FileServiceImpl implements FileService {
 //    @Override
 //    public Integer mergeFiless(Integer userId, String taskId) {
 //        // 获取缓存中数据
-//        var uploadTempFileDTO = fileRedisDAO.getUploadTempFileInfo(userId, taskId);
+//        var uploadTempFileDTO = fileCache.getUploadTempFileInfo(userId, taskId);
 //
 //        if (uploadTempFileDTO == null) {
 //            // TODO 返回错误信息

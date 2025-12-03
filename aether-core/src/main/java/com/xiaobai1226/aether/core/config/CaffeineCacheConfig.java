@@ -26,6 +26,46 @@ public class CaffeineCacheConfig {
     }
 
     /**
+     * 上传临时文件信息缓存
+     * 最大10000个条目，60分钟后过期
+     */
+    @Bean("uploadTempFileCache")
+    public Cache<String, CacheEntry<Object>> uploadTempFileCache() {
+        return Caffeine.newBuilder().maximumSize(10000).expireAfterWrite(Duration.ofMinutes(60))
+                .build();
+    }
+
+    /**
+     * 上传中文件大小缓存
+     * 最大10000个条目，60分钟后过期
+     */
+    @Bean("uploadingSizeCache")
+    public Cache<String, CacheEntry<Long>> uploadingSizeCache() {
+        return Caffeine.newBuilder().maximumSize(10000).expireAfterWrite(Duration.ofMinutes(60))
+                .build();
+    }
+
+    /**
+     * 分享文件信息缓存
+     * 最大5000个条目，60分钟后过期
+     */
+    @Bean("shareInfoCache")
+    public Cache<String, CacheEntry<Object>> shareInfoCache() {
+        return Caffeine.newBuilder().maximumSize(5000).expireAfterWrite(Duration.ofMinutes(60))
+                .build();
+    }
+
+    /**
+     * 下载签名缓存
+     * 最大5000个条目，5分钟后过期
+     */
+    @Bean("downloadSignCache")
+    public Cache<String, CacheEntry<Object>> downloadSignCache() {
+        return Caffeine.newBuilder().maximumSize(5000).expireAfterWrite(Duration.ofMinutes(5))
+                .build();
+    }
+
+    /**
      * 缓存条目包装类，用于存储值和过期时间
      */
     public static class CacheEntry<T> {

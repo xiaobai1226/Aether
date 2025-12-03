@@ -48,4 +48,12 @@ public interface RecycleBinService extends IService<RecycleBinDO> {
      * @author bai
      */
     void restore(final Long userId, List<String> recycleIds);
+
+    /**
+     * 清理过期的回收站文件
+     * 删除10天前的回收站文件
+     *
+     * @author bai
+     */
+    void cleanExpiredRecycleBinFiles();
 }

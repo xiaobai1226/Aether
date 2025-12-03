@@ -15,12 +15,3 @@ solon:
       driverClassName: com.mysql.cj.jdbc.Driver
       username: root
       password: 123456
-
-# redis配置
-redis.ds1:
-  config: |
-    singleServerConfig:
-      password:
-      address: "redis://localhost:6379"
-      # 数据库索引
-      database: 0

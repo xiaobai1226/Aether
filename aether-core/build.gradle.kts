@@ -10,7 +10,6 @@ dependencies {
     implementation("org.noear:solon-web-webdav:${DependenciesVersion.solonVersion}")
     implementation("org.noear:solon-logging-logback")
     implementation("org.noear:sa-token-solon-plugin")
-    implementation("org.noear:redisson-solon-plugin")
     // Caffeine缓存
     implementation("com.github.ben-manes.caffeine:caffeine:${DependenciesVersion.caffeineVersion}")    
 
