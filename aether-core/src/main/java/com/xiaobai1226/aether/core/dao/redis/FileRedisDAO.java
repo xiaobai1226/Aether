@@ -2,9 +2,9 @@ package com.xiaobai1226.aether.core.dao.redis;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.xiaobai1226.aether.core.constant.RedisKeyConsts;
+import com.xiaobai1226.aether.core.constant.CacheKeyConsts;
 import com.xiaobai1226.aether.core.domain.dto.UploadFileTempDTO;
-import com.xiaobai1226.aether.core.util.RedisKeyGenerator;
+import com.xiaobai1226.aether.core.util.CacheKeyGenerator;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.redisson.api.RMap;
@@ -13,7 +13,7 @@ import org.redisson.api.RedissonClient;
 import java.time.Duration;
 import java.util.Map;
 
-import static com.xiaobai1226.aether.core.constant.RedisKeyConsts.UPLOADED_SIZE;
+import static com.xiaobai1226.aether.core.constant.CacheKeyConsts.UPLOADED_SIZE;
 import static com.xiaobai1226.aether.common.constant.SystemConsts.UPLOAD_TEMP_FILE_INFO_TIMEOUT;
 
 /**
@@ -41,7 +41,7 @@ public class FileRedisDAO {
         var uploadFileTempMap = BeanUtil.beanToMap(uploadFileTempDTO);
 
         // 将信息写入Redis
-        RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.UPLOAD, RedisKeyConsts.TEMP, userId, taskId));
+        RMap<String, Object> rMap = redisClient.getMap(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.FILE, CacheKeyConsts.UPLOAD, CacheKeyConsts.TEMP, userId, taskId));
         rMap.putAll(uploadFileTempMap);
 
         // 设置超时时间
@@ -57,7 +57,7 @@ public class FileRedisDAO {
      */
     public void updateUploadedSize(Long userId, String taskId, Long chunkSize) {
         // 获取redisson的map对象
-        RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.UPLOAD, RedisKeyConsts.TEMP, userId, taskId));
+        RMap<String, Object> rMap = redisClient.getMap(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.FILE, CacheKeyConsts.UPLOAD, CacheKeyConsts.TEMP, userId, taskId));
 
         var uploadedSize = 0L;
         var uploadedSizeObject = rMap.get(UPLOADED_SIZE);
@@ -83,7 +83,7 @@ public class FileRedisDAO {
      */
     public UploadFileTempDTO getUploadTempFileInfo(Long userId, String taskId) {
         // 获取redisson的map对象
-        RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.UPLOAD, RedisKeyConsts.TEMP, userId, taskId));
+        RMap<String, Object> rMap = redisClient.getMap(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.FILE, CacheKeyConsts.UPLOAD, CacheKeyConsts.TEMP, userId, taskId));
 
         // 获取map中的所有键值对
         Map<String, Object> uploadFileTempMap = rMap.readAllMap();
@@ -101,7 +101,7 @@ public class FileRedisDAO {
      */
     public Boolean delUploadTempFileInfo(Long userId, String taskId) {
         // 获取redisson的map对象
-        RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.UPLOAD, RedisKeyConsts.TEMP, userId, taskId));
+        RMap<String, Object> rMap = redisClient.getMap(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.FILE, CacheKeyConsts.UPLOAD, CacheKeyConsts.TEMP, userId, taskId));
         // 删除键值对
         return rMap.delete();
     }

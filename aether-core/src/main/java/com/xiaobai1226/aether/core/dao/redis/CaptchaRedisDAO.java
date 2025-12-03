@@ -2,8 +2,8 @@ package com.xiaobai1226.aether.core.dao.redis;
 
 import com.xiaobai1226.aether.core.enums.CaptchaTypeEnum;
 import com.xiaobai1226.aether.core.enums.EmailEventEnum;
-import com.xiaobai1226.aether.core.constant.RedisKeyConsts;
-import com.xiaobai1226.aether.core.util.RedisKeyGenerator;
+import com.xiaobai1226.aether.core.constant.CacheKeyConsts;
+import com.xiaobai1226.aether.core.util.CacheKeyGenerator;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.redisson.api.RBucket;
@@ -34,7 +34,7 @@ public class CaptchaRedisDAO {
      */
     public void setImageCaptcha(String id, String captchaCode, Integer timeout) {
         // 设置键值对和超时时间
-        RBucket<String> bucket = redisClient.getBucket(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.CAPTCHA, CaptchaTypeEnum.IMAGE.type(), id));
+        RBucket<String> bucket = redisClient.getBucket(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.CAPTCHA, CaptchaTypeEnum.IMAGE.type(), id));
         bucket.set(captchaCode, Duration.ofMinutes(timeout));
     }
 
@@ -45,7 +45,7 @@ public class CaptchaRedisDAO {
      * @return id对应的图形验证码数据
      */
     public String getAndDelImageCaptcha(String id) {
-        RBucket<String> bucket = redisClient.getBucket(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.CAPTCHA, CaptchaTypeEnum.IMAGE.type(), id));
+        RBucket<String> bucket = redisClient.getBucket(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.CAPTCHA, CaptchaTypeEnum.IMAGE.type(), id));
         // 获取并删除键值对
         return bucket.getAndDelete();
     }

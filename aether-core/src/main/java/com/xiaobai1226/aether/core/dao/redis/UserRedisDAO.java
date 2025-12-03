@@ -1,7 +1,7 @@
 package com.xiaobai1226.aether.core.dao.redis;
 
-import com.xiaobai1226.aether.core.constant.RedisKeyConsts;
-import com.xiaobai1226.aether.core.util.RedisKeyGenerator;
+import com.xiaobai1226.aether.core.constant.CacheKeyConsts;
+import com.xiaobai1226.aether.core.util.CacheKeyGenerator;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.redisson.api.RAtomicLong;
@@ -32,7 +32,7 @@ public class UserRedisDAO {
      * @param fileSize 文件大小
      */
     public void incrementUploadingFileSize(Long userId, Long fileSize) {
-        RAtomicLong rAtomicLongAdd = redisClient.getAtomicLong(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.USER, RedisKeyConsts.UPLOADING, RedisKeyConsts.USED_STORAGE, userId));
+        RAtomicLong rAtomicLongAdd = redisClient.getAtomicLong(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.USER, CacheKeyConsts.UPLOADING, CacheKeyConsts.USED_STORAGE, userId));
         // 对值进行加法操作
         rAtomicLongAdd.addAndGet(fileSize);
         // 设置超时时间
@@ -46,7 +46,7 @@ public class UserRedisDAO {
      * @param fileSize 文件大小
      */
     public void decrementUploadingFileSize(Long userId, Long fileSize) {
-        RAtomicLong rAtomicLongDecrement = redisClient.getAtomicLong(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.USER, RedisKeyConsts.UPLOADING, RedisKeyConsts.USED_STORAGE, userId));
+        RAtomicLong rAtomicLongDecrement = redisClient.getAtomicLong(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.USER, CacheKeyConsts.UPLOADING, CacheKeyConsts.USED_STORAGE, userId));
         // 对值进行减法操作
         var newValue = rAtomicLongDecrement.addAndGet(-fileSize);
 
@@ -63,7 +63,7 @@ public class UserRedisDAO {
      */
     public Long getUploadingFileSize(Long userId) {
         // 从Redis中获取信息
-        RAtomicLong rAtomicLong = redisClient.getAtomicLong(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.USER, RedisKeyConsts.UPLOADING, RedisKeyConsts.USED_STORAGE, userId));
+        RAtomicLong rAtomicLong = redisClient.getAtomicLong(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.USER, CacheKeyConsts.UPLOADING, CacheKeyConsts.USED_STORAGE, userId));
 
         return rAtomicLong.get();
     }

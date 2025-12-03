@@ -2,8 +2,8 @@ package com.xiaobai1226.aether.core.dao.redis;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.xiaobai1226.aether.core.constant.RedisKeyConsts;
-import com.xiaobai1226.aether.core.util.RedisKeyGenerator;
+import com.xiaobai1226.aether.core.constant.CacheKeyConsts;
+import com.xiaobai1226.aether.core.util.CacheKeyGenerator;
 import com.xiaobai1226.aether.dao.domain.dto.ShareFileDTO;
 
 import org.noear.solon.annotation.Component;
@@ -40,7 +40,7 @@ public class ShareRedisDAO {
         var shareFileDTOMap = BeanUtil.beanToMap(shareFileDTO);
 
         // 将信息写入Redis
-        RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.SHARE, shareId));
+        RMap<String, Object> rMap = redisClient.getMap(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.FILE, CacheKeyConsts.SHARE, shareId));
         rMap.putAll(shareFileDTOMap);
 
         // 设置超时时间 TODO 超时时间待确认
@@ -55,7 +55,7 @@ public class ShareRedisDAO {
      */
     public ShareFileDTO getShareInfo(String shareId) {
         // 获取redisson的map对象
-        RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.SHARE, shareId));
+        RMap<String, Object> rMap = redisClient.getMap(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.FILE, CacheKeyConsts.SHARE, shareId));
 
         // 获取map中的所有键值对
         Map<String, Object> shareFileDTOMap = rMap.readAllMap();

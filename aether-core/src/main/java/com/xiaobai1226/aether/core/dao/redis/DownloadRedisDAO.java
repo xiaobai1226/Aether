@@ -2,9 +2,9 @@ package com.xiaobai1226.aether.core.dao.redis;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.xiaobai1226.aether.core.constant.RedisKeyConsts;
+import com.xiaobai1226.aether.core.constant.CacheKeyConsts;
 import com.xiaobai1226.aether.core.domain.dto.DownloadFileDTO;
-import com.xiaobai1226.aether.core.util.RedisKeyGenerator;
+import com.xiaobai1226.aether.core.util.CacheKeyGenerator;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.redisson.api.RMap;
@@ -39,7 +39,7 @@ public class DownloadRedisDAO {
         var downloadFileDTOMap = BeanUtil.beanToMap(downloadFileDTO);
 
         // 将信息写入Redis
-        RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.DOWNLOAD, sign));
+        RMap<String, Object> rMap = redisClient.getMap(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.FILE, CacheKeyConsts.DOWNLOAD, sign));
         rMap.putAll(downloadFileDTOMap);
 
         // 设置超时时间
@@ -54,7 +54,7 @@ public class DownloadRedisDAO {
      */
     public DownloadFileDTO getDownloadInfo(String sign) {
         // 获取redisson的map对象
-        RMap<String, Object> rMap = redisClient.getMap(RedisKeyGenerator.PROJECT.generateKey(RedisKeyConsts.FILE, RedisKeyConsts.DOWNLOAD, sign));
+        RMap<String, Object> rMap = redisClient.getMap(CacheKeyGenerator.PROJECT.generateKey(CacheKeyConsts.FILE, CacheKeyConsts.DOWNLOAD, sign));
 
         // 获取map中的所有键值对
         Map<String, Object> downloadFileDTOMap = rMap.readAllMap();

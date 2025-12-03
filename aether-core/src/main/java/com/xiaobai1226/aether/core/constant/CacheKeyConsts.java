@@ -1,12 +1,12 @@
 package com.xiaobai1226.aether.core.constant;
 
 /**
- * 项目redis的key
+ * 项目cache的key
  *
  * @author bai
  */
 
-public class RedisKeyConsts {
+public class CacheKeyConsts {
     /**
      * 验证码
      */

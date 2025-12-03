@@ -3,21 +3,21 @@ package com.xiaobai1226.aether.core.util;
 import cn.hutool.core.util.StrUtil;
 
 /**
- * Redis键值工具类
+ * Cache键值工具类
  *
  * @author bai
  */
 
-public enum RedisKeyGenerator {
+public enum CacheKeyGenerator {
     // 项目名称前缀
-    PROJECT("NETDISK");
+    PROJECT("AETHER");
 
     /**
      * key前缀
      */
     private String prefix;
 
-    RedisKeyGenerator(String prefix) {
+    CacheKeyGenerator(String prefix) {
         this.prefix = prefix;
     }
 
