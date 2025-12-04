@@ -52,14 +52,24 @@ const getPreviewWidth = () => {
 
 /**
  * 显示预览
- * @param data
+ * @param data 当前要预览的文件
  * @param showPart
+ * @param fileList 当前目录的所有文件列表（用于图片预览时的左右切换）
  */
-const showPreview = (data: UserFileInfo, showPart?: any) => {
+const showPreview = (data: UserFileInfo, showPart?: any, fileList?: UserFileInfo[]) => {
   fileInfo.value = data
   if (data.suffix && IMAGE.suffixSet.has(data.suffix)) {
+    // 如果是图片，传递当前目录的所有图片列表
     nextTick(() => {
-      imageViewRef.value.show(0, data.name)
+      if (fileList && fileList.length > 0) {
+        // 筛选出所有图片文件
+        const imageFiles = fileList.filter(file => 
+          file.itemType === 1 && file.suffix && IMAGE.suffixSet.has(file.suffix)
+        )
+        imageViewRef.value.show(0, data.name, imageFiles, data.id)
+      } else {
+        imageViewRef.value.show(0, data.name)
+      }
     })
   } else {
     windowShow.value = true

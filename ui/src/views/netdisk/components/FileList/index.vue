@@ -545,7 +545,8 @@ const click = (userFile: UserFileInfo) => {
     return
   }
 
-  previewRef.value.showPreview(userFile, 0)
+  // 传递当前目录的所有文件列表，用于图片预览时的左右切换
+  previewRef.value.showPreview(userFile, 0, tableData.value.list)
 }
 
 // 下载文件
