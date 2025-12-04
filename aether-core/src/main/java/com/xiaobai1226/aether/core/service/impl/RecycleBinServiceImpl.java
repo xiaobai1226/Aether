@@ -215,7 +215,6 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         var userFileLambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         var userFileDOList = userFileLambdaQuery.in(UserFileDO::getFileId, fileIds).list();
 
-
         var delFileIds = new HashSet<Long>();
         // 如果为空，直接返回
         if (CollUtil.isEmpty(userFileDOList)) {

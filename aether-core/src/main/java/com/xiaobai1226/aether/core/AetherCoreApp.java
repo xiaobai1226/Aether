@@ -4,6 +4,7 @@ import com.xiaobai1226.aether.core.util.BannerUtils;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Import;
 import org.noear.solon.annotation.SolonMain;
+import org.noear.solon.scheduling.annotation.EnableScheduling;
 import org.noear.solon.web.cors.CrossFilter;
 
 /**
@@ -13,6 +14,7 @@ import org.noear.solon.web.cors.CrossFilter;
  */
 @SolonMain
 @Import(scanPackages = "com.xiaobai1226.aether")
+@EnableScheduling
 public class AetherCoreApp {
 
     public static void main(String[] args) {
