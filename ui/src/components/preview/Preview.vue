@@ -55,11 +55,11 @@ const getPreviewWidth = () => {
  * @param data
  * @param showPart
  */
-const showPreview = (data: UserFileInfo, showPart) => {
+const showPreview = (data: UserFileInfo, showPart?: any) => {
   fileInfo.value = data
   if (data.suffix && IMAGE.suffixSet.has(data.suffix)) {
     nextTick(() => {
-      imageViewRef.value.show(0)
+      imageViewRef.value.show(0, data.name)
     })
   } else {
     windowShow.value = true
@@ -72,7 +72,7 @@ defineExpose({ showPreview })
 <template>
   <!--  <PreviewImage v-if="fileInfo.category == 3" ref="imageViewRef" :imageList="[imageUrl]"/>-->
   <PreviewImage v-if="(fileInfo.suffix && IMAGE.suffixSet.has(fileInfo.suffix))" ref="imageViewRef"
-                :fileId="fileInfo.id" />
+                :fileId="fileInfo.id" :fileName="fileInfo.name" />
   <Window :show="windowShow" @close="closeWindow"
           :width="getPreviewWidth()"
           :title="fileInfo.name" :align="(fileInfo.suffix && VIDEO.suffixSet.has(fileInfo.suffix)) ? 'center' : 'top'"
