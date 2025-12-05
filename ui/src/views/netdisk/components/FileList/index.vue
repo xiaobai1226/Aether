@@ -117,7 +117,7 @@ const route = useRoute()
 const tableData = ref<GetFileListByPageResponse>({
   list: [],
   pageNum: 1,
-  pageSize: 50,
+  pageSize: 100,
   total: 0,
   totalPage: 0
 })
@@ -167,7 +167,7 @@ const loadDataList = () => {
         tableData.value = {
           list: [],
           pageNum: 1,
-          pageSize: 50,
+          pageSize: 100,
           total: 0,
           totalPage: 0
         }
