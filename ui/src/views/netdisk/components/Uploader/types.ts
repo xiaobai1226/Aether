@@ -31,7 +31,15 @@ export interface UploadFileItem {
   // 回调方法
   uploadedCallback: (uploadPath?: string) => void,
   // 完成时间
-  finishTime?: string
+  finishTime?: string,
+  // 上传速度（字节/秒）
+  uploadSpeed?: number,
+  // 预计剩余时间（秒）
+  remainingTime?: number,
+  // 上次更新时间戳（用于计算速度）
+  lastUpdateTime?: number,
+  // 上次上传大小（用于计算速度）
+  lastUploadedSize?: number
 }
 
 // 定义STATUS对象
