@@ -46,6 +46,11 @@ const getPreviewWidth = () => {
     return 1100
   }
   
+  // 文本和代码文件使用较大宽度，避免代码行过度换行
+  if (TXT.suffixSet.has(fileInfo.value.suffix) || CODE.suffixSet.has(fileInfo.value.suffix)) {
+    return 1100
+  }
+  
   // 其他文件使用默认宽度
   return 900
 }
