@@ -2,6 +2,18 @@
   <div class="markdown-preview-container">
     <!-- 悬浮操作按钮 -->
     <div class="floating-actions">
+      <el-tooltip 
+        :content="viewMode === 'preview' ? '查看源码' : '预览渲染'" 
+        placement="left" 
+        :show-after="300"
+      >
+        <div class="action-btn toggle-btn" @click="toggleViewMode">
+          <el-icon :size="18">
+            <View v-if="viewMode === 'preview'" />
+            <Document v-else />
+          </el-icon>
+        </div>
+      </el-tooltip>
       <el-tooltip content="复制内容" placement="left" :show-after="300">
         <div class="action-btn copy-btn" @click="copyMarkdown">
           <el-icon :size="18"><DocumentCopy /></el-icon>
@@ -16,14 +28,22 @@
 
     <!-- Markdown 预览区域 -->
     <div class="markdown-content" v-loading="loading">
+      <!-- 预览模式 -->
       <MdPreview 
-        v-if="!loading"
+        v-if="!loading && viewMode === 'preview'"
         :modelValue="markdownContent" 
         :theme="theme"
         previewTheme="github"
         codeTheme="github"
         :showCodeRowNumber="true"
       />
+      
+      <!-- 源码模式 -->
+      <div v-else-if="!loading && viewMode === 'source'" class="source-code-view">
+        <highlightjs language="markdown" :code="markdownContent" />
+      </div>
+      
+      <!-- 错误提示 -->
       <div v-if="error" class="error-message">
         <el-icon :size="48" color="#F56C6C"><WarningFilled /></el-icon>
         <p>{{ error }}</p>
@@ -35,7 +55,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { DocumentCopy, Download, WarningFilled } from '@element-plus/icons-vue'
+import { DocumentCopy, Download, WarningFilled, View, Document } from '@element-plus/icons-vue'
 import { MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import { getFile } from '@/api/v1/file'
@@ -55,12 +75,21 @@ const markdownContent = ref('')
 const loading = ref(true)
 const error = ref('')
 const blobResult = ref<Blob>()
+const viewMode = ref<'preview' | 'source'>('preview') // 视图模式：preview-预览，source-源码
 
 // 主题（可以根据系统主题自动切换）
 const theme = computed(() => {
   // 可以从系统配置中读取，这里默认使用 light
   return 'light'
 })
+
+/**
+ * 切换视图模式
+ */
+const toggleViewMode = () => {
+  viewMode.value = viewMode.value === 'preview' ? 'source' : 'preview'
+  ElMessage.success(`已切换到${viewMode.value === 'preview' ? '预览' : '源码'}模式`)
+}
 
 /**
  * 读取 Markdown 文件
@@ -191,6 +220,14 @@ onMounted(() => {
       }
     }
 
+    .toggle-btn {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+
+      &:hover {
+        background: linear-gradient(135deg, #3e9bed 0%, #00e1ed 100%);
+      }
+    }
+
     .copy-btn {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
@@ -244,6 +281,26 @@ onMounted(() => {
       p {
         margin-top: 16px;
         font-size: 14px;
+      }
+    }
+
+    // 源码视图
+    .source-code-view {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+
+      :deep(pre) {
+        margin: 0;
+        border-radius: 8px;
+        max-height: none;
+        
+        code {
+          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+          font-size: 14px;
+          line-height: 1.6;
+        }
       }
     }
   }
