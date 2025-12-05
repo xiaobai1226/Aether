@@ -2,6 +2,7 @@ package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.date.DateUtil;
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
@@ -22,6 +23,7 @@ import com.xiaobai1226.aether.dao.mapper.FileMapper;
 import com.xiaobai1226.aether.dao.mapper.RecycleBinMapper;
 import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 import com.xiaobai1226.aether.common.util.FileUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -42,6 +44,7 @@ import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
  * @author bai
  */
 @Component
+@Slf4j
 public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, RecycleBinDO> implements RecycleBinService {
 
     @Db
@@ -55,6 +58,9 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
     @Inject("${project.path.root}")
     private String rootPath;
+
+    @Inject("${project.recycle-bin.retention-days:10}")
+    private Integer retentionDays;
 
     @Inject
     private UserService userService;
@@ -208,7 +214,6 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         // TODO 确认一个事务内，前面删除了，这里是否查得到，如果查得到会导致逻辑出错，file无法删除了
         var userFileLambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         var userFileDOList = userFileLambdaQuery.in(UserFileDO::getFileId, fileIds).list();
-
 
         var delFileIds = new HashSet<Long>();
         // 如果为空，直接返回
@@ -364,5 +369,56 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
         // 修改状态
         userFileService.updateUserFileStatusById(userFileIds, userId, NORMAL);
+    }
+
+    @Override
+    @Tran
+    public void cleanExpiredRecycleBinFiles() {
+        try {
+            // 计算N天前的时间（从配置中读取保留天数）
+            Date expireDate = DateUtil.offsetDay(new Date(), -retentionDays);
+            String expireDateStr = DateUtil.format(expireDate, "yyyy-MM-dd HH:mm:ss");
+            
+            log.info("开始清理{}之前的回收站文件（保留期限{}天）", expireDateStr, retentionDays);
+
+            // 查询10天前的回收站记录
+            var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
+            var expiredRecycleBinList = lambdaQuery.lt(RecycleBinDO::getCreateTime, expireDateStr).list();
+
+            if (CollUtil.isEmpty(expiredRecycleBinList)) {
+                log.info("没有需要清理的过期回收站文件");
+                return;
+            }
+
+            log.info("找到{}条过期回收站记录", expiredRecycleBinList.size());
+
+            // 按用户分组处理
+            Map<Long, List<String>> userRecycleIdMap = new HashMap<>();
+            for (var recycleBinDO : expiredRecycleBinList) {
+                userRecycleIdMap.computeIfAbsent(recycleBinDO.getUserId(), k -> new ArrayList<>())
+                        .add(recycleBinDO.getRecycleId());
+            }
+
+            // 逐个用户清理
+            int totalCleaned = 0;
+            for (Map.Entry<Long, List<String>> entry : userRecycleIdMap.entrySet()) {
+                Long userId = entry.getKey();
+                List<String> recycleIds = entry.getValue();
+                
+                try {
+                    // 调用删除方法
+                    delete(userId, recycleIds);
+                    totalCleaned += recycleIds.size();
+                    log.info("用户{}的{}条过期回收站文件已清理", userId, recycleIds.size());
+                } catch (Exception e) {
+                    log.error("清理用户{}的过期回收站文件失败: {}", userId, e.getMessage(), e);
+                }
+            }
+
+            log.info("回收站自动清理完成，共清理{}条记录", totalCleaned);
+        } catch (Exception e) {
+            log.error("清理过期回收站文件失败: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 }

@@ -83,7 +83,15 @@ export const useUploaderStore = defineStore('uploader', () => {
       // 任务ID
       taskId: '',
       // 回调方法
-      uploadedCallback: uploadedCallback
+      uploadedCallback: uploadedCallback,
+      // 上传速度（字节/秒）
+      uploadSpeed: 0,
+      // 预计剩余时间（秒）
+      remainingTime: 0,
+      // 上次更新时间戳
+      lastUpdateTime: Date.now(),
+      // 上次上传大小
+      lastUploadedSize: 0
     }
 
     // 向列表第一条插入元素
@@ -296,6 +304,25 @@ export const useUploaderStore = defineStore('uploader', () => {
             currentUploadFile.uploadedSize = i * chunkSize + loaded
             const uploadProgress = Math.floor((currentUploadFile.uploadedSize / fileSize) * 100)
             currentUploadFile.uploadProgress = uploadProgress ? uploadProgress : 0
+
+            // 计算上传速度和剩余时间
+            const currentTime = Date.now()
+            const timeDiff = (currentTime - (currentUploadFile.lastUpdateTime || currentTime)) / 1000 // 转为秒
+            if (timeDiff > 0.5) { // 每0.5秒更新一次速度
+              const sizeDiff = currentUploadFile.uploadedSize - (currentUploadFile.lastUploadedSize || 0)
+              const speed = Math.floor(sizeDiff / timeDiff) // 字节/秒
+              currentUploadFile.uploadSpeed = speed > 0 ? speed : 0
+              
+              // 计算剩余时间（秒）
+              if (speed > 0) {
+                const remainingSize = fileSize - currentUploadFile.uploadedSize
+                currentUploadFile.remainingTime = Math.ceil(remainingSize / speed)
+              }
+              
+              // 更新记录
+              currentUploadFile.lastUpdateTime = currentTime
+              currentUploadFile.lastUploadedSize = currentUploadFile.uploadedSize
+            }
           }).then((response) => {
             // 安全地检查响应数据
             if (!response || !response.data) {
@@ -405,7 +432,7 @@ export const useUploaderStore = defineStore('uploader', () => {
   /**
    * 开始上传
    * @param uid 文件ID
-   * @param type 操作类型 1 暂停状态重新开始 2 取消状态重新开始
+   * @param type 操作类型 1 暂停状态重新开始 2 失败/取消状态重新开始
    */
   const startUpload = (uid: string, type: number) => {
     let file: UploadFileItem | undefined
@@ -415,8 +442,17 @@ export const useUploaderStore = defineStore('uploader', () => {
       file = getUploadFailFileByUid(uid)
     }
 
-    if (file && (file.status === STATUS.pause.value || file.status === STATUS.cancel.value)) {
-      if (file.status === STATUS.cancel.value) {
+    if (file && (file.status === STATUS.pause.value || file.status === STATUS.cancel.value || file.status === STATUS.fail.value)) {
+      if (file.status === STATUS.cancel.value || file.status === STATUS.fail.value) {
+        // 重置上传状态（从头开始）
+        file.currentChunkIndex = 0
+        file.uploadProgress = 0
+        file.uploadedSize = 0
+        file.uploadSpeed = 0
+        file.remainingTime = 0
+        file.lastUpdateTime = Date.now()
+        file.lastUploadedSize = 0
+        
         // 将数据写入上传中列表
         uploadingFileList.value.push(file)
 
@@ -512,6 +548,93 @@ export const useUploaderStore = defineStore('uploader', () => {
     }
   }
 
+  /**
+   * 批量开始上传（针对暂停和等待中的文件）
+   */
+  const startAllUpload = () => {
+    uploadingFileList.value.forEach(file => {
+      if (file.status === STATUS.pause.value || file.status === STATUS.wait.value) {
+        startUpload(file.uid, 1)
+      }
+    })
+  }
+
+  /**
+   * 批量暂停上传（针对上传中和等待中的文件）
+   */
+  const pauseAllUpload = () => {
+    uploadingFileList.value.forEach(file => {
+      if (file.status === STATUS.uploading.value) {
+        pauseUpload(file.uid)
+      } else if (file.status === STATUS.wait.value) {
+        // 将等待中的文件直接改为暂停状态
+        file.status = STATUS.pause.value
+      }
+    })
+  }
+
+  /**
+   * 批量取消上传（只取消暂停状态的文件）
+   */
+  const cancelAllUpload = () => {
+    // 复制一份列表，避免在遍历时修改原数组
+    const filesToCancel = [...uploadingFileList.value].filter(
+      file => file.status === STATUS.pause.value
+    )
+    filesToCancel.forEach(file => {
+      cancelUpload(file.uid)
+    })
+  }
+
+  /**
+   * 批量清除上传成功记录
+   */
+  const clearAllSuccessRecord = () => {
+    uploadSuccessFileList.value = []
+  }
+
+  /**
+   * 批量重新开始失败的上传
+   */
+  const restartAllFailedUpload = () => {
+    // 复制一份需要重新开始的文件列表
+    const filesToRestart = [...uploadFailFileList.value].filter(
+      file => file.status === STATUS.cancel.value || file.status === STATUS.fail.value
+    )
+    
+    // 先从失败列表中移除所有要重新开始的文件
+    filesToRestart.forEach(file => {
+      const index = uploadFailFileList.value.findIndex(f => f.uid === file.uid)
+      if (index !== -1) {
+        uploadFailFileList.value.splice(index, 1)
+      }
+    })
+    
+    // 然后重置状态并添加到上传中列表
+    filesToRestart.forEach(file => {
+      // 重置上传状态（从头开始）
+      file.currentChunkIndex = 0
+      file.uploadProgress = 0
+      file.uploadedSize = 0
+      file.uploadSpeed = 0
+      file.remainingTime = 0
+      file.lastUpdateTime = Date.now()
+      file.lastUploadedSize = 0
+      
+      // 添加到上传中列表
+      uploadingFileList.value.push(file)
+      
+      // 根据当前上传数量决定状态
+      if (uploadingNum.value >= 3) {
+        file.status = STATUS.wait.value
+      } else {
+        uploadingNum.value++
+        file.status = STATUS.uploading.value
+        md5AndUploadFile(file.uid, file.currentChunkIndex, file.uploadedCallback)
+      }
+    })
+  }
+
   // 以对象的格式把state和action返回
   return {
     isShowUploader,
@@ -523,6 +646,12 @@ export const useUploaderStore = defineStore('uploader', () => {
     pauseUpload,
     startUpload,
     cancelUpload,
-    clearUploadRecord
+    clearUploadRecord,
+    // 批量操作方法
+    startAllUpload,
+    pauseAllUpload,
+    cancelAllUpload,
+    clearAllSuccessRecord,
+    restartAllFailedUpload
   }
 })

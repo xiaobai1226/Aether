@@ -54,6 +54,7 @@ declare module 'vue' {
     PreviewDownload: typeof import('./src/components/preview/PreviewDownload.vue')['default']
     PreviewExcel: typeof import('./src/components/preview/PreviewExcel.vue')['default']
     PreviewImage: typeof import('./src/components/preview/PreviewImage.vue')['default']
+    PreviewMarkdown: typeof import('./src/components/preview/PreviewMarkdown.vue')['default']
     PreviewMusic: typeof import('./src/components/preview/PreviewMusic.vue')['default']
     PreviewPdf: typeof import('./src/components/preview/PreviewPdf.vue')['default']
     PreviewTxt: typeof import('./src/components/preview/PreviewTxt.vue')['default']

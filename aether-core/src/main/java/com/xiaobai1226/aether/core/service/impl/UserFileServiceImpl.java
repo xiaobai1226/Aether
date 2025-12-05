@@ -15,8 +15,8 @@ import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.common.enums.FileTypeEnum;
-import com.xiaobai1226.aether.core.dao.redis.FileRedisDAO;
-import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
+import com.xiaobai1226.aether.core.cache.FileCache;
+import com.xiaobai1226.aether.core.cache.UserCache;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.common.util.VideoUtils;
@@ -78,10 +78,10 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     private String rootPath;
 
     @Inject
-    private FileRedisDAO fileRedisDAO;
+    private FileCache fileCache;
 
     @Inject
-    private UserRedisDAO userRedisDAO;
+    private UserCache userCache;
 
     @Inject
     private UserService userService;
@@ -337,14 +337,14 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             }
 
             // 增加上传中文件大小（整个文件大小）
-            userRedisDAO.incrementUploadingFileSize(userId, uploadFileVO.getFileSize());
+            userCache.incrementUploadingFileSize(userId, uploadFileVO.getFileSize());
 
             // 切片是0，则表示redis中还没有数据，要新增
             var uploadFileTempDTO = BeanUtil.toBean(uploadFileVO, UploadFileTempDTO.class);
             uploadFileTempDTO.setUploadedSize(0L);
             uploadFileTempDTO.setTempFolder(tempFolder);
             uploadFileTempDTO.setParentId(parentId);
-            fileRedisDAO.putUploadTempFileInfo(userId, uploadFileVO.getTaskId(), uploadFileTempDTO);
+            fileCache.putUploadTempFileInfo(userId, uploadFileVO.getTaskId(), uploadFileTempDTO);
 
             // 如果文件夹不存在则创建目录
             if (!FileUtil.isDirectory(tempDir)) {
@@ -354,13 +354,13 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             }
         } else {
             // 获取缓存中数据
-//                var uploadTempFileDTO = fileRedisDAO.getUploadTempFileInfo(userId, uploadFileVO.getTaskId());
+//                var uploadTempFileDTO = fileCache.getUploadTempFileInfo(userId, uploadFileVO.getTaskId());
 //
 //                // 如果缓存中没有数据，则返回上传失败
 //                if (uploadTempFileDTO == null) {
 //                    // 删除缓存数据
-//                    fileRedisDAO.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-//                    userRedisDAO.decrementUploadingFileSize(userId, uploadFileVO.getFileSize());
+//                    fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
+//                    userCache.decrementUploadingFileSize(userId, uploadFileVO.getFileSize());
 //                    FileUtil.del(tempDir);
 //
 //                    return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FAIL.id());
@@ -369,15 +369,15 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 //                // 如果缓存中有数据，但是实际上传文件大小已超过初始文件大小
 //                if (uploadTempFileDTO.getFileSize() < (uploadTempFileDTO.getUploadedSize() + file.getSize())) {
 //                    // 删除缓存数据
-//                    fileRedisDAO.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-//                    userRedisDAO.decrementUploadingFileSize(userId, uploadFileVO.getFileSize());
+//                    fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
+//                    userCache.decrementUploadingFileSize(userId, uploadFileVO.getFileSize());
 //                    FileUtil.del(tempDir);
 //
 //                    return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FAIL.id());
 //                }
 
             // 不是第一片，增加uploadedSize
-            fileRedisDAO.updateUploadedSize(userId, uploadFileVO.getTaskId(), file.getContentSize());
+            fileCache.updateUploadedSize(userId, uploadFileVO.getTaskId(), file.getContentSize());
         }
 
         // 将文件写入临时目录
@@ -390,7 +390,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         }
 
         // 获取缓存中数据
-        uploadTempFileDTO = fileRedisDAO.getUploadTempFileInfo(userId, uploadFileVO.getTaskId());
+        uploadTempFileDTO = fileCache.getUploadTempFileInfo(userId, uploadFileVO.getTaskId());
 
         // 如果是最后一片，执行合并分片操作
         var finalFilePath = fileService.mergeFile(uploadTempFileDTO.getFileName(), uploadFileVO.getTaskId(), tempFolder);
@@ -444,8 +444,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         // 插入数据库
         addUserFile(userId, fileId, parentId, uploadFileVO.getFileName(), FILE, NORMAL, finalFileSize);
         // 删除缓存数据
-        fileRedisDAO.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-        userRedisDAO.decrementUploadingFileSize(userId, uploadTempFileDTO.getFileSize());
+        fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
+        userCache.decrementUploadingFileSize(userId, uploadTempFileDTO.getFileSize());
         FileUtil.del(tempDir);
 
         return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FINISH.id());
@@ -454,14 +454,14 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     @Override
     public void cancelUploadFile(final Long userId, String taskId) {
 
-        var uploadTempFileInfo = fileRedisDAO.getUploadTempFileInfo(userId, taskId);
+        var uploadTempFileInfo = fileCache.getUploadTempFileInfo(userId, taskId);
 
         if (uploadTempFileInfo == null) {
             throw new FailResultException(BAD_REQUEST_ERROR, ERROR_CANCEL_UPLOAD);
         }
         // 删除缓存数据
-        fileRedisDAO.delUploadTempFileInfo(userId, taskId);
-        userRedisDAO.decrementUploadingFileSize(userId, uploadTempFileInfo.getFileSize());
+        fileCache.delUploadTempFileInfo(userId, taskId);
+        userCache.decrementUploadingFileSize(userId, uploadTempFileInfo.getFileSize());
         var tempFolder = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_TEMP_FILE_FULL, userId, taskId);
         var tempDir = FileUtil.file(tempFolder);
         FileUtil.del(tempDir);
@@ -470,8 +470,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     @Override
     public void clearUploadFileCache(final Long userId, String taskId, Long fileSize, UploadFileCacheDTO uploadFileCacheDTO) {
         // 删除缓存数据
-        fileRedisDAO.delUploadTempFileInfo(userId, taskId);
-        userRedisDAO.decrementUploadingFileSize(userId, fileSize);
+        fileCache.delUploadTempFileInfo(userId, taskId);
+        userCache.decrementUploadingFileSize(userId, fileSize);
         FileUtil.del(uploadFileCacheDTO.getTempDir());
         FileUtil.del(uploadFileCacheDTO.getFinalFilePath());
         FileUtil.del(uploadFileCacheDTO.getThumbnailFilePath());
@@ -615,7 +615,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     public void copy(Long targetId, final Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long totalSize) {
         if (totalSize > 0) {
             // 增加上传中文件大小（整个文件大小）
-            userRedisDAO.incrementUploadingFileSize(userId, totalSize);
+            userCache.incrementUploadingFileSize(userId, totalSize);
         }
 
         insertUserFileTree(sourceUserFileTreeDTOList, userId, targetId);
@@ -630,7 +630,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             userService.updateUser(userDO);
 
             // 减去上传中文件大小（整个文件大小）
-            userRedisDAO.decrementUploadingFileSize(userId, totalSize);
+            userCache.decrementUploadingFileSize(userId, totalSize);
         }
     }
 

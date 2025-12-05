@@ -21,13 +21,13 @@ public interface FileSystem {
 
     boolean putFile(String reqPath, InputStream in, Long userId);
 
-    boolean del(String reqPath);
+    boolean del(String reqPath, Long userId);
 
-    boolean copy(String reqPath, String descPath);
+    boolean copy(String reqPath, String descPath, Long userId);
 
-    boolean move(String reqPath, String descPath);
+    boolean move(String reqPath, String descPath, Long userId);
 
-    boolean mkdir(String reqPath);
+    boolean mkdir(String reqPath, Long userId);
 
     String fileUrl(String reqPath);
 }

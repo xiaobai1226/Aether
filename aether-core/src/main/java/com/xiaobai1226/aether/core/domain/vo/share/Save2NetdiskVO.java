@@ -1,6 +1,5 @@
 package com.xiaobai1226.aether.core.domain.vo.share;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.noear.solon.validation.annotation.NotNull;
 
@@ -16,7 +15,7 @@ public class Save2NetdiskVO {
      * ShareID集合，使用，分割的字符串
      */
     @NotNull(message = "文件ID不能为空")
-    @JsonProperty("ids")
+    // @JsonProperty("ids")
     private String idsStr;
 
     /**

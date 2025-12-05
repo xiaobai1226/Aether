@@ -5,7 +5,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
-import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
+import com.xiaobai1226.aether.core.cache.UserCache;
 import com.xiaobai1226.aether.core.domain.dto.UserSpaceUsageDTO;
 import com.xiaobai1226.aether.core.domain.vo.RegisterVO;
 import com.xiaobai1226.aether.dao.domain.entity.UserDO;
@@ -30,7 +30,7 @@ public class UserServiceImpl implements UserService {
     private UserMapper userMapper;
 
     @Inject
-    private UserRedisDAO userRedisDAO;
+    private UserCache userCache;
 
     @Override
     public UserDO getUserByUsername(String username) {
@@ -49,7 +49,7 @@ public class UserServiceImpl implements UserService {
     public UserSpaceUsageDTO getUserSpaceUsage(final Long userId) {
         var userDO = userMapper.selectById(userId);
         var remainStorage = userDO.getTotalStorage() - userDO.getUsedStorage();
-        var uploadingUsedStorage = userRedisDAO.getUploadingFileSize(userId);
+        var uploadingUsedStorage = userCache.getUploadingFileSize(userId);
         var realRemainStorage = remainStorage - uploadingUsedStorage;
         return new UserSpaceUsageDTO(userDO.getUsedStorage(), userDO.getTotalStorage(), remainStorage, uploadingUsedStorage, realRemainStorage);
     }
@@ -115,4 +115,3 @@ public class UserServiceImpl implements UserService {
         return null;
     }
 }
-

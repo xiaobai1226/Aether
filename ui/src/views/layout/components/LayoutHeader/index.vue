@@ -78,6 +78,8 @@ const toAdmin = () => {
       <el-popover :width="800" trigger="click" v-model:visible="uploaderStore.isShowUploader" :offset="20"
                   transition="none"
                   :hide-after="0"
+                  :persistent="false"
+                  :teleported="true"
                   :popper-style="{ padding: '0px' }">
         <template #reference>
           <span>
@@ -87,7 +89,7 @@ const toAdmin = () => {
           </span>
         </template>
         <template #default>
-          <Uploader ref="uploaderRef" />
+          <Uploader ref="uploaderRef" @mousedown.stop @click.stop />
         </template>
       </el-popover>
       <el-dropdown>

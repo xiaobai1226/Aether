@@ -4,7 +4,7 @@ import com.xiaobai1226.aether.core.annotation.CurrentUserId;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.core.dao.redis.ShareRedisDAO;
+import com.xiaobai1226.aether.core.cache.ShareCache;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.core.domain.vo.share.*;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
@@ -47,10 +47,10 @@ public class ShareFileController {
     private UserFileService userFileService;
 
     /**
-     * 分享文件Redis缓存
+     * 分享文件缓存
      */
     @Inject
-    private ShareRedisDAO shareRedisDAO;
+    private ShareCache shareCache;
 
     /**
      * 创建分享文件
@@ -145,7 +145,7 @@ public class ShareFileController {
 //            userId = StpUtil.getLoginIdAsLong();
 //        }
 //
-//        var shareInfo = shareRedisDAO.getShareInfo(shareId);
+//        var shareInfo = shareCache.getShareInfo(shareId);
 //        if (shareInfo == null) {
 //            return null;
 //        }
@@ -179,7 +179,7 @@ public class ShareFileController {
 //    @Mapping("/getShareFileListByShareIdPagination")
 //    public PageResultDataDTO<UserFileDTO> getShareFileListByShareIdPagination(GetShareFileInfoListVO getShareFileInfoListVO) {
 //
-//        var shareInfo = shareRedisDAO.getShareInfo(getShareFileInfoListVO.getShareId());
+//        var shareInfo = shareCache.getShareInfo(getShareFileInfoListVO.getShareId());
 //        if (shareInfo == null) {
 //            // TODO 需要返回特定状态码，表示没有输入校验码校验
 //            return null;
@@ -229,64 +229,64 @@ public class ShareFileController {
      *
      * @param save2NetdiskVO 保存到网盘信息
      */
-    @Post
-    @Mapping("/save2NetDisk")
-    public void saveToNetDisk(Save2NetdiskVO save2NetdiskVO, @CurrentUserId Long userId) {
+//     @Post
+//     @Mapping("/save2NetDisk")
+//     public void saveToNetDisk(Save2NetdiskVO save2NetdiskVO, @CurrentUserId Long userId) {
 
-        var shareInfo = shareRedisDAO.getShareInfo(save2NetdiskVO.getShareId());
-        if (shareInfo == null) {
-            // TODO 抛出异常，表示没有输入校验码校验
-            return;
-        }
+//         var shareInfo = shareCache.getShareInfo(save2NetdiskVO.getShareId());
+//         if (shareInfo == null) {
+//             // TODO 抛出异常，表示没有输入校验码校验
+//             return;
+//         }
 
-        if (userId == shareInfo.getUserId()) {
-            throw new FailResultException(PARAM_IS_INVALID, "不能分享给自己");
-        }
+//         if (userId == shareInfo.getUserId()) {
+//             throw new FailResultException(PARAM_IS_INVALID, "不能分享给自己");
+//         }
 
-        List<Long> sourceIds = Arrays.stream(save2NetdiskVO.getIdsStr().split(",")).mapToLong(Long::parseLong).boxed().toList();
+//         List<Long> sourceIds = Arrays.stream(save2NetdiskVO.getIdsStr().split(",")).mapToLong(Long::parseLong).boxed().toList();
 
-        if (sourceIds.isEmpty()) {
-            throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
-        }
+//         if (sourceIds.isEmpty()) {
+//             throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
+//         }
 
-        var sourceUserFileTreeDTOList = userFileService.getUserFileTreeDTOByIdsAndUserId(sourceIds, shareInfo.getUserId(), UserFileStatusEnum.NORMAL.flag());
+//         var sourceUserFileTreeDTOList = userFileService.getUserFileTreeDTOByIdsAndUserId(sourceIds, shareInfo.getUserId(), UserFileStatusEnum.NORMAL.flag());
 
-        if (sourceUserFileTreeDTOList == null || sourceUserFileTreeDTOList.size() != sourceIds.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
-        }
+//         if (sourceUserFileTreeDTOList == null || sourceUserFileTreeDTOList.size() != sourceIds.size()) {
+//             throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
+//         }
 
-        // TODO 校验分享文件是否属于本次分享
+//         // TODO 校验分享文件是否属于本次分享
 
-        // 校验目标文件夹是否存在
-        UserFileDO targetUserFileDO = null;
-        Long targetId = 0L;
-        // 如果不是根目录则判断目标文件夹是否存在
-        if (save2NetdiskVO.getPath() != null) {
-            targetUserFileDO = userFileService.getParentUserFileByPathAndItemType(userId, save2NetdiskVO.getPath());
+//         // 校验目标文件夹是否存在
+//         UserFileDO targetUserFileDO = null;
+//         Long targetId = 0L;
+//         // 如果不是根目录则判断目标文件夹是否存在
+//         if (save2NetdiskVO.getPath() != null) {
+//             targetUserFileDO = userFileService.getParentUserFileByPathAndItemType(userId, save2NetdiskVO.getPath());
 
-            if (targetUserFileDO == null || !Objects.equals(UserFileItemTypeEnum.FOLDER.flag(), targetUserFileDO.getItemType())) {
-                throw new FailResultException(PARAM_IS_INVALID, "目标文件夹不存在");
-            }
-            targetId = targetUserFileDO.getId();
-        }
+//             if (targetUserFileDO == null || !Objects.equals(UserFileItemTypeEnum.FOLDER.flag(), targetUserFileDO.getItemType())) {
+//                 throw new FailResultException(PARAM_IS_INVALID, "目标文件夹不存在");
+//             }
+//             targetId = targetUserFileDO.getId();
+//         }
 
-        // 获取全部要复制文件
-        userFileService.recursiveGetUserFileTreeDTO(sourceUserFileTreeDTOList, userId);
-        var totalSize = userFileService.getUserFileTreeSpaceUsage(sourceUserFileTreeDTOList);
+//         // 获取全部要复制文件
+//         userFileService.recursiveGetUserFileTreeDTO(sourceUserFileTreeDTOList, userId);
+//         var totalSize = userFileService.getUserFileTreeSpaceUsage(sourceUserFileTreeDTOList);
 
-        // 检测存储空间是否足够
-//        var userSpaceUsage = userService.getUserSpaceUsage(userId);
-//        if (userSpaceUsage == null || userSpaceUsage.getRealRemainStorage() < totalSize) {
-//            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-//        }
+//         // 检测存储空间是否足够
+// //        var userSpaceUsage = userService.getUserSpaceUsage(userId);
+// //        if (userSpaceUsage == null || userSpaceUsage.getRealRemainStorage() < totalSize) {
+// //            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
+// //        }
 
-        // 复制文件
-//        var result = userFileService.copy(targetUserFileDO, userId, sourceUserFileTreeDTOList, totalSize);
+//         // 复制文件
+// //        var result = userFileService.copy(targetUserFileDO, userId, sourceUserFileTreeDTOList, totalSize);
 
-//        if (!result) {
-//            throw new FailResultException(BAD_REQUEST_ERROR, "复制失败");
-//        }
+// //        if (!result) {
+// //            throw new FailResultException(BAD_REQUEST_ERROR, "复制失败");
+// //        }
 
-//        return ResultDataUtils.success(SUCCESS_MSG_COPY.msg());
-    }
+// //        return ResultDataUtils.success(SUCCESS_MSG_COPY.msg());
+//     }
 }

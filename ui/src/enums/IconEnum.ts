@@ -61,7 +61,11 @@ export const IconEnum: IconEnumType = {
   } as const,
   CODE: {
     iconUrl: url('code'),
-    suffixSet: new Set(['xml', 'jsp', 'java', 'class', 'dll', 'vue', 'md', 'html', 'sql', 'c', 'h', 'm', 'cpp', 'cc', 'chm'])
+    suffixSet: new Set(['xml', 'jsp', 'java', 'class', 'dll', 'vue', 'html', 'sql', 'c', 'h', 'm', 'cpp', 'cc', 'chm'])
+  } as const,
+  MARKDOWN: {
+    iconUrl: url('code'),
+    suffixSet: new Set(['md', 'markdown'])
   } as const,
   EPUB: { iconUrl: url('epub'), suffixSet: new Set(['epub']) } as const,
   CSS: { iconUrl: url('css'), suffixSet: new Set(['css', 'scss']) } as const,
@@ -100,6 +104,7 @@ export const {
   EXE,
   IMAGE,
   JS,
+  MARKDOWN,
   MUSIC,
   OTHER,
   PDF,

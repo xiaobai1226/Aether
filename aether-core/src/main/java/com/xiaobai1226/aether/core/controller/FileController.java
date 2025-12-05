@@ -10,7 +10,7 @@ import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.core.annotation.CurrentUserId;
-import com.xiaobai1226.aether.core.dao.redis.DownloadRedisDAO;
+import com.xiaobai1226.aether.core.cache.DownloadCache;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.core.domain.vo.*;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
@@ -68,7 +68,7 @@ public class FileController {
     private String rootPath;
 
     @Inject
-    private DownloadRedisDAO downloadRedisDAO;
+    private DownloadCache downloadCache;
 
     /**
      * 分页获取文件列表
@@ -700,7 +700,7 @@ public class FileController {
 
         String sign = RandomUtil.randomString(20);
 
-        downloadRedisDAO.setDownloadSign(new DownloadFileDTO(idList, userId), sign);
+        downloadCache.setDownloadSign(new DownloadFileDTO(idList, userId), sign);
 
         return sign;
     }
@@ -714,7 +714,7 @@ public class FileController {
     @Mapping("/download")
     public void download(Context ctx, @Param("sign") String sign) {
         try {
-            var downloadFileDTO = downloadRedisDAO.getDownloadInfo(sign);
+            var downloadFileDTO = downloadCache.getDownloadInfo(sign);
 
             // 判断sign是否存在
             if (downloadFileDTO == null) {
