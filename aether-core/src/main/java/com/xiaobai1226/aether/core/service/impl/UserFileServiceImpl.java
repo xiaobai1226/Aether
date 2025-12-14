@@ -42,12 +42,16 @@ import com.xiaobai1226.aether.dao.domain.entity.RecycleBinDO;
 import com.xiaobai1226.aether.dao.domain.entity.StorageSourceDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
+import com.xiaobai1226.aether.dao.mapper.FileMapper;
 import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
+
+import java.util.HashMap;
+import java.util.Objects;
 import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.data.annotation.Tran;
@@ -77,6 +81,9 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Db
     private UserFileMapper userFileMapper;
+
+    @Db
+    private FileMapper fileMapper;
 
     @Inject("${project.path.root}")
     private String rootPath;
@@ -913,23 +920,50 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             return true;
         }
 
-        // 获取旧存储源
-        var oldStorageSource = folder.getStorageSourceId() != null
-                ? storageSourceService.getStorageSourceById(folder.getStorageSourceId(), userId)
+        // 获取旧存储源ID（用于判断子文件夹是否需要处理）
+        var oldStorageSourceId = folder.getStorageSourceId();
+        
+        // 获取旧存储源（用于文件迁移）
+        var oldStorageSource = oldStorageSourceId != null
+                ? storageSourceService.getStorageSourceById(oldStorageSourceId, userId)
                 : null;
 
         try {
-            // 1. 递归获取该文件夹下所有文件
+            // 1. 递归收集需要迁移的文件ID和需要更新的UserFile记录ID（只处理存储源一致的子文件夹）
             var fileIdsToMigrate = new ArrayList<Long>();
-            collectFileIdsRecursively(folderId, userId, fileIdsToMigrate);
+            var userFileIdsToUpdate = new ArrayList<Long>();
+            userFileIdsToUpdate.add(folderId); // 先加入当前文件夹
+            collectFileAndUserFileIdsRecursively(folderId, userId, oldStorageSourceId, fileIdsToMigrate, userFileIdsToUpdate);
 
-            // 2. 迁移文件
+            // 2. 迁移文件（返回旧fileId -> 新fileId的映射关系）
+            HashMap<Long, Long> fileIdMapping = new HashMap<>();
             if (CollUtil.isNotEmpty(fileIdsToMigrate) && oldStorageSource != null) {
-                migrateFiles(fileIdsToMigrate, oldStorageSource.getPath(), storageSource.getPath());
+                fileIdMapping = migrateFiles(fileIdsToMigrate, oldStorageSourceId, storageSourceId, 
+                        oldStorageSource.getPath(), storageSource.getPath());
             }
 
-            // 3. 更新文件夹及其所有子文件夹的存储源ID
-            updateFolderStorageSourceRecursively(folderId, storageSourceId);
+            // 3. 批量更新所有UserFile记录的存储源ID（包括文件和文件夹）
+            if (CollUtil.isNotEmpty(userFileIdsToUpdate)) {
+                var lambdaUpdate = new LambdaUpdateWrapper<UserFileDO>();
+                lambdaUpdate.set(UserFileDO::getStorageSourceId, storageSourceId)
+                        .in(UserFileDO::getId, userFileIdsToUpdate);
+                userFileMapper.update(null, lambdaUpdate);
+            }
+
+            // 4. 更新UserFile记录的fileId（如果文件ID发生了变化）
+            if (CollUtil.isNotEmpty(fileIdMapping)) {
+                for (var entry : fileIdMapping.entrySet()) {
+                    var oldFileId = entry.getKey();
+                    var newFileId = entry.getValue();
+                    if (!oldFileId.equals(newFileId)) {
+                        var lambdaUpdate = new LambdaUpdateWrapper<UserFileDO>();
+                        lambdaUpdate.set(UserFileDO::getFileId, newFileId)
+                                .eq(UserFileDO::getFileId, oldFileId)
+                                .in(UserFileDO::getId, userFileIdsToUpdate);
+                        userFileMapper.update(null, lambdaUpdate);
+                    }
+                }
+            }
 
             return true;
         } catch (Exception e) {
@@ -939,13 +973,16 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     /**
-     * 递归收集文件夹下所有文件的ID
+     * 递归收集文件夹下所有文件ID和需要更新的UserFile记录ID（只处理存储源一致的子文件夹）
      *
-     * @param folderId 文件夹ID
-     * @param userId   用户ID
-     * @param fileIds  收集的文件ID列表
+     * @param folderId            文件夹ID
+     * @param userId              用户ID
+     * @param originalStorageId   原始存储源ID（用于判断子文件夹是否需要处理）
+     * @param fileIds             收集的文件ID列表（用于文件迁移）
+     * @param userFileIds         收集的UserFile记录ID列表（包括文件和文件夹，用于更新存储源ID）
      */
-    private void collectFileIdsRecursively(Long folderId, Long userId, List<Long> fileIds) {
+    private void collectFileAndUserFileIdsRecursively(Long folderId, Long userId, Long originalStorageId, 
+                                                       List<Long> fileIds, List<Long> userFileIds) {
         var userFiles = ChainWrappers.lambdaQueryChain(userFileMapper)
                 .eq(UserFileDO::getUserId, userId)
                 .eq(UserFileDO::getParentId, folderId)
@@ -954,12 +991,19 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         for (var userFile : userFiles) {
             if (UserFileItemTypeEnum.isFile(userFile.getItemType())) {
+                // 收集文件的File表ID（用于迁移）和UserFile表ID（用于更新存储源）
                 if (userFile.getFileId() != null) {
                     fileIds.add(userFile.getFileId());
                 }
+                userFileIds.add(userFile.getId()); // 文件本身也需要更新存储源ID
             } else {
-                // 递归处理子文件夹
-                collectFileIdsRecursively(userFile.getId(), userId, fileIds);
+                // 对于子文件夹，只有当其存储源ID与原始存储源ID一致时才递归处理
+                // 使用Objects.equals来正确处理null值的比较
+                if (Objects.equals(userFile.getStorageSourceId(), originalStorageId)) {
+                    userFileIds.add(userFile.getId()); // 收集需要更新的子文件夹ID
+                    collectFileAndUserFileIdsRecursively(userFile.getId(), userId, originalStorageId, fileIds, userFileIds);
+                }
+                // 如果子文件夹的存储源ID不一致，跳过该子文件夹及其所有内容
             }
         }
     }
@@ -967,71 +1011,115 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     /**
      * 迁移文件
      *
-     * @param fileIds        文件ID列表
-     * @param oldStoragePath 旧存储路径
-     * @param newStoragePath 新存储路径
+     * @param fileIds            文件ID列表（旧存储源的File记录ID）
+     * @param oldStorageSourceId 旧存储源ID
+     * @param newStorageSourceId 新存储源ID
+     * @param oldStoragePath     旧存储路径
+     * @param newStoragePath     新存储路径
+     * @return 旧fileId -> 新fileId的映射关系
      */
-    private void migrateFiles(List<Long> fileIds, String oldStoragePath, String newStoragePath) {
-        for (var fileId : fileIds) {
-            var fileDO = fileService.getFileById(fileId);
-            if (fileDO == null) {
-                continue;
+    private HashMap<Long, Long> migrateFiles(List<Long> fileIds, Long oldStorageSourceId, Long newStorageSourceId,
+                                              String oldStoragePath, String newStoragePath) {
+        var fileIdMapping = new HashMap<Long, Long>();
+
+        // 批量查询旧存储源的文件记录
+        var oldFileDOList = ChainWrappers.lambdaQueryChain(fileMapper)
+                .in(FileDO::getId, fileIds)
+                .list();
+
+        // 校验查询结果数量
+        if (oldFileDOList.size() != fileIds.size()) {
+            log.error("批量查询文件记录数量不一致，期望: {}, 实际: {}", fileIds.size(), oldFileDOList.size());
+            throw new FailResultException(BAD_REQUEST_ERROR, "部分文件记录不存在，无法完成迁移");
+        }
+
+        // 迁移每个文件
+        for (var oldFileDO : oldFileDOList) {
+            Long newFileId;
+
+            // 1. 检查目标存储源是否已存在相同identifier的文件
+            var existingFileDO = ChainWrappers.lambdaQueryChain(fileMapper)
+                    .eq(FileDO::getIdentifier, oldFileDO.getIdentifier())
+                    .eq(FileDO::getStorageSourceId, newStorageSourceId)
+                    .one();
+
+            if (existingFileDO != null) {
+                // 目标存储源已存在该文件，直接使用
+                log.info("目标存储源已存在文件，无需迁移: identifier={}, path={}", 
+                        oldFileDO.getIdentifier(), oldFileDO.getPath());
+                newFileId = existingFileDO.getId();
+            } else {
+                // 目标存储源不存在该文件，需要迁移
+                // 2. 迁移物理文件
+                var oldFilePath = FileUtils.generatePath(oldStoragePath, oldFileDO.getPath());
+                var newFilePath = FileUtils.generatePath(newStoragePath, oldFileDO.getPath());
+
+                var oldFile = FileUtil.file(oldFilePath);
+                if (!oldFile.exists()) {
+                    log.error("文件不存在: {}", oldFilePath);
+                    throw new FailResultException(BAD_REQUEST_ERROR, "文件不存在: " + oldFileDO.getPath());
+                }
+
+                var newFile = FileUtil.file(newFilePath);
+                // 确保目录存在
+                FileUtil.mkParentDirs(newFile);
+
+                // 复制文件
+                FileUtil.copy(oldFile, newFile, true);
+
+                // 验证复制是否成功
+                if (!newFile.exists() || newFile.length() != oldFile.length()) {
+                    log.error("文件复制失败: {}", oldFileDO.getPath());
+                    throw new FailResultException(BAD_REQUEST_ERROR, "文件复制失败: " + oldFileDO.getPath());
+                }
+
+                // 3. 在新存储源创建File记录
+                var newFileDO = new FileDO();
+                newFileDO.setName(oldFileDO.getName());
+                newFileDO.setPath(oldFileDO.getPath());
+                newFileDO.setSize(oldFileDO.getSize());
+                newFileDO.setSuffix(oldFileDO.getSuffix());
+                newFileDO.setIdentifier(oldFileDO.getIdentifier());
+                newFileDO.setThumbnail(oldFileDO.getThumbnail());
+                newFileDO.setStorageSourceId(newStorageSourceId);
+                fileMapper.insert(newFileDO);
+                newFileId = newFileDO.getId();
+
+                log.info("文件迁移成功: oldFileId={}, newFileId={}, path={}", 
+                        oldFileDO.getId(), newFileId, oldFileDO.getPath());
             }
 
-            // 构造旧文件路径和新文件路径
-            var oldFilePath = FileUtils.generatePath(oldStoragePath, fileDO.getPath());
-            var newFilePath = FileUtils.generatePath(newStoragePath, fileDO.getPath());
+            // 记录映射关系
+            fileIdMapping.put(oldFileDO.getId(), newFileId);
 
-            // 复制文件
-            var oldFile = FileUtil.file(oldFilePath);
-            if (!oldFile.exists()) {
-                log.warn("文件不存在: {}", oldFilePath);
-                continue;
+            // 4. 检查旧File记录是否还被其他UserFile使用
+            var remainingUsageCount = ChainWrappers.lambdaQueryChain(userFileMapper)
+                    .eq(UserFileDO::getFileId, oldFileDO.getId())
+                    .ne(UserFileDO::getStorageSourceId, oldStorageSourceId)
+                    .count();
+
+            if (remainingUsageCount == 0) {
+                // 旧File记录没有被其他存储源的UserFile使用，可以删除
+                // 删除物理文件
+                var oldFilePath = FileUtils.generatePath(oldStoragePath, oldFileDO.getPath());
+                var oldFile = FileUtil.file(oldFilePath);
+                if (oldFile.exists()) {
+                    FileUtil.del(oldFile);
+                    log.info("删除旧存储源物理文件: {}", oldFilePath);
+                }
+
+                // 删除File记录
+                fileMapper.deleteById(oldFileDO.getId());
+                log.info("删除旧存储源File记录: fileId={}", oldFileDO.getId());
+            } else {
+                log.info("旧存储源File记录仍被使用，保留: fileId={}, 使用次数={}", 
+                        oldFileDO.getId(), remainingUsageCount);
             }
-
-            var newFile = FileUtil.file(newFilePath);
-            // 确保目录存在
-            FileUtil.mkParentDirs(newFile);
-
-            // 复制文件
-            FileUtil.copy(oldFile, newFile, true);
-
-            // 验证复制是否成功
-            if (!newFile.exists() || newFile.length() != oldFile.length()) {
-                throw new RuntimeException("文件复制失败: " + fileDO.getPath());
-            }
-
-            // 删除旧文件
-            FileUtil.del(oldFile);
 
             // 缩略图存储在rootPath，不需要迁移
         }
-    }
 
-    /**
-     * 递归更新文件夹及其子文件夹的存储源ID
-     *
-     * @param folderId        文件夹ID
-     * @param storageSourceId 存储源ID
-     */
-    private void updateFolderStorageSourceRecursively(Long folderId, Long storageSourceId) {
-        // 更新当前文件夹
-        var lambdaUpdate = new LambdaUpdateWrapper<UserFileDO>();
-        lambdaUpdate.set(UserFileDO::getStorageSourceId, storageSourceId)
-                .eq(UserFileDO::getId, folderId);
-        userFileMapper.update(null, lambdaUpdate);
-
-        // 获取所有子文件夹
-        var subFolders = ChainWrappers.lambdaQueryChain(userFileMapper)
-                .eq(UserFileDO::getParentId, folderId)
-                .eq(UserFileDO::getItemType, UserFileItemTypeEnum.FOLDER.flag())
-                .eq(UserFileDO::getFileStatus, NORMAL.flag())
-                .list();
-
-        // 递归更新子文件夹
-        for (var subFolder : subFolders) {
-            updateFolderStorageSourceRecursively(subFolder.getId(), storageSourceId);
-        }
+        return fileIdMapping;
     }
 
     /**
