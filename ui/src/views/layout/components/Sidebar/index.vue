@@ -29,13 +29,14 @@ const menus: Menu[] = [
   //   tips: "回收站中的文件会在10天后自动删除",
   //   allShow: true
   // },
-  // {
-  //   icon: "settings",
-  //   name: "设置",
-  //   menuCode: "settings",
-  //   path: "/settings/fileList",
-  //   allShow: false
-  // },
+  {
+    icon: "settings",
+    name: "设置",
+    category: "settings",
+    menuCode: "settings",
+    path: "/settings/storage",
+    allShow: true
+  },
 ];
 
 const currentMenu = ref<Menu>(menus[0]);

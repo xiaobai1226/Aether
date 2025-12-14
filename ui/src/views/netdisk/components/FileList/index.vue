@@ -16,19 +16,22 @@
                   :fetch="loadDataList" :initFetch="false" :loading="loading"
                   :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
-                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" 
+                  @set-storage-source="setStorageSource" />
         <!-- 缩略模式 -->
         <GridView ref="thumbnailViewRef" v-else-if="netdiskConfig.displayMode.id === Thumbnail.id"
                   :width="128" :height="170" :mode="0"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
-                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" 
+                  @set-storage-source="setStorageSource" />
         <!-- 大图模式 -->
         <GridView ref="largeViewRef" v-else-if="netdiskConfig.displayMode.id === Large.id"
                   :width="168" :height="245" :mode="1"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
-                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" 
+                  @set-storage-source="setStorageSource" />
       </div>
       <div class="no-data" v-else>
         <div class="no-data-inner">
@@ -51,6 +54,8 @@
     <FolderSelect ref="folderSelectRef" @folderSelect="handleMoveOrCopyCallback" />
     <!-- 预览 -->
     <Preview ref="previewRef" />
+    <!-- 设置存储源对话框 -->
+    <SetStorageSourceDialog ref="setStorageSourceDialogRef" @success="reload" />
     <!-- 分享 -->
     <!--    <ShareFile ref="shareFileRef"></ShareFile>-->
   </div>
@@ -92,6 +97,7 @@ import ListView from '@/views/netdisk/components/FileList/components/ListView.vu
 import GridView from '@/views/netdisk/components/FileList/components/GridView.vue'
 import ActionBar from '@/views/netdisk/components/FileList/components/ActionBar.vue'
 import NavigationActionBar from '@/views/netdisk/components/FileList/components/NavigationActionBar.vue'
+import SetStorageSourceDialog from '@/views/netdisk/components/FileList/components/SetStorageSourceDialog.vue'
 import { FOLDER, NO_DATA, FILE } from '@/enums/IconEnum'
 
 /**
@@ -586,6 +592,29 @@ const listViewRef = ref()
 const thumbnailViewRef = ref()
 
 const largeViewRef = ref()
+
+const setStorageSourceDialogRef = ref()
+
+/**
+ * 设置存储源
+ */
+const setStorageSource = (userFile: UserFileInfo) => {
+  if (!userFile || !userFile.id) {
+    ElMessage.warning('请选择有效的文件夹')
+    return
+  }
+  
+  if (userFile.itemType !== 0) {
+    ElMessage.warning('只能为文件夹设置存储源')
+    return
+  }
+  
+  setStorageSourceDialogRef.value.show({
+    id: userFile.id,
+    name: userFile.name,
+    storageSourceId: userFile.storageSourceId
+  })
+}
 
 /**
  * 清除选中

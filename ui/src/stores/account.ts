@@ -14,7 +14,8 @@ export const useAccountStore = defineStore('account', () => {
     roleId: 0,
     token: '',
     tokenName: '',
-    tokenPrefix: ''
+    tokenPrefix: '',
+    hasStorageSource: false
   })
 
   // 登录
@@ -46,7 +47,8 @@ export const useAccountStore = defineStore('account', () => {
       roleId: 0,
       token: '',
       tokenName: '',
-      tokenPrefix: ''
+      tokenPrefix: '',
+      hasStorageSource: false
     }
   }
 

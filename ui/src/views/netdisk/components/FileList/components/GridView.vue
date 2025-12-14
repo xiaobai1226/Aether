@@ -10,7 +10,7 @@ import { PLAY, VIDEO } from '@/enums/IconEnum'
 /**
  * 父类回调方法
  */
-const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file'])
+const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file', 'set-storage-source'])
 
 const props = defineProps({
   /**
@@ -251,6 +251,10 @@ defineExpose({ clearSelection })
                         <span class="iconfont icon-copy op-dropdown-iconfont" />
                         <span class="op-dropdown-txt">复制</span>
                       </el-dropdown-item>
+                      <el-dropdown-item v-if="userFile.itemType === 0" @click="emit('set-storage-source', userFile)">
+                        <span class="iconfont icon-settings op-dropdown-iconfont" />
+                        <span class="op-dropdown-txt">设置存储源</span>
+                      </el-dropdown-item>
                     </div>
                   </el-dropdown-menu>
                 </template>
@@ -440,6 +444,10 @@ defineExpose({ clearSelection })
   }
 
   .icon-copy {
+    font-size: 12px;
+  }
+
+  .icon-settings {
     font-size: 12px;
   }
 

@@ -57,4 +57,9 @@ export interface LoginUserInfo {
    * 登录前缀
    */
   tokenPrefix: string;
+
+  /**
+   * 是否有存储源
+   */
+  hasStorageSource?: boolean;
 }

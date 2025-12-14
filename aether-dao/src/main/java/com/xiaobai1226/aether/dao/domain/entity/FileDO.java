@@ -60,9 +60,9 @@ public class FileDO {
     private String identifier;
 
     /**
-     * 存储源ID 1 本地存储
+     * 存储源ID
      */
-//    private Integer storageSourceId;
+    private Long storageSourceId;
 
     /**
      * 创建时间

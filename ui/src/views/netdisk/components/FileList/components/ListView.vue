@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import Utils from '@/utils/Utils'
 import Icon from '@/components/Icon.vue'
 import type { Column } from '@/components/Table.vue'
@@ -11,7 +11,7 @@ import { useSystemStore } from '@/stores/system'
 /**
  * 父类回调方法
  */
-const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file'])
+const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file', 'set-storage-source'])
 
 /**
  * 获取系统配置
@@ -126,17 +126,54 @@ const tableOptions = ref({
  * 显示操作栏的索引 -1 为不展示，其他为要展示行的索引
  */
 const showActionBarIndex = ref<number>(-1)
+
+/**
+ * 隐藏操作栏的延迟定时器
+ */
+let hideTimer: number | null = null
+
+/**
+ * 下拉菜单是否打开
+ */
+const dropdownVisible = ref<boolean>(false)
+
 /**
  * 展示操作栏
  */
 const showActionBar = (index: number) => {
+  // 清除可能存在的隐藏定时器
+  if (hideTimer) {
+    clearTimeout(hideTimer)
+    hideTimer = null
+  }
   showActionBarIndex.value = index
 }
+
 /**
  * 隐藏操作栏
  */
 const hideActionBar = () => {
-  showActionBarIndex.value = -1
+  // 如果下拉菜单打开，则不隐藏
+  if (dropdownVisible.value) {
+    return
+  }
+  
+  // 添加延迟隐藏，避免鼠标移动过程中闪烁
+  hideTimer = window.setTimeout(() => {
+    showActionBarIndex.value = -1
+    hideTimer = null
+  }, 200)
+}
+
+/**
+ * 下拉菜单可见性变化
+ */
+const onDropdownVisibleChange = (visible: boolean) => {
+  dropdownVisible.value = visible
+  // 下拉菜单关闭时，如果鼠标不在行上，则隐藏操作栏
+  if (!visible) {
+    hideActionBar()
+  }
 }
 
 /**
@@ -231,6 +268,41 @@ const sort = (prop: string, order: string) => {
 }
 
 /**
+ * 处理更多菜单命令
+ */
+const handleCommand = (command: string, row: UserFileInfo, index: number) => {
+  switch (command) {
+    case 'move':
+      emit('move-file', row)
+      break
+    case 'copy':
+      emit('copy-file', row)
+      break
+    case 'set-storage':
+      emit('set-storage-source', row)
+      break
+  }
+}
+
+/**
+ * 处理行点击事件
+ * @param row 行数据
+ */
+const handleRowClick = (row: UserFileInfo) => {
+  emit('click', row)
+}
+
+/**
+ * 组件卸载时清理定时器
+ */
+onUnmounted(() => {
+  if (hideTimer) {
+    clearTimeout(hideTimer)
+    hideTimer = null
+  }
+})
+
+/**
  * 将子组件暴露出去，否则父组件无法调用
  */
 defineExpose({ clearSelection, restoreSelection, sort })
@@ -244,7 +316,7 @@ defineExpose({ clearSelection, restoreSelection, sort })
   <Table ref="dataTableRef" :columns="columns" :dataSource="dataSource" :fetch="fetch" :initFetch="false"
          :options="tableOptions" :loading="loading" :default-prop="netdiskConfig.sortingConfig.sortingField.elField"
          :default-order="netdiskConfig.sortingConfig.sortingMethod.elStr"
-         @sort-change="sortChange" @selection-change="selectionChange">
+         @sort-change="sortChange" @selection-change="selectionChange" @row-click="handleRowClick">
     <!-- 文件名称 -->
     <template #fileName="{index, row}">
       <div class="file-item" @mouseenter="showActionBar(index)" @mouseleave="hideActionBar">
@@ -256,7 +328,7 @@ defineExpose({ clearSelection, restoreSelection, sort })
         <Icon :itemType="row.itemType" :suffix="row.suffix" :thumbnail="row.thumbnail" />
         <!--              </template>-->
         <span class="file-name" :title="row.name">
-              <span @click="emit('click', row)">{{ row.name }}</span>
+              {{ row.name }}
         </span>
         <!-- 新建文件夹或重命名输入栏 -->
         <!--              <div class="edit-panel" v-if="showEditPanelIndex == index">-->
@@ -270,12 +342,31 @@ defineExpose({ clearSelection, restoreSelection, sort })
         <!-- 操作栏 -->
         <span class="op">
           <template v-if="showActionBarIndex == index && row.id && row.fileStatus == 1">
-<!--                <span class="iconfont icon-share" @click="shareFile(row)">分享</span>-->
-            <span class="iconfont icon-download" @click="emit('download', row)">下载</span>
-            <span class="iconfont icon-delete" @click="emit('del-file', row)">删除</span>
-            <span class="iconfont icon-edit" @click="emit('show-edit-panel', index)">重命名</span>
-            <span class="iconfont icon-move" @click="emit('move-file', row)">移动</span>
-            <span class="iconfont icon-copy" @click="emit('copy-file', row)">复制</span>
+            <span class="iconfont icon-download" @click.stop="emit('download', row)" title="下载">下载</span>
+            <span class="iconfont icon-delete" @click.stop="emit('del-file', row)" title="删除">删除</span>
+            <span class="iconfont icon-edit" @click.stop="emit('show-edit-panel', index)" title="重命名">重命名</span>
+            <!-- 更多操作下拉菜单 -->
+            <el-dropdown trigger="hover" :hide-on-click="true" :show-timeout="100" :hide-timeout="100"
+                         @command="handleCommand($event, row, index)" 
+                         @visible-change="onDropdownVisibleChange"
+                         @click.stop>
+              <span class="iconfont icon-more more-btn" title="更多操作">
+                更多<i class="el-icon--right" />
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="move">
+                    <span class="iconfont icon-move"></span> 移动
+                  </el-dropdown-item>
+                  <el-dropdown-item command="copy">
+                    <span class="iconfont icon-copy"></span> 复制
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="row.itemType === 0" command="set-storage" divided>
+                    <span class="iconfont icon-settings"></span> 设置存储源
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </span>
       </div>
@@ -295,5 +386,29 @@ defineExpose({ clearSelection, restoreSelection, sort })
   font-size: 12px;
   color: #25262BB8;
   margin-bottom: 5px;
+}
+
+// 表格行样式 - 添加手型指针
+:deep(.el-table__row) {
+  cursor: pointer;
+}
+
+// 文件名 hover 效果
+.file-item {
+  .file-name {
+    cursor: pointer;
+    
+    &:hover {
+      color: #06a7ff;
+    }
+  }
+}
+
+// 下拉菜单项样式
+:deep(.el-dropdown-menu__item) {
+  .iconfont {
+    margin-right: 8px;
+    font-size: 12px;
+  }
 }
 </style>

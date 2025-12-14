@@ -32,7 +32,7 @@ CREATE TABLE user (
     used_storage bigint DEFAULT 0 COMMENT '已使用存储空间 单位 byte',
     total_storage bigint DEFAULT 0 COMMENT '总存储空间 单位 byte',
     constraint user_info_pk unique (username) #     constraint user_info_pk2 unique (email)
-) COMMENT '用户表' ENGINE = InnoDB CHARACTER SET = utf8;
+) COMMENT '用户表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
 -- ----------------------------
 -- Table structure for
 -- 文件表
@@ -47,11 +47,11 @@ CREATE TABLE file (
     suffix varchar(300) DEFAULT NULL NULL COMMENT '文件名后缀',
     file_type int unsigned DEFAULT 0 NULL COMMENT '文件类型 0 其他 1 视频 2音频 3 图片 4 pdf 5 doc 6 excel 7 txt 8 code 9 zip',
     identifier varchar(50) NOT NULL COMMENT 'md5唯一标识',
-    #     storage_source_id int unsigned                           NOT NULL COMMENT '存储源ID 1 本地存储',
+    storage_source_id bigint unsigned NULL COMMENT '存储源ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
     constraint file_pk2 unique (name)
-) COMMENT '文件表' ENGINE = InnoDB CHARACTER SET = utf8;
+) COMMENT '文件表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
 -- ----------------------------
 -- Table structure for
 -- 用户文件表
@@ -67,10 +67,26 @@ CREATE TABLE user_file (
     name varchar(300) NOT NULL COMMENT '文件夹或文件名称',
     suffix varchar(300) DEFAULT NULL NULL COMMENT '文件名后缀',
     category int unsigned DEFAULT NULL NULL COMMENT '文件分类 0 其他 1 视频 2音频 3 图片 4 文档 文件夹为null',
-    #     storage_source_id int unsigned                         NOT NULL COMMENT '存储源ID 1 本地存储',
+    storage_source_id bigint unsigned NULL COMMENT '存储源ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间'
-) COMMENT '用户文件表' ENGINE = InnoDB CHARACTER SET = utf8;
+) COMMENT '用户文件表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
+-- ----------------------------
+-- Table structure for
+-- 存储源表
+-- ----------------------------
+DROP TABLE IF EXISTS storage_source;
+CREATE TABLE storage_source (
+    id bigint unsigned AUTO_INCREMENT COMMENT '主键ID' PRIMARY KEY,
+    user_id bigint unsigned NOT NULL COMMENT '用户ID',
+    name varchar(100) NOT NULL COMMENT '存储源名称',
+    type tinyint(1) DEFAULT 0 NOT NULL COMMENT '存储源类型 0=本地存储',
+    path varchar(500) NOT NULL COMMENT '存储路径（本地绝对路径）',
+    is_default tinyint(1) DEFAULT 0 NOT NULL COMMENT '是否为默认存储源 0=否 1=是',
+    status tinyint(1) DEFAULT 1 NOT NULL COMMENT '状态 0=禁用 1=启用',
+    create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间'
+) COMMENT '存储源表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
 -- ----------------------------
 -- Table structure for
 -- 回收站表
@@ -83,7 +99,7 @@ CREATE TABLE recycle_bin (
     user_file_id bigint unsigned NOT NULL COMMENT '用户文件ID',
     user_id bigint unsigned NOT NULL COMMENT '所属用户ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间'
-) COMMENT '回收站表' ENGINE = InnoDB CHARACTER SET = utf8;
+) COMMENT '回收站表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
 -- ----------------------------
 -- Table structure for
 -- 分享表
@@ -98,7 +114,7 @@ CREATE TABLE share (
     validity_period int NOT NULL COMMENT '有效期，单位 天，0为永久',
     user_id bigint unsigned NOT NULL COMMENT '所属用户ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间'
-) COMMENT '分享文件表' ENGINE = InnoDB CHARACTER SET = utf8;
+) COMMENT '分享文件表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
 -- ----------------------------
 -- Table structure for
 -- 分享文件中间表
@@ -108,4 +124,4 @@ CREATE TABLE share_user_file (
     id bigint unsigned auto_increment COMMENT '主键ID' PRIMARY KEY,
     share_id varchar(50) NOT NULL COMMENT '分享ID',
     user_file_id bigint unsigned NOT NULL COMMENT '用户文件ID'
-) COMMENT '分享文件中间表' ENGINE = InnoDB CHARACTER SET = utf8;
+) COMMENT '分享文件中间表' ENGINE = InnoDB CHARACTER SET = utf8mb4;

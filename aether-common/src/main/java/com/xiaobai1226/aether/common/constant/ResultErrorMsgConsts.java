@@ -336,4 +336,70 @@ public class ResultErrorMsgConsts {
      * sign非法错误
      */
     public static final String ERROR_SIGN = "sign不合法";
+
+    ///////////////////////////////////////////////// 存储源 ///////////////////////////////////////////////
+    /**
+     * 存储源ID为空错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_ID_EMPTY = "存储源ID不能为空";
+
+    /**
+     * 存储源名称为空错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_NAME_EMPTY = "存储源名称不能为空";
+
+    /**
+     * 存储源类型为空错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_TYPE_EMPTY = "存储源类型不能为空";
+
+    /**
+     * 存储源路径为空错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_PATH_EMPTY = "存储路径不能为空";
+
+    /**
+     * 存储源路径格式错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_PATH_FORMAT = "存储路径必须是绝对路径";
+
+    /**
+     * 存储源路径已存在错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_PATH_EXIST = "该存储路径已存在";
+
+    /**
+     * 存储源路径不可访问错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_PATH_UNAVAILABLE = "存储路径不可访问或无写入权限";
+
+    /**
+     * 存储源不存在错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_NO_EXIST = "存储源不存在";
+
+    /**
+     * 无法删除默认存储源错误
+     */
+    public static final String ERROR_CANNOT_DELETE_DEFAULT_STORAGE = "无法删除默认存储源，请先设置其他存储源为默认";
+
+    /**
+     * 无法删除有文件的存储源错误
+     */
+    public static final String ERROR_CANNOT_DELETE_STORAGE_WITH_FILES = "无法删除有文件的存储源";
+
+    /**
+     * 用户没有存储源错误
+     */
+    public static final String ERROR_NO_STORAGE_SOURCE = "请先添加存储源";
+
+    /**
+     * 文件夹ID为空错误
+     */
+    public static final String ERROR_FOLDER_ID_EMPTY = "文件夹ID不能为空";
+
+    /**
+     * 文件迁移失败错误
+     */
+    public static final String ERROR_FILE_MIGRATION = "文件迁移失败";
 }

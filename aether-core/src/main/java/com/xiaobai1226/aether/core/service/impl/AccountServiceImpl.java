@@ -7,6 +7,7 @@ import com.xiaobai1226.aether.core.domain.dto.LoginUserInfoDTO;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.AccountService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
+import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
@@ -28,6 +29,9 @@ public class AccountServiceImpl implements AccountService {
 
     @Inject
     private UserService userService;
+
+    @Inject
+    private StorageSourceService storageSourceService;
 
     @Override
     public LoginUserInfoDTO login(String username, String password) {
@@ -54,6 +58,9 @@ public class AccountServiceImpl implements AccountService {
         loginUserInfoDTO.setToken(tokenInfo.getTokenValue());
         loginUserInfoDTO.setTokenName(tokenInfo.getTokenName());
         loginUserInfoDTO.setTokenPrefix(tokenPrefix);
+        
+        // 检查用户是否有存储源
+        loginUserInfoDTO.setHasStorageSource(storageSourceService.hasStorageSource(userDO.getId()));
 
         return loginUserInfoDTO;
     }

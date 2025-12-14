@@ -62,6 +62,11 @@ public class UserFileDO {
 //    private Integer category;
 
     /**
+     * 存储源ID
+     */
+    private Long storageSourceId;
+
+    /**
      * 创建时间
      */
     private String createTime;

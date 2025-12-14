@@ -156,6 +156,11 @@ export interface UserFileInfo {
    * md5唯一标识
    */
   identifier?: string;
+
+  /**
+   * 存储源ID
+   */
+  storageSourceId?: number;
 }
 
 /**
