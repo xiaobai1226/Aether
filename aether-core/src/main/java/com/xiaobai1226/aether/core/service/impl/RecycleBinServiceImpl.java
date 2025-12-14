@@ -308,10 +308,11 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             // 检查父目录是否存在
             // 父文件存在标识
             var parentExist = true;
+            UserFileDO userFileParentDO = null;
             // 如果不为根目录
             if (userFileDO.getParentId() != 0) {
                 // 查询文件父节点是否存在
-                var userFileParentDO = userFileService.getUserFileByIdAndUserId(userFileDO.getParentId(), userId, NORMAL);
+                userFileParentDO = userFileService.getUserFileByIdAndUserId(userFileDO.getParentId(), userId, NORMAL);
 
                 // 查询结果为空
                 if (userFileParentDO == null) {
@@ -369,6 +370,42 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
         // 修改状态
         userFileService.updateUserFileStatusById(userFileIds, userId, NORMAL);
+        
+        // 处理存储源迁移（只对继承类型的文件/文件夹进行处理）
+        for (var userFileDO : userFileDOList) {
+            if (!rootUserFileIdSet.contains(userFileDO.getId())) {
+                continue;
+            }
+            
+            // 只处理继承类型的文件/文件夹（storage_source_type = 1）
+            if (userFileDO.getStorageSourceType() == null || userFileDO.getStorageSourceType() != 1) {
+                continue;
+            }
+            
+            // 获取目标父目录的存储源ID
+            Long targetStorageSourceId;
+            if (userFileDO.getParentId() == 0) {
+                // 父目录是根目录，获取默认存储源
+                var defaultStorageSource = storageSourceService.getDefaultStorageSource(userId);
+                if (defaultStorageSource == null) {
+                    continue;
+                }
+                targetStorageSourceId = defaultStorageSource.getId();
+            } else {
+                // 获取父目录的存储源
+                var parentUserFile = userFileService.getUserFileByIdAndUserId(userFileDO.getParentId(), userId, NORMAL);
+                if (parentUserFile == null || parentUserFile.getStorageSourceId() == null) {
+                    continue;
+                }
+                targetStorageSourceId = parentUserFile.getStorageSourceId();
+            }
+            
+            // 如果存储源不一致，需要迁移
+            if (!Objects.equals(userFileDO.getStorageSourceId(), targetStorageSourceId)) {
+                // 调用存储源迁移逻辑
+                userFileService.migrateUserFileStorageSource(userFileDO.getId(), targetStorageSourceId, userId);
+            }
+        }
     }
 
     @Override

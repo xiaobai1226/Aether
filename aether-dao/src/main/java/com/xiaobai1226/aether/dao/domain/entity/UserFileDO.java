@@ -67,6 +67,11 @@ public class UserFileDO {
     private Long storageSourceId;
 
     /**
+     * 存储源类型 1 继承父目录 2 显式指定
+     */
+    private Integer storageSourceType;
+
+    /**
      * 创建时间
      */
     private String createTime;

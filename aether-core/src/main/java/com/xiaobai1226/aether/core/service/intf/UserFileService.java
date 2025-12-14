@@ -119,6 +119,17 @@ public interface UserFileService extends IService<UserFileDO> {
         Long getStorageSourceIdByParent(UserFileDO parentUserFile, Long userId);
 
         /**
+         * 迁移用户文件/文件夹的存储源（保持存储源类型不变）
+         *
+         * @param userFileId      用户文件ID
+         * @param storageSourceId 新的存储源ID
+         * @param userId          用户ID
+         * @return 是否成功
+         * @author bai
+         */
+        boolean migrateUserFileStorageSource(Long userFileId, Long storageSourceId, final Long userId);
+
+        /**
          * 尝试秒传文件（检查文件是否已存在，如果存在则直接秒传或复制）
          *
          * @param userId         用户ID

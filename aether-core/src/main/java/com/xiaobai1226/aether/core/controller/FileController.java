@@ -356,6 +356,41 @@ public class FileController {
         // 根据id集合修改parentId
         userFileService.updateParentIdByIds(sourceIds, targetId, userId, NORMAL);
 
+        // 获取目标目录的存储源ID
+        Long targetStorageSourceId;
+        if (targetId == 0) {
+            // 目标是根目录，获取默认存储源
+            var defaultStorageSource = storageSourceService.getDefaultStorageSource(userId);
+            if (defaultStorageSource != null) {
+                targetStorageSourceId = defaultStorageSource.getId();
+            } else {
+                return Result.success(SUCCESS_MSG_MOVE.msg());
+            }
+        } else {
+            // 获取目标目录的存储源
+            var targetUserFile = userFileService.getUserFileByIdAndUserId(targetId, userId, NORMAL);
+            if (targetUserFile == null || targetUserFile.getStorageSourceId() == null) {
+                return Result.success(SUCCESS_MSG_MOVE.msg());
+            }
+            targetStorageSourceId = targetUserFile.getStorageSourceId();
+        }
+
+        // 对于继承类型的文件/文件夹，如果存储源不一致，需要迁移
+        for (Long sourceId : sourceIds) {
+            var sourceUserFile = userFileService.getUserFileByIdAndUserId(sourceId, userId, NORMAL);
+            if (sourceUserFile == null) {
+                continue;
+            }
+            
+            // 只处理继承类型的文件/文件夹（storage_source_type = 1）
+            if (sourceUserFile.getStorageSourceType() != null && sourceUserFile.getStorageSourceType() == 1) {
+                // 如果存储源不一致，需要迁移
+                if (!Objects.equals(sourceUserFile.getStorageSourceId(), targetStorageSourceId)) {
+                    userFileService.migrateUserFileStorageSource(sourceId, targetStorageSourceId, userId);
+                }
+            }
+        }
+
         return Result.success(SUCCESS_MSG_MOVE.msg());
     }
 
