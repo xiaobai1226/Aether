@@ -1,13 +1,13 @@
 package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.core.cache.FileCache;
+import com.xiaobai1226.aether.core.infrastructure.storage.StorageBackendFactory;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.mapper.FileMapper;
@@ -35,6 +35,9 @@ public class FileServiceImpl implements FileService {
 
     @Inject
     private FileCache fileCache;
+
+    @Inject
+    private StorageBackendFactory storageBackendFactory;
 
     @Inject("${project.path.root}")
     private String rootPath;
@@ -111,38 +114,34 @@ public class FileServiceImpl implements FileService {
     public FileDO copyFileToStorageSource(FileDO sourceFileDO, String sourceStoragePath, String targetStoragePath,
             Long targetStorageId) {
         try {
-            // 构建源文件完整路径
-            var sourceFilePath = FileUtils.generatePath(sourceStoragePath, sourceFileDO.getPath());
+            // 当前存储源类型只有本地；后续扩展对象存储时，改为根据 StorageSource.type 选择后端
+            var backend = storageBackendFactory.getByType(0);
 
-            // 检查源文件是否存在
-            if (!FileUtil.exist(sourceFilePath)) {
-                log.error("源文件不存在，无法复制. sourceFilePath: {}", sourceFilePath);
+            var key = sourceFileDO.getPath();
+            if (!backend.exists(sourceStoragePath, key)) {
+                log.error("源文件不存在，无法复制. sourceKey: {}", key);
                 return null;
             }
 
-            // 构建目标文件路径（保持相同的相对路径）
-            var targetFileRelativePath = sourceFileDO.getPath();
-            var targetFilePath = FileUtils.generatePath(targetStoragePath, targetFileRelativePath);
-
-            // 如果目标文件已存在，说明已经复制过了，直接创建记录
-            if (!FileUtil.exist(targetFilePath)) {
-                // 复制文件（包括目录结构）
-                FileUtil.copy(sourceFilePath, targetFilePath, true);
-                log.info("文件复制成功. sourceFilePath: {}, targetFilePath: {}", sourceFilePath, targetFilePath);
+            // 目标 key 仍保持相同相对路径（与现有数据结构兼容）
+            var targetKey = key;
+            if (!backend.exists(targetStoragePath, targetKey)) {
+                backend.copy(sourceStoragePath, key, targetStoragePath, targetKey, true);
+                log.info("文件复制成功. sourceKey: {}, targetKey: {}", key, targetKey);
             } else {
-                log.info("目标文件已存在，跳过复制. targetFilePath: {}", targetFilePath);
+                log.info("目标文件已存在，跳过复制. targetKey: {}", targetKey);
             }
 
             // 注意：缩略图不需要复制，因为缩略图是统一路径，可以共用
 
             // 创建新的File记录（缩略图路径保持和源文件一致，因为是共用的）
-            var newFile = addFile(sourceFileDO.getName(), targetFileRelativePath, sourceFileDO.getSize(),
+            var newFile = addFile(sourceFileDO.getName(), targetKey, sourceFileDO.getSize(),
                     sourceFileDO.getIdentifier(), sourceFileDO.getThumbnail(), targetStorageId);
 
             if (newFile == null) {
                 log.error("创建File记录失败. sourceFileId: {}", sourceFileDO.getId());
                 // 如果创建失败，删除已复制的文件
-                FileUtil.del(targetFilePath);
+                backend.delete(targetStoragePath, targetKey);
                 return null;
             }
 

@@ -1,49 +1,26 @@
 package com.xiaobai1226.aether.core.controller;
 
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.RandomUtil;
-import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.common.enums.CategoryEnum;
-import com.xiaobai1226.aether.common.constant.FolderNameConsts;
-import com.xiaobai1226.aether.common.enums.FileTypeEnum;
-import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.core.annotation.CurrentUserId;
-import com.xiaobai1226.aether.core.cache.DownloadCache;
+import com.xiaobai1226.aether.core.application.FileOperationsFacade;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.core.domain.vo.*;
-import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
-import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
-import com.xiaobai1226.aether.core.service.intf.FileService;
-import com.xiaobai1226.aether.core.service.intf.UserFileService;
-import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
-import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
-import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.*;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.Date;
-import java.util.stream.Collectors;
 
-import static cn.hutool.http.ContentType.OCTET_STREAM;
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
 import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.*;
 import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.*;
-import static com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.FILE;
-import static com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.FOLDER;
-import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 
 /**
  * 文件Controller
@@ -57,22 +34,7 @@ import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 public class FileController {
 
     @Inject
-    private UserFileService userFileService;
-
-    @Inject
-    private UserService userService;
-
-    @Inject
-    private FileService fileService;
-
-    @Inject("${project.path.root}")
-    private String rootPath;
-
-    @Inject
-    private DownloadCache downloadCache;
-
-    @Inject
-    private StorageSourceService storageSourceService;
+    private FileOperationsFacade fileOperationsFacade;
 
     /**
      * 分页获取文件列表
@@ -82,22 +44,7 @@ public class FileController {
     @Get
     @Mapping("/getFileListByPage")
     public PageResult<UserFileDTO> getFileListByPage(UserFileVO userFileVO, @CurrentUserId Long userId) {
-        var parentId = 0L;
-        if (userFileVO.getCategory() == null && StrUtil.isNotEmpty(userFileVO.getPath())) {
-            var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, userFileVO.getPath());
-            if (parentUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_PARENT_FOLDER_NO_EXIST);
-            }
-            parentId = parentUserFile.getId();
-        }
-
-        if (userFileVO.getSortingField() == null) {
-            userFileVO.setSortingField(0);
-        }
-        if (userFileVO.getSortingMethod() == null) {
-            userFileVO.setSortingMethod(0);
-        }
-        return userFileService.getFileList(userId, parentId, userFileVO);
+        return fileOperationsFacade.getFileListByPage(userFileVO, userId);
     }
 
     /**
@@ -108,16 +55,7 @@ public class FileController {
     @Post
     @Mapping("/newFolder")
     public Result<Void> newFolder(@Validated NewFolderVO newFolderVO, @CurrentUserId Long userId) {
-
-        UserFileDO parentUserFileDO = null;
-        if (StrUtil.isNotEmpty(newFolderVO.getPath())) {
-            var parentUserFile = userFileService.getParentFolderByPath(userId, 0L, newFolderVO.getPath());
-            if (parentUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-        }
-
-        userFileService.newFolder(newFolderVO.getFolderName(), parentUserFileDO, userId);
+        fileOperationsFacade.newFolder(newFolderVO, userId);
 
         return Result.success(SUCCESS_MSG_CREATE_FOLDER.msg());
     }
@@ -130,31 +68,7 @@ public class FileController {
     @Post
     @Mapping("/rename")
     public Result<Void> rename(@Validated FileRenameVO fileRenameVO, @CurrentUserId Long userId) {
-
-        var userFileDO = userFileService.getUserFileByIdAndUserId(fileRenameVO.getId(), userId, NORMAL);
-
-        if (userFileDO == null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        // var existUserFileDO =
-        // userFileService.getUserFileByName(fileRenameVO.getNewName(), userId,
-        // userFileDO.getParentId(), NORMAL,
-        // UserFileItemTypeEnum.getEnumByFlag(userFileDO.getItemType()));
-        var existUserFileDO = userFileService.getUserFileByName(fileRenameVO.getNewName(), userId,
-                userFileDO.getParentId(), NORMAL);
-
-        if (existUserFileDO != null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NAME_EXIST);
-        }
-
-        // 修改名称
-        var result = userFileService.rename(fileRenameVO.getId(), userId, fileRenameVO.getNewName(), userFileDO,
-                NORMAL);
-
-        if (!result) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_RENAME);
-        }
+        fileOperationsFacade.rename(fileRenameVO, userId);
 
         return Result.success(SUCCESS_MSG_RENAME.msg());
     }
@@ -171,68 +85,7 @@ public class FileController {
     @Mapping(path = "/uploadFile")
     public UploadResultDTO uploadFile(@Validated UploadFileVO uploadFileVO, UploadedFile file,
             @CurrentUserId Long userId) {
-
-        UserFileDO parentUserFile = null;
-        if (StrUtil.isNotEmpty(uploadFileVO.getPath())) {
-            parentUserFile = userFileService.getParentFolderByPath(userId, 0L, uploadFileVO.getPath());
-            if (parentUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-        }
-
-        // 如果是上传文件夹，判断文件路径
-        if (StrUtil.isNotEmpty(uploadFileVO.getRelativePath())) {
-            var relativePath = uploadFileVO.getRelativePath();
-            int lastIndex = relativePath.lastIndexOf("/");
-            if (lastIndex > 0) {
-                relativePath = relativePath.substring(0, lastIndex);
-            }
-
-            parentUserFile = userFileService.getParentFolderByPathOrCreate(userId, parentUserFile, relativePath);
-
-            if (parentUserFile == null) {
-                throw new FailResultException(SYSTEM_ERROR);
-            }
-        }
-
-        // 如果taskId为空，则生成taskId
-        if (StrUtil.isBlank(uploadFileVO.getTaskId())) {
-            // 生成taskId
-            String task = userId + uploadFileVO.getIdentifier() + DateUtil.format(new Date(), "yyyyMMddHHmmssSSS")
-                    + RandomUtil.randomString(6);
-            uploadFileVO.setTaskId(task);
-        }
-
-        // 如果是第一片文件，尝试秒传
-        if (uploadFileVO.getChunkIndex() == 0) {
-            // 尝试秒传（如果文件已存在）
-            var storageFileDO = userFileService.trySecondUpload(userId, parentUserFile, uploadFileVO);
-            if (storageFileDO != null) {
-                // 秒传成功，直接返回
-                return userFileService.secondUploadFile(userId, parentUserFile, uploadFileVO, storageFileDO);
-            }
-            // 秒传失败或文件不存在，继续正常上传流程
-        }
-
-        var uploadFileCacheDTO = new UploadFileCacheDTO();
-        try {
-            // 执行分片上传操作
-            return userFileService.splitUploadFile(file, userId, parentUserFile, uploadFileVO, uploadFileCacheDTO);
-        } catch (FailResultException e) {
-            // 报异常清理缓存
-            userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
-                    uploadFileCacheDTO);
-
-            throw e;
-        } catch (Exception e) {
-            log.error(e.getMessage());
-
-            // 报异常清理缓存
-            userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
-                    uploadFileCacheDTO);
-
-            throw new FailResultException(SYSTEM_ERROR);
-        }
+        return fileOperationsFacade.uploadFile(uploadFileVO, file, userId);
     }
 
     /**
@@ -245,7 +98,7 @@ public class FileController {
     @Mapping(path = "/cancelUploadFile")
     public void cancelUploadFile(@Validated @NotNull(message = ERROR_TASK_ID_EMPTY) String taskId,
             @CurrentUserId Long userId) {
-        userFileService.cancelUploadFile(userId, taskId);
+        fileOperationsFacade.cancelUploadFile(taskId, userId);
     }
 
     /**
@@ -255,17 +108,7 @@ public class FileController {
     @Mapping("/getFolderListByPage")
     public PageResult<UserFileDO> getFolderListByPage(@Validated UserFolderVO userFolderVO,
             @CurrentUserId Long userId) {
-
-        Long parentId = 0L;
-        if (StrUtil.isNotEmpty(userFolderVO.getPath())) {
-            var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, userFolderVO.getPath());
-            if (parentUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_PARENT_FOLDER_NO_EXIST);
-            }
-            parentId = parentUserFile.getId();
-        }
-
-        return userFileService.getFolderList(userId, parentId, userFolderVO);
+        return fileOperationsFacade.getFolderListByPage(userFolderVO, userId);
     }
 
     /**
@@ -276,120 +119,7 @@ public class FileController {
     @Post
     @Mapping("/move")
     public Result<Void> move(@Validated MoveVO moveVO, @CurrentUserId Long userId) {
-
-        if (moveVO == null || StrUtil.isEmpty(moveVO.getSourceIds())) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
-        }
-
-        List<Long> sourceIds = Arrays.stream(moveVO.getSourceIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong)
-                .boxed().collect(Collectors.toList());
-
-        if (CollUtil.isEmpty(sourceIds)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
-        }
-
-        // 获取要移动的文件
-        var sourceUserFileDOList = userFileService.getUserFileByIdsAndUserId(sourceIds, userId, NORMAL);
-
-        if (CollUtil.isEmpty(sourceUserFileDOList) || sourceUserFileDOList.size() != sourceIds.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
-        }
-
-        Long targetId = 0L;
-        // 如果不是根目录则判断目标文件夹是否存在
-        if (StrUtil.isNotEmpty(moveVO.getTargetPath())) {
-            var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, moveVO.getTargetPath());
-            if (targetUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
-            }
-            targetId = targetUserFile.getId();
-        }
-
-        // 如果目标目录就是文件所在目录，直接返回
-        if (sourceUserFileDOList.getFirst().getParentId() == targetId) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_IN_CURRENT_FOLDER);
-        }
-
-        // 要移动的文件名称集合
-        var sourceFileNames = new ArrayList<String>();
-        // 要移动的文件夹名称集合
-        var sourceFolderNames = new ArrayList<String>();
-        // 要移动的文件夹ID集合
-        var sourceFolderIds = new ArrayList<Long>();
-
-        sourceUserFileDOList.forEach(sourceUserFileDO -> {
-            if (UserFileItemTypeEnum.isFile(sourceUserFileDO.getItemType())) {
-                sourceFileNames.add(sourceUserFileDO.getName());
-            } else {
-                sourceFolderIds.add(sourceUserFileDO.getId());
-                sourceFolderNames.add(sourceUserFileDO.getName());
-            }
-        });
-
-        // 校验，不能将文件移动到自身或其子目录下
-        if (CollUtil.isNotEmpty(sourceFolderIds)) {
-            if (sourceFolderIds.contains(targetId)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_TARGET_IS_ITSELF_OR_SUB);
-            }
-            // 获取所有子文件夹ID
-            var subfolderIds = userFileService.getAllSubfolders(userId, sourceFolderIds);
-            if (CollUtil.isNotEmpty(subfolderIds) && subfolderIds.contains(targetId)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_TARGET_IS_ITSELF_OR_SUB);
-            }
-        }
-
-        // 校验目标文件夹下是否存在同名文件
-        if (CollUtil.isNotEmpty(sourceFileNames)) {
-            var existNameCount = userFileService.getCountByNames(sourceFileNames, userId, targetId, NORMAL, FILE);
-            if (existNameCount > 0) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_TARGET_CONTAIN_SAME_NAME_FILE);
-            }
-        }
-        // 校验目标文件夹下是否存在同名文件夹
-        if (CollUtil.isNotEmpty(sourceFolderNames)) {
-            var existNameCount = userFileService.getCountByNames(sourceFolderNames, userId, targetId, NORMAL, FOLDER);
-            if (existNameCount > 0) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_TARGET_CONTAIN_SAME_NAME_FOLDER);
-            }
-        }
-
-        // 根据id集合修改parentId
-        userFileService.updateParentIdByIds(sourceIds, targetId, userId, NORMAL);
-
-        // 获取目标目录的存储源ID
-        Long targetStorageSourceId;
-        if (targetId == 0) {
-            // 目标是根目录，获取默认存储源
-            var defaultStorageSource = storageSourceService.getDefaultStorageSource(userId);
-            if (defaultStorageSource != null) {
-                targetStorageSourceId = defaultStorageSource.getId();
-            } else {
-                return Result.success(SUCCESS_MSG_MOVE.msg());
-            }
-        } else {
-            // 获取目标目录的存储源
-            var targetUserFile = userFileService.getUserFileByIdAndUserId(targetId, userId, NORMAL);
-            if (targetUserFile == null || targetUserFile.getStorageSourceId() == null) {
-                return Result.success(SUCCESS_MSG_MOVE.msg());
-            }
-            targetStorageSourceId = targetUserFile.getStorageSourceId();
-        }
-
-        // 对于继承类型的文件/文件夹，如果存储源不一致，需要迁移
-        for (Long sourceId : sourceIds) {
-            var sourceUserFile = userFileService.getUserFileByIdAndUserId(sourceId, userId, NORMAL);
-            if (sourceUserFile == null) {
-                continue;
-            }
-            
-            // 只处理继承类型的文件/文件夹（storage_source_type = 1）
-            if (sourceUserFile.getStorageSourceType() != null && sourceUserFile.getStorageSourceType() == 1) {
-                // 如果存储源不一致，需要迁移
-                if (!Objects.equals(sourceUserFile.getStorageSourceId(), targetStorageSourceId)) {
-                    userFileService.migrateUserFileStorageSource(sourceId, targetStorageSourceId, userId);
-                }
-            }
-        }
+        fileOperationsFacade.move(moveVO, userId);
 
         return Result.success(SUCCESS_MSG_MOVE.msg());
     }
@@ -403,94 +133,7 @@ public class FileController {
     @Post
     @Mapping("/copy")
     public Result<Void> copy(@Validated CopyVO copyVO, @CurrentUserId Long userId) {
-
-        if (copyVO == null || StrUtil.isEmpty(copyVO.getSourceIds())) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
-        }
-
-        List<Long> sourceIds = Arrays.stream(copyVO.getSourceIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong)
-                .boxed().collect(Collectors.toList());
-
-        if (CollUtil.isEmpty(sourceIds)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
-        }
-
-        // 获取要复制的源文件
-        var sourceUserFileTreeList = userFileService.getUserFileTreeListByIds(sourceIds, userId, NORMAL);
-        if (CollUtil.isEmpty(sourceUserFileTreeList) || sourceUserFileTreeList.size() != sourceIds.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
-        }
-
-        Long targetId = 0L;
-        // 如果不是根目录则判断目标文件夹是否存在
-        if (StrUtil.isNotEmpty(copyVO.getTargetPath())) {
-            var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, copyVO.getTargetPath());
-            if (targetUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
-            }
-            targetId = targetUserFile.getId();
-        }
-
-        if (sourceUserFileTreeList.getFirst().getParentId() == targetId) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_IN_CURRENT_FOLDER);
-        }
-
-        // 要复制的文件名称集合
-        var sourceFileNames = new ArrayList<String>();
-        // 要复制的文件夹名称集合
-        var sourceFolderNames = new ArrayList<String>();
-        // 要复制的文件夹ID集合
-        var sourceFolderIds = new ArrayList<Long>();
-
-        sourceUserFileTreeList.forEach(sourceUserFileDO -> {
-            if (UserFileItemTypeEnum.isFile(sourceUserFileDO.getItemType())) {
-                sourceFileNames.add(sourceUserFileDO.getName());
-            } else {
-                sourceFolderIds.add(sourceUserFileDO.getId());
-                sourceFolderNames.add(sourceUserFileDO.getName());
-            }
-        });
-
-        // 校验，不能将文件复制到自身或其子目录下
-        if (CollUtil.isNotEmpty(sourceFolderIds)) {
-            if (sourceFolderIds.contains(targetId)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_TARGET_IS_ITSELF_OR_SUB);
-            }
-            // 获取所有子文件夹ID
-            var subfolderIds = userFileService.getAllSubfolders(userId, sourceFolderIds);
-            if (CollUtil.isNotEmpty(subfolderIds) && subfolderIds.contains(targetId)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_TARGET_IS_ITSELF_OR_SUB);
-            }
-        }
-
-        // 校验目标文件夹下是否存在同名文件
-        if (CollUtil.isNotEmpty(sourceFileNames)) {
-            var existNameCount = userFileService.getCountByNames(sourceFileNames, userId, targetId, NORMAL, FILE);
-            if (existNameCount > 0) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_TARGET_CONTAIN_SAME_NAME_FILE);
-            }
-        }
-        // 校验目标文件夹下是否存在同名文件夹
-        if (CollUtil.isNotEmpty(sourceFolderNames)) {
-            var existNameCount = userFileService.getCountByNames(sourceFolderNames, userId, targetId, NORMAL, FOLDER);
-            if (existNameCount > 0) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_TARGET_CONTAIN_SAME_NAME_FOLDER);
-            }
-        }
-
-        // 获取全部要复制文件
-        userFileService.getSubUserFileTree(userId, sourceUserFileTreeList);
-
-        var totalSize = userFileService.getUserFileTreeSpaceUsage(sourceUserFileTreeList);
-
-        // 检测存储空间是否足够
-        var userSpaceUsage = userService.getUserSpaceUsage(userId);
-        if (userSpaceUsage == null || userSpaceUsage.getRealRemainStorage() < totalSize) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-        }
-
-        // 复制文件
-        userFileService.copy(targetId, userId, sourceUserFileTreeList, totalSize);
+        fileOperationsFacade.copy(copyVO, userId);
 
         return Result.success(SUCCESS_MSG_COPY.msg());
     }
@@ -503,30 +146,7 @@ public class FileController {
     @Post
     @Mapping("/delete")
     public Result<Void> delete(@Validated DeleteVO deleteVO, @CurrentUserId Long userId) {
-
-        if (deleteVO == null || StrUtil.isEmpty(deleteVO.getIds())) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
-        }
-
-        List<Long> ids = Arrays.stream(deleteVO.getIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed()
-                .collect(Collectors.toList());
-
-        if (CollUtil.isEmpty(ids)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
-        }
-
-        // 获取要删除的文件
-        var delUserFileTreeList = userFileService.getUserFileTreeListByIds(ids, userId, NORMAL);
-
-        if (CollUtil.isEmpty(delUserFileTreeList) || delUserFileTreeList.size() != ids.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
-        }
-
-        // 获取全部要删除的文件
-        userFileService.getSubUserFileTree(userId, delUserFileTreeList);
-
-        // 删除文件
-        userFileService.delete(delUserFileTreeList, userId);
+        fileOperationsFacade.deleteToRecycle(deleteVO, userId);
 
         return Result.success(SUCCESS_MSG_DELETE.msg());
     }
@@ -537,27 +157,8 @@ public class FileController {
     @Get
     @Mapping("/getThumbnail")
     public void getThumbnail(Context ctx, @Param("thumbnail") String thumbnail) {
-        // 设置文件存储全路径
-        final var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
-                thumbnail);
-
-        // 判断文件是否存在
-        if (!FileUtil.exist(thumbnailFilePath)) {
-            // TODO 这没写
-        }
-
-        // ctx.contentType("image/jpg");
-        // FileUtils.readFile(ctx, thumbnailFilePath);
-
         try {
-            var file = FileUtil.file(thumbnailFilePath);
-
-            var downloadedFile = new DownloadedFile(file);
-
-            // 不做为附件下载（按需配置）
-            downloadedFile.asAttachment(false);
-
-            // 也可用接口输出
+            var downloadedFile = fileOperationsFacade.getThumbnail(thumbnail);
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -571,46 +172,8 @@ public class FileController {
     @Get
     @Mapping("/getImage")
     public void getImage(Context ctx, @Param("id") Long id, @CurrentUserId Long userId) {
-
         try {
-            var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
-
-            if (userFileDO == null || !CategoryEnum.isPictureBySuffix(userFileDO.getSuffix())) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var fileDO = fileService.getFileById(userFileDO.getFileId());
-
-            // 判断文件是否存在
-            if (fileDO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
-
-            if (!FileUtil.exist(fileFullPath)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            DownloadedFile downloadedFile;
-
-            if (FileTypeEnum.isHeic(fileDO.getSuffix())) {
-                var webpBytes = ImageUtils.heic2Webp(fileFullPath);
-
-                if (webpBytes == null) {
-                    throw new FailResultException(SYSTEM_ERROR);
-                }
-
-                downloadedFile = new DownloadedFile(OCTET_STREAM.getValue(), webpBytes, userFileDO.getName());
-            } else {
-                var file = FileUtil.file(fileFullPath);
-                downloadedFile = new DownloadedFile(file, userFileDO.getName());
-            }
-
-            // 不做为附件下载（按需配置）
-            downloadedFile.asAttachment(false);
-
-            // 也可用接口输出
+            var downloadedFile = fileOperationsFacade.getImage(id, userId);
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -624,45 +187,8 @@ public class FileController {
     @Get
     @Mapping("/getVideo")
     public void getVideo(Context ctx, @Param("id") Long id, @CurrentUserId Long userId) {
-
         try {
-            var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
-
-            if (userFileDO == null || !CategoryEnum.isVideoBySuffix(userFileDO.getSuffix())) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var fileDO = fileService.getFileById(userFileDO.getFileId());
-
-            // 判断文件是否存在
-            if (fileDO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            // 获取文件所在的存储源
-            var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
-            if (storageSource == null) {
-                // 如果没有存储源ID，使用默认存储源
-                storageSource = storageSourceService.getDefaultStorageSource(userId);
-                if (storageSource == null) {
-                    throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-                }
-            }
-
-            var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());
-
-            if (!FileUtil.exist(fileFullPath)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var file = FileUtil.file(fileFullPath);
-
-            var downloadedFile = new DownloadedFile(file, userFileDO.getName());
-
-            // 不做为附件下载（按需配置）
-            downloadedFile.asAttachment(false);
-
-            // 也可用接口输出
+            var downloadedFile = fileOperationsFacade.getVideo(id, userId);
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -676,45 +202,8 @@ public class FileController {
     @Get
     @Mapping("/getFile")
     public void getFile(Context ctx, @Param("id") Long id, @CurrentUserId Long userId) {
-
         try {
-            var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
-
-            if (userFileDO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var fileDO = fileService.getFileById(userFileDO.getFileId());
-
-            // 判断文件是否存在
-            if (fileDO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            // 获取文件所在的存储源
-            var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
-            if (storageSource == null) {
-                // 如果没有存储源ID，使用默认存储源
-                storageSource = storageSourceService.getDefaultStorageSource(userId);
-                if (storageSource == null) {
-                    throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-                }
-            }
-
-            var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());
-
-            if (!FileUtil.exist(fileFullPath)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var file = FileUtil.file(fileFullPath);
-
-            var downloadedFile = new DownloadedFile(file, userFileDO.getName());
-
-            // 不做为附件下载（按需配置）
-            downloadedFile.asAttachment(false);
-
-            // 也可用接口输出
+            var downloadedFile = fileOperationsFacade.getFile(id, userId);
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -733,13 +222,7 @@ public class FileController {
     @Mapping("/setFolderStorageSource")
     public Result<Void> setFolderStorageSource(@Validated SetFolderStorageSourceVO setFolderStorageSourceVO,
             @CurrentUserId Long userId) {
-        var result = userFileService.setFolderStorageSource(setFolderStorageSourceVO.getFolderId(),
-                setFolderStorageSourceVO.getStorageSourceId(), userId);
-
-        if (!result) {
-            throw new FailResultException(BAD_REQUEST_ERROR);
-        }
-
+        fileOperationsFacade.setFolderStorageSource(setFolderStorageSourceVO, userId);
         return Result.success("设置文件夹存储源成功");
     }
 
@@ -753,25 +236,7 @@ public class FileController {
     @Mapping("/createDownloadSign")
     public String createDownloadSign(@Validated @NotBlank(message = ERROR_DOWNLOAD_CONTENT_EMPTY) String ids,
             @CurrentUserId Long userId) {
-
-        List<Long> idList = Arrays.stream(ids.split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed()
-                .collect(Collectors.toList());
-
-        if (CollUtil.isEmpty(idList)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DOWNLOAD_CONTENT_EMPTY);
-        }
-
-        var userFileDTOList = userFileService.getUserFileDTOListByIds(idList, userId, NORMAL);
-
-        if (CollUtil.isEmpty(userFileDTOList) || userFileDTOList.size() != idList.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        String sign = RandomUtil.randomString(20);
-
-        downloadCache.setDownloadSign(new DownloadFileDTO(idList, userId), sign);
-
-        return sign;
+        return fileOperationsFacade.createDownloadSign(ids, userId);
     }
 
     /**
@@ -783,27 +248,7 @@ public class FileController {
     @Mapping("/download")
     public void download(Context ctx, @Param("sign") String sign) {
         try {
-            var downloadFileDTO = downloadCache.getDownloadInfo(sign);
-
-            // 判断sign是否存在
-            if (downloadFileDTO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_SIGN);
-            }
-
-            var userFileTreeDTOList = userFileService.getUserFileTreeListByIds(downloadFileDTO.getIds(),
-                    downloadFileDTO.getUserId(), NORMAL);
-
-            if (CollUtil.isEmpty(userFileTreeDTOList)
-                    || userFileTreeDTOList.size() != downloadFileDTO.getIds().size()) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            // 获取全部要下载的文件
-            userFileService.getSubUserFileTree(downloadFileDTO.getUserId(), userFileTreeDTOList);
-
-            var downloadedFile = userFileService.download(userFileTreeDTOList, downloadFileDTO.getUserId());
-
-            // 也可用接口输出
+            var downloadedFile = fileOperationsFacade.downloadBySign(sign);
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());

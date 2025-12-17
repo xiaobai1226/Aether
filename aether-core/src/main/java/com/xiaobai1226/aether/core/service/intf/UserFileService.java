@@ -11,13 +11,13 @@ import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO;
 import com.xiaobai1226.aether.dao.domain.entity.FileDO;
-import com.xiaobai1226.aether.dao.domain.entity.StorageSourceDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 
 import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 
 import java.io.IOException;
+import java.io.File;
 import java.util.List;
 
 /**
@@ -202,6 +202,22 @@ public interface UserFileService extends IService<UserFileDO> {
         UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, UserFileDO parentUserFile,
                         UploadFileVO uploadFileVO,
                         UploadFileCacheDTO uploadFileCacheDTO) throws IOException;
+
+        /**
+         * 上传整文件（用于 WebDAV 等非 Multipart 场景）
+         *
+         * <p>
+         * 说明：该方法会复用现有的存储源选择、缩略图生成、FileDO/UserFile 记录落库与空间统计规则。
+         * </p>
+         *
+         * @param localFile      本地临时文件
+         * @param userId         用户ID
+         * @param parentUserFile 父目录（可为 null 表示根目录）
+         * @param fileName       用户侧展示名称
+         * @param identifier     内容标识（例如 MD5）
+         */
+        UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFileDO parentUserFile, String fileName,
+                        String identifier) throws IOException;
 
         /**
          * 取消上传

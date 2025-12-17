@@ -10,19 +10,20 @@ import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapp
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiaobai1226.aether.common.exception.FailResultException;
+import com.xiaobai1226.aether.core.service.intf.QuotaService;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
+import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
-import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.domain.entity.RecycleBinDO;
-import com.xiaobai1226.aether.dao.domain.entity.UserDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.dao.mapper.FileMapper;
 import com.xiaobai1226.aether.dao.mapper.RecycleBinMapper;
 import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 import com.xiaobai1226.aether.common.util.FileUtils;
+import com.xiaobai1226.aether.core.service.support.FilePurgeService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
@@ -66,7 +67,16 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
     private UserService userService;
 
     @Inject
+    private QuotaService quotaService;
+
+    @Inject
     private UserFileService userFileService;
+
+    @Inject
+    private StorageSourceService storageSourceService;
+
+    @Inject
+    private FilePurgeService filePurgeService;
 
     @Tran
     @Override
@@ -79,29 +89,35 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
     @Override
     public PageResult<RecycleBinFileDTO> getRecycleBinList(final Long userId, PageVO recycleBinVO) {
-        var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper).eq(RecycleBinDO::getUserId, userId).eq(RecycleBinDO::getRoot, 1);
+        var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper).eq(RecycleBinDO::getUserId, userId)
+                .eq(RecycleBinDO::getRoot, 1);
 
         // 1 文件名 2 删除时间 3 文件大小 4 有效时间
-//        if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() == 1) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::get);
-//        } else if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() == 2) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::get);
-//        } else
+        // if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() == 1) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::get);
+        // } else if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() ==
+        // 2) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::get);
+        // } else
 
         if (recycleBinVO.getSortField() == 2 && recycleBinVO.getSortOrder() == 1) {
             lambdaQuery.orderByAsc(RecycleBinDO::getCreateTime);
         } else if (recycleBinVO.getSortField() == 2 && recycleBinVO.getSortOrder() == 2) {
             lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
         }
-//            else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() == 1) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
-//        } else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() == 2) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
-//        } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() == 1) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
-//        } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() == 2) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::get);
-//        }
+        // else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() ==
+        // 1) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+        // } else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() ==
+        // 2) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+        // } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() ==
+        // 1) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+        // } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() ==
+        // 2) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::get);
+        // }
         var recycleBinListPage = lambdaQuery.page(new Page<>(recycleBinVO.getPageNum(), recycleBinVO.getPageSize()));
 
         // 判断结果是否为空
@@ -136,7 +152,8 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             }
         }
 
-        var recycleBinFileIPage = new Page<RecycleBinFileDTO>(recycleBinListPage.getCurrent(), recycleBinListPage.getSize(), recycleBinListPage.getTotal());
+        var recycleBinFileIPage = new Page<RecycleBinFileDTO>(recycleBinListPage.getCurrent(),
+                recycleBinListPage.getSize(), recycleBinListPage.getTotal());
         recycleBinFileIPage.setPages(recycleBinListPage.getPages());
         recycleBinFileIPage.setRecords(recycleBinDTOList);
         return new PageResult<>(recycleBinFileIPage);
@@ -199,12 +216,8 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
         // 更新用户所使用的空间
         if (totalSize > 0) {
-            // 更新用户已使用存储空间
-            var userSpaceUsageDTO = userService.getUserSpaceUsage(userId);
-            var userDO = new UserDO();
-            userDO.setId(userId);
-            userDO.setUsedStorage(userSpaceUsageDTO.getUsedStorage() - totalSize);
-            userService.updateUser(userDO);
+            // 回收站占用空间：只有彻底删除才释放空间（集中到 QuotaService）
+            quotaService.decreaseUsed(userId, totalSize);
         }
 
         if (CollUtil.isEmpty(fileIds)) {
@@ -238,31 +251,16 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             return;
         }
 
-        // TODO 以下操作单独封装在FileService中，并可以异步执行
-        // 查询要删除的文件详情
-        var fileLambdaQuery = new LambdaQueryChainWrapper<>(fileMapper);
-        var delFileList = fileLambdaQuery.in(FileDO::getId, delFileIds).list();
-        if (CollUtil.isEmpty(delFileList)) {
-            return;
-        }
-
-        // 删除文件内容
-        var delFileCount = fileMapper.deleteBatchIds(delFileIds);
-        if (delFileCount != delFileIds.size()) {
-            // TODO 返回前台成功，增加后台报警机制
-        }
-
-        // 删除文件
-        for (var delFile : delFileList) {
-            FileUtils.deleteFile(delFile.getSuffix(), delFile.getThumbnail(), delFile.getPath(), rootPath);
-        }
+        // 彻底删除文件（FileDO + 物理对象）
+        filePurgeService.purgeFiles(userId, delFileIds);
     }
 
     @Tran
     @Override
     public void restore(final Long userId, List<String> recycleIds) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
-        var recycleBinDOList = lambdaQuery.eq(RecycleBinDO::getUserId, userId).in(RecycleBinDO::getRecycleId, recycleIds).list();
+        var recycleBinDOList = lambdaQuery.eq(RecycleBinDO::getUserId, userId)
+                .in(RecycleBinDO::getRecycleId, recycleIds).list();
 
         // 判断结果是否为空
         if (CollUtil.isEmpty(recycleBinDOList)) {
@@ -291,7 +289,8 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
         // 查询用户文件信息
         var userFileLambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
-        var userFileDOList = userFileLambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, DEL.flag()).in(UserFileDO::getId, userFileIds).list();
+        var userFileDOList = userFileLambdaQuery.eq(UserFileDO::getUserId, userId)
+                .eq(UserFileDO::getFileStatus, DEL.flag()).in(UserFileDO::getId, userFileIds).list();
 
         if (CollUtil.isEmpty(userFileDOList) || recycleBinDOList.size() != userFileDOList.size()) {
             throw new FailResultException(SYSTEM_ERROR);
@@ -337,7 +336,9 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
                 isExistRepeatName = true;
             } else {
                 // 检查父目录下，有没有与根元素同名文件或文件夹
-//            var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(), userId, parentId, NORMAL, UserFileItemTypeEnum.getEnumByFlag(userFileDO.getItemType()));
+                // var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(),
+                // userId, parentId, NORMAL,
+                // UserFileItemTypeEnum.getEnumByFlag(userFileDO.getItemType()));
                 var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(), userId, parentId, NORMAL);
 
                 // 查询结果不为空
@@ -370,18 +371,18 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
         // 修改状态
         userFileService.updateUserFileStatusById(userFileIds, userId, NORMAL);
-        
+
         // 处理存储源迁移（只对继承类型的文件/文件夹进行处理）
         for (var userFileDO : userFileDOList) {
             if (!rootUserFileIdSet.contains(userFileDO.getId())) {
                 continue;
             }
-            
+
             // 只处理继承类型的文件/文件夹（storage_source_type = 1）
             if (userFileDO.getStorageSourceType() == null || userFileDO.getStorageSourceType() != 1) {
                 continue;
             }
-            
+
             // 获取目标父目录的存储源ID
             Long targetStorageSourceId;
             if (userFileDO.getParentId() == 0) {
@@ -399,7 +400,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
                 }
                 targetStorageSourceId = parentUserFile.getStorageSourceId();
             }
-            
+
             // 如果存储源不一致，需要迁移
             if (!Objects.equals(userFileDO.getStorageSourceId(), targetStorageSourceId)) {
                 // 调用存储源迁移逻辑
@@ -415,7 +416,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             // 计算N天前的时间（从配置中读取保留天数）
             Date expireDate = DateUtil.offsetDay(new Date(), -retentionDays);
             String expireDateStr = DateUtil.format(expireDate, "yyyy-MM-dd HH:mm:ss");
-            
+
             log.info("开始清理{}之前的回收站文件（保留期限{}天）", expireDateStr, retentionDays);
 
             // 查询10天前的回收站记录
@@ -441,7 +442,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             for (Map.Entry<Long, List<String>> entry : userRecycleIdMap.entrySet()) {
                 Long userId = entry.getKey();
                 List<String> recycleIds = entry.getValue();
-                
+
                 try {
                     // 调用删除方法
                     delete(userId, recycleIds);

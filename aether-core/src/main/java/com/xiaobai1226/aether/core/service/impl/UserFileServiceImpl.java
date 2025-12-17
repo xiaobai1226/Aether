@@ -28,19 +28,22 @@ import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.FileService;
+import com.xiaobai1226.aether.core.service.intf.QuotaService;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.core.util.LockManager;
+import com.xiaobai1226.aether.core.infrastructure.storage.StorageBackendFactory;
+import com.xiaobai1226.aether.core.service.support.UserFileDownloadService;
+import com.xiaobai1226.aether.core.service.support.UserFileTreeService;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO;
 import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.domain.entity.RecycleBinDO;
 import com.xiaobai1226.aether.dao.domain.entity.StorageSourceDO;
-import com.xiaobai1226.aether.dao.domain.entity.UserDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.dao.mapper.FileMapper;
 import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
@@ -58,8 +61,7 @@ import org.noear.solon.data.annotation.Tran;
 
 import java.io.*;
 import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.nio.file.Files;
 
 import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
 import static com.xiaobai1226.aether.common.enums.CategoryEnum.OTHER;
@@ -98,6 +100,9 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     private UserService userService;
 
     @Inject
+    private QuotaService quotaService;
+
+    @Inject
     private FileService fileService;
 
     @Inject
@@ -105,6 +110,15 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Inject
     private StorageSourceService storageSourceService;
+
+    @Inject
+    private StorageBackendFactory storageBackendFactory;
+
+    @Inject
+    private UserFileTreeService userFileTreeService;
+
+    @Inject
+    private UserFileDownloadService userFileDownloadService;
 
     @Override
     public UserFileDO getParentFolderByPath(final Long userId, Long parentId, String path) {
@@ -443,8 +457,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                 throw new FailResultException(BAD_REQUEST_ERROR, ERROR_FILE_SIZE_OVERFLOW);
             }
 
-            // 增加上传中文件大小（整个文件大小）
-            userCache.incrementUploadingFileSize(userId, uploadFileVO.getFileSize());
+            // 预占上传空间（整个文件大小）
+            quotaService.reserveUploading(userId, uploadFileVO.getFileSize());
 
             // 切片是0，则表示redis中还没有数据，要新增
             var uploadFileTempDTO = BeanUtil.toBean(uploadFileVO, UploadFileTempDTO.class);
@@ -572,10 +586,101 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                 storageSourceId);
         // 删除缓存数据
         fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-        userCache.decrementUploadingFileSize(userId, uploadTempFileDTO.getFileSize());
+        quotaService.releaseUploading(userId, uploadTempFileDTO.getFileSize());
         FileUtil.del(tempDir);
 
         return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FINISH.id());
+    }
+
+    @Override
+    @Tran
+    public UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFileDO parentUserFile,
+            String fileName, String identifier) throws IOException {
+        if (localFile == null || !localFile.exists() || localFile.isDirectory()) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+        if (StrUtil.isBlank(fileName)) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NAME_EMPTY);
+        }
+        if (StrUtil.isBlank(identifier)) {
+            throw new FailResultException(PARAM_IS_INVALID);
+        }
+
+        long fileSize = localFile.length();
+        // 预占上传空间
+        quotaService.reserveUploading(userId, fileSize);
+
+        // 选择存储源
+        Long storageSourceId = getStorageSourceIdByParent(parentUserFile, userId);
+        var storageSource = storageSourceService.getStorageSourceById(storageSourceId, userId);
+        if (storageSource == null) {
+            quotaService.releaseUploading(userId, fileSize);
+            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
+        }
+
+        // 生成任务ID与存储文件名
+        String taskId = IdUtil.simpleUUID();
+        var storedFileName = FileUtils.rename(fileName, taskId);
+        var relativePath = FileUtils.generatePath(FolderNameConsts.PATH_UPLOAD_FILE_FULL,
+                DateUtil.format(new Date(), "yyyy/MM/dd"), storedFileName);
+
+        // 先落盘（轻量一致性套路：先落物理对象，再落库；失败时清理物理对象）
+        var backend = storageBackendFactory.getByType(0);
+        try {
+            backend.putFile(storageSource.getPath(), relativePath, localFile, true);
+
+            // 缩略图（仍使用 rootPath 统一存储）
+            var thumbnailSuffix = FileTypeEnum.isGif(FileNameUtil.extName(storedFileName).toLowerCase())
+                    ? SystemConsts.THUMBNAIL_GIF_SUFFIX
+                    : SystemConsts.THUMBNAIL_SUFFIX;
+            String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH
+                    + FileUtils.replaceFileExtName(storedFileName, thumbnailSuffix);
+            var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
+                    thumbnailFileName);
+
+            String absPath = backend.tryResolveAbsolutePath(storageSource.getPath(), relativePath);
+            String thumbnailToStore = null;
+            if (absPath != null) {
+                if (CategoryEnum.isPictureByName(storedFileName)) {
+                    var ok = ImageUtils.generateThumbnail(absPath, thumbnailFilePath, 150, -1);
+                    thumbnailToStore = ok ? thumbnailFileName : null;
+                } else if (CategoryEnum.isVideoByName(storedFileName)) {
+                    var ok = VideoUtils.generateThumbnail(absPath, thumbnailFilePath, 150);
+                    thumbnailToStore = ok ? thumbnailFileName : null;
+                }
+            }
+
+            // FileDO
+            var fileDO = fileService.addFile(storedFileName, relativePath, fileSize, identifier, thumbnailToStore,
+                    storageSourceId);
+            if (fileDO == null) {
+                throw new FailResultException(SYSTEM_ERROR);
+            }
+
+            long parentId = parentUserFile != null ? parentUserFile.getId() : 0L;
+            addUserFile(userId, fileDO.getId(), parentId, fileName, FILE, NORMAL, fileSize, storageSourceId);
+
+            // 释放上传预占（已用空间由 addUserFile 内统一增加）
+            quotaService.releaseUploading(userId, fileSize);
+            return new UploadResultDTO(taskId, UPLOAD_FINISH.id());
+        } catch (Exception e) {
+            // 清理：释放预占 + 删除已落盘文件（尽量）
+            quotaService.releaseUploading(userId, fileSize);
+            try {
+                backend.delete(storageSource.getPath(), relativePath);
+            } catch (Exception ignore) {
+            }
+            if (e instanceof FailResultException fre) {
+                throw fre;
+            }
+            throw new FailResultException(SYSTEM_ERROR);
+        } finally {
+            // 清理临时文件（WebDAV场景）
+            try {
+                Files.deleteIfExists(localFile.toPath());
+            } catch (Exception ignore) {
+            }
+        }
     }
 
     @Override
@@ -588,7 +693,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         }
         // 删除缓存数据
         fileCache.delUploadTempFileInfo(userId, taskId);
-        userCache.decrementUploadingFileSize(userId, uploadTempFileInfo.getFileSize());
+        quotaService.releaseUploading(userId, uploadTempFileInfo.getFileSize());
         var tempFolder = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_TEMP_FILE_FULL, userId, taskId);
         var tempDir = FileUtil.file(tempFolder);
         FileUtil.del(tempDir);
@@ -599,7 +704,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             UploadFileCacheDTO uploadFileCacheDTO) {
         // 删除缓存数据
         fileCache.delUploadTempFileInfo(userId, taskId);
-        userCache.decrementUploadingFileSize(userId, fileSize);
+        quotaService.releaseUploading(userId, fileSize);
         FileUtil.del(uploadFileCacheDTO.getTempDir());
         FileUtil.del(uploadFileCacheDTO.getFinalFilePath());
         FileUtil.del(uploadFileCacheDTO.getThumbnailFilePath());
@@ -710,45 +815,12 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Override
     public void getSubUserFileTree(final Long userId, List<UserFileTreeDTO> userFileTreeList) {
-        UserFileVO userFileVO;
-        List<UserFileTreeDTO> subUserFileTreeList;
-        for (var userFileTree : userFileTreeList) {
-            if (UserFileItemTypeEnum.isFile(userFileTree.getItemType())) {
-                continue;
-            }
-
-            userFileVO = new UserFileVO();
-            userFileVO.setPageNum(1);
-            userFileVO.setPageSize(-1);
-            var userFileDTOListPage = getFileList(userId, userFileTree.getId(), userFileVO);
-
-            if (userFileDTOListPage == null || CollUtil.isEmpty(userFileDTOListPage.getList())) {
-                continue;
-            }
-
-            subUserFileTreeList = BeanUtil.copyToList(userFileDTOListPage.getList(), UserFileTreeDTO.class);
-            userFileTree.setChildUserFileDTOList(subUserFileTreeList);
-            getSubUserFileTree(userId, subUserFileTreeList);
-        }
+        userFileTreeService.fillSubTree(userId, userFileTreeList);
     }
 
     @Override
     public Long getUserFileTreeSpaceUsage(List<UserFileTreeDTO> userFileTreeDTOList) {
-        var totalSize = 0L;
-        for (var userFileTree : userFileTreeDTOList) {
-            if (UserFileItemTypeEnum.isFile(userFileTree.getItemType())) {
-                totalSize += userFileTree.getSize();
-                continue;
-            }
-
-            var childrenUserFileDTOList = userFileTree.getChildUserFileDTOList();
-            if (CollUtil.isNotEmpty(childrenUserFileDTOList)) {
-                var childrenTotalSize = getUserFileTreeSpaceUsage(childrenUserFileDTOList);
-                totalSize += childrenTotalSize;
-            }
-        }
-
-        return totalSize;
+        return userFileTreeService.calcSpaceUsage(userFileTreeDTOList);
     }
 
     @Tran
@@ -756,8 +828,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     public void copy(Long targetId, final Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList,
             Long totalSize) {
         if (totalSize > 0) {
-            // 增加上传中文件大小（整个文件大小）
-            userCache.incrementUploadingFileSize(userId, totalSize);
+            // 预占上传空间（整个文件大小）
+            quotaService.reserveUploading(userId, totalSize);
         }
 
         // 获取目标目录的存储源ID
@@ -785,14 +857,9 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         // 更新用户所使用的空间
         if (totalSize > 0) {
             // 更新用户已使用存储空间
-            var userSpaceUsageDTO = userService.getUserSpaceUsage(userId);
-            var userDO = new UserDO();
-            userDO.setId(userId);
-            userDO.setUsedStorage(userSpaceUsageDTO.getUsedStorage() + totalSize);
-            userService.updateUser(userDO);
-
-            // 减去上传中文件大小（整个文件大小）
-            userCache.decrementUploadingFileSize(userId, totalSize);
+            quotaService.increaseUsed(userId, totalSize);
+            // 释放上传预占（整个文件大小）
+            quotaService.releaseUploading(userId, totalSize);
         }
     }
 
@@ -885,16 +952,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         }
 
         if (UserFileItemTypeEnum.isFile(userFileItemType)) {
-            // 更新用户已使用存储空间
-            var userSpaceUsageDTO = userService.getUserSpaceUsage(userId);
-            var userDO = new UserDO();
-            userDO.setId(userId);
-            userDO.setUsedStorage(userSpaceUsageDTO.getUsedStorage() + fileSize);
-            var result = userService.updateUser(userDO);
-
-            if (result != 1) {
-                throw new FailResultException(SYSTEM_ERROR);
-            }
+            // 更新用户已使用存储空间（集中到 QuotaService，避免多流程漏改）
+            quotaService.increaseUsed(userId, fileSize == null ? 0L : fileSize);
         }
 
         return userFileDO;
@@ -944,7 +1003,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 获取旧存储源ID（用于判断子文件夹是否需要处理）
         var oldStorageSourceId = userFile.getStorageSourceId();
-        
+
         // 获取旧存储源（用于文件迁移）
         var oldStorageSource = oldStorageSourceId != null
                 ? storageSourceService.getStorageSourceById(oldStorageSourceId, userId)
@@ -954,11 +1013,12 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             // 1. 递归收集需要迁移的文件ID和需要更新的UserFile记录ID（只处理存储源类型为继承的子文件夹）
             var fileIdsToMigrate = new ArrayList<Long>();
             var userFileIdsToUpdate = new ArrayList<Long>();
-            
+
             // 如果是文件夹，收集子文件和子文件夹
             if (UserFileItemTypeEnum.isFolder(userFile.getItemType())) {
                 userFileIdsToUpdate.add(userFileId); // 先加入当前文件夹
-                collectFileAndUserFileIdsRecursively(userFileId, userId, oldStorageSourceId, fileIdsToMigrate, userFileIdsToUpdate);
+                collectFileAndUserFileIdsRecursively(userFileId, userId, oldStorageSourceId, fileIdsToMigrate,
+                        userFileIdsToUpdate);
             } else {
                 // 如果是文件，直接处理
                 if (userFile.getFileId() != null) {
@@ -970,7 +1030,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             // 2. 迁移文件（返回旧fileId -> 新fileId的映射关系）
             HashMap<Long, Long> fileIdMapping = new HashMap<>();
             if (CollUtil.isNotEmpty(fileIdsToMigrate) && oldStorageSource != null) {
-                fileIdMapping = migrateFiles(fileIdsToMigrate, oldStorageSourceId, storageSourceId, 
+                fileIdMapping = migrateFiles(fileIdsToMigrate, oldStorageSourceId, storageSourceId,
                         oldStorageSource.getPath(), storageSource.getPath());
             }
 
@@ -1026,7 +1086,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 获取旧存储源ID（用于判断子文件夹是否需要处理）
         var oldStorageSourceId = folder.getStorageSourceId();
-        
+
         // 获取旧存储源（用于文件迁移）
         var oldStorageSource = oldStorageSourceId != null
                 ? storageSourceService.getStorageSourceById(oldStorageSourceId, userId)
@@ -1037,12 +1097,13 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             var fileIdsToMigrate = new ArrayList<Long>();
             var userFileIdsToUpdate = new ArrayList<Long>();
             userFileIdsToUpdate.add(folderId); // 先加入当前文件夹
-            collectFileAndUserFileIdsRecursively(folderId, userId, oldStorageSourceId, fileIdsToMigrate, userFileIdsToUpdate);
+            collectFileAndUserFileIdsRecursively(folderId, userId, oldStorageSourceId, fileIdsToMigrate,
+                    userFileIdsToUpdate);
 
             // 2. 迁移文件（返回旧fileId -> 新fileId的映射关系）
             HashMap<Long, Long> fileIdMapping = new HashMap<>();
             if (CollUtil.isNotEmpty(fileIdsToMigrate) && oldStorageSource != null) {
-                fileIdMapping = migrateFiles(fileIdsToMigrate, oldStorageSourceId, storageSourceId, 
+                fileIdMapping = migrateFiles(fileIdsToMigrate, oldStorageSourceId, storageSourceId,
                         oldStorageSource.getPath(), storageSource.getPath());
             }
 
@@ -1053,7 +1114,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                         .in(UserFileDO::getId, userFileIdsToUpdate);
                 userFileMapper.update(null, lambdaUpdate);
             }
-            
+
             // 4. 将当前文件夹设置为显式指定类型
             var lambdaUpdate = new LambdaUpdateWrapper<UserFileDO>();
             lambdaUpdate.set(UserFileDO::getStorageSourceType, 2)
@@ -1085,14 +1146,14 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     /**
      * 递归收集文件夹下所有文件ID和需要更新的UserFile记录ID（只处理存储源类型为继承的子文件夹）
      *
-     * @param folderId            文件夹ID
-     * @param userId              用户ID
-     * @param originalStorageId   原始存储源ID（用于判断子文件夹是否需要处理）
-     * @param fileIds             收集的文件ID列表（用于文件迁移）
-     * @param userFileIds         收集的UserFile记录ID列表（包括文件和文件夹，用于更新存储源ID）
+     * @param folderId          文件夹ID
+     * @param userId            用户ID
+     * @param originalStorageId 原始存储源ID（用于判断子文件夹是否需要处理）
+     * @param fileIds           收集的文件ID列表（用于文件迁移）
+     * @param userFileIds       收集的UserFile记录ID列表（包括文件和文件夹，用于更新存储源ID）
      */
-    private void collectFileAndUserFileIdsRecursively(Long folderId, Long userId, Long originalStorageId, 
-                                                       List<Long> fileIds, List<Long> userFileIds) {
+    private void collectFileAndUserFileIdsRecursively(Long folderId, Long userId, Long originalStorageId,
+            List<Long> fileIds, List<Long> userFileIds) {
         var userFiles = ChainWrappers.lambdaQueryChain(userFileMapper)
                 .eq(UserFileDO::getUserId, userId)
                 .eq(UserFileDO::getParentId, folderId)
@@ -1112,7 +1173,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                 // 如果是显式指定类型（2），则跳过该子文件夹及其所有内容
                 if (userFile.getStorageSourceType() != null && userFile.getStorageSourceType() == 1) {
                     userFileIds.add(userFile.getId()); // 收集需要更新的子文件夹ID
-                    collectFileAndUserFileIdsRecursively(userFile.getId(), userId, originalStorageId, fileIds, userFileIds);
+                    collectFileAndUserFileIdsRecursively(userFile.getId(), userId, originalStorageId, fileIds,
+                            userFileIds);
                 }
                 // 如果子文件夹是显式指定类型，跳过该子文件夹及其所有内容
             }
@@ -1130,7 +1192,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
      * @return 旧fileId -> 新fileId的映射关系
      */
     private HashMap<Long, Long> migrateFiles(List<Long> fileIds, Long oldStorageSourceId, Long newStorageSourceId,
-                                              String oldStoragePath, String newStoragePath) {
+            String oldStoragePath, String newStoragePath) {
         var fileIdMapping = new HashMap<Long, Long>();
 
         // 批量查询旧存储源的文件记录
@@ -1156,31 +1218,23 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
             if (existingFileDO != null) {
                 // 目标存储源已存在该文件，直接使用
-                log.info("目标存储源已存在文件，无需迁移: identifier={}, path={}", 
+                log.info("目标存储源已存在文件，无需迁移: identifier={}, path={}",
                         oldFileDO.getIdentifier(), oldFileDO.getPath());
                 newFileId = existingFileDO.getId();
             } else {
-                // 目标存储源不存在该文件，需要迁移
-                // 2. 迁移物理文件
-                var oldFilePath = FileUtils.generatePath(oldStoragePath, oldFileDO.getPath());
-                var newFilePath = FileUtils.generatePath(newStoragePath, oldFileDO.getPath());
+                // 目标存储源不存在该文件，需要迁移（通过存储后端抽象执行复制）
+                var backend = storageBackendFactory.getByType(0);
+                var key = oldFileDO.getPath();
 
-                var oldFile = FileUtil.file(oldFilePath);
-                if (!oldFile.exists()) {
-                    log.error("文件不存在: {}", oldFilePath);
+                if (!backend.exists(oldStoragePath, key)) {
+                    log.error("文件不存在: {}", key);
                     throw new FailResultException(BAD_REQUEST_ERROR, "文件不存在: " + oldFileDO.getPath());
                 }
 
-                var newFile = FileUtil.file(newFilePath);
-                // 确保目录存在
-                FileUtil.mkParentDirs(newFile);
-
-                // 复制文件
-                FileUtil.copy(oldFile, newFile, true);
-
-                // 验证复制是否成功
-                if (!newFile.exists() || newFile.length() != oldFile.length()) {
-                    log.error("文件复制失败: {}", oldFileDO.getPath());
+                try {
+                    backend.copy(oldStoragePath, key, newStoragePath, key, true);
+                } catch (IOException e) {
+                    log.error("文件复制失败: {}", key, e);
                     throw new FailResultException(BAD_REQUEST_ERROR, "文件复制失败: " + oldFileDO.getPath());
                 }
 
@@ -1196,7 +1250,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                 fileMapper.insert(newFileDO);
                 newFileId = newFileDO.getId();
 
-                log.info("文件迁移成功: oldFileId={}, newFileId={}, path={}", 
+                log.info("文件迁移成功: oldFileId={}, newFileId={}, path={}",
                         oldFileDO.getId(), newFileId, oldFileDO.getPath());
             }
 
@@ -1211,19 +1265,24 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
             if (remainingUsageCount == 0) {
                 // 旧File记录没有被其他存储源的UserFile使用，可以删除
-                // 删除物理文件
-                var oldFilePath = FileUtils.generatePath(oldStoragePath, oldFileDO.getPath());
-                var oldFile = FileUtil.file(oldFilePath);
-                if (oldFile.exists()) {
-                    FileUtil.del(oldFile);
-                    log.info("删除旧存储源物理文件: {}", oldFilePath);
+                // 删除物理文件（通过存储后端抽象）
+                var backend = storageBackendFactory.getByType(0);
+                var key = oldFileDO.getPath();
+                if (backend.exists(oldStoragePath, key)) {
+                    try {
+                        backend.delete(oldStoragePath, key);
+                    } catch (IOException e) {
+                        log.error("删除旧存储源物理文件失败: {}", key, e);
+                        // 删除物理文件失败不影响引用切换，保留记录以便后续清理
+                    }
+                    log.info("删除旧存储源物理文件: {}", key);
                 }
 
                 // 删除File记录
                 fileMapper.deleteById(oldFileDO.getId());
                 log.info("删除旧存储源File记录: fileId={}", oldFileDO.getId());
             } else {
-                log.info("旧存储源File记录仍被使用，保留: fileId={}, 使用次数={}", 
+                log.info("旧存储源File记录仍被使用，保留: fileId={}, 使用次数={}",
                         oldFileDO.getId(), remainingUsageCount);
             }
 
@@ -1236,20 +1295,21 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     /**
      * 新增UserFileTree结构对象
      *
-     * @param userFileTreeList     要插入的元素集合
-     * @param userId               用户ID
-     * @param parentId             父文件夹ID
+     * @param userFileTreeList      要插入的元素集合
+     * @param userId                用户ID
+     * @param parentId              父文件夹ID
      * @param targetStorageSourceId 目标存储源ID
      */
     @Tran
-    private void insertUserFileTree(List<UserFileTreeDTO> userFileTreeList, Long userId, Long parentId, Long targetStorageSourceId) {
+    private void insertUserFileTree(List<UserFileTreeDTO> userFileTreeList, Long userId, Long parentId,
+            Long targetStorageSourceId) {
         if (CollUtil.isEmpty(userFileTreeList)) {
             return;
         }
 
         var userFileList = new ArrayList<UserFileDO>();
         var needMigrateList = new ArrayList<UserFileDO>(); // 需要迁移存储源的文件列表
-        
+
         for (var userFileTree : userFileTreeList) {
             var userFileDO = new UserFileDO();
             BeanUtil.copyProperties(userFileTree, userFileDO);
@@ -1259,10 +1319,10 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             userFileDO.setParentId(parentId);
             userFileDO.setCreateTime(null);
             userFileDO.setUpdateTime(null);
-            
+
             // 对于继承类型的文件/文件夹，如果目标存储源与原存储源不同，需要更新存储源
-            if (targetStorageSourceId != null && userFileDO.getStorageSourceType() != null 
-                    && userFileDO.getStorageSourceType() == 1 
+            if (targetStorageSourceId != null && userFileDO.getStorageSourceType() != null
+                    && userFileDO.getStorageSourceType() == 1
                     && !Objects.equals(userFileDO.getStorageSourceId(), targetStorageSourceId)) {
                 // 更新为目标存储源
                 userFileDO.setStorageSourceId(targetStorageSourceId);
@@ -1282,7 +1342,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         // 对需要迁移的文件执行迁移（复制文件到新存储源）
         for (int i = 0; i < userFileList.size(); i++) {
             var userFileDO = userFileList.get(i);
-            
+
             // 如果是文件且需要迁移，执行文件迁移
             if (UserFileItemTypeEnum.isFile(userFileDO.getItemType()) && needMigrateList.contains(userFileDO)) {
                 if (userFileDO.getFileId() != null) {
@@ -1290,16 +1350,18 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                     var oldFileDO = fileMapper.selectById(userFileDO.getFileId());
                     if (oldFileDO != null) {
                         // 获取源存储源和目标存储源
-                        var sourceStorageSource = storageSourceService.getStorageSourceById(oldFileDO.getStorageSourceId(), userId);
-                        var targetStorageSource = storageSourceService.getStorageSourceById(targetStorageSourceId, userId);
-                        
+                        var sourceStorageSource = storageSourceService
+                                .getStorageSourceById(oldFileDO.getStorageSourceId(), userId);
+                        var targetStorageSource = storageSourceService.getStorageSourceById(targetStorageSourceId,
+                                userId);
+
                         if (sourceStorageSource != null && targetStorageSource != null) {
                             // 复制文件到目标存储源
-                            var newFileDO = fileService.copyFileToStorageSource(oldFileDO, 
-                                    sourceStorageSource.getPath(), 
-                                    targetStorageSource.getPath(), 
+                            var newFileDO = fileService.copyFileToStorageSource(oldFileDO,
+                                    sourceStorageSource.getPath(),
+                                    targetStorageSource.getPath(),
                                     targetStorageSourceId);
-                            
+
                             if (newFileDO != null) {
                                 // 更新UserFile记录的fileId
                                 userFileDO.setFileId(newFileDO.getId());
@@ -1322,7 +1384,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
             // 插入子节点对象，传递当前节点的存储源ID
             Long childTargetStorageSourceId = userFileList.get(i).getStorageSourceId();
-            insertUserFileTree(userFileTree.getChildUserFileDTOList(), userId, userFileList.get(i).getId(), childTargetStorageSourceId);
+            insertUserFileTree(userFileTree.getChildUserFileDTOList(), userId, userFileList.get(i).getId(),
+                    childTargetStorageSourceId);
         }
     }
 
@@ -1524,74 +1587,6 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Override
     public DownloadedFile download(List<UserFileTreeDTO> userFileTreeDTOList, final Long userId) throws IOException {
-        if (userFileTreeDTOList.size() == 1
-                && UserFileItemTypeEnum.isFile(userFileTreeDTOList.getFirst().getItemType())) {
-            return new DownloadedFile(
-                    new File(FileUtils.generatePath(rootPath, userFileTreeDTOList.getFirst().getPath())),
-                    userFileTreeDTOList.getFirst().getName());
-        } else {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-                zipFiles(userFileTreeDTOList, zos, null, true);
-            }
-
-            var name = "打包下载.zip";
-            if (userFileTreeDTOList.size() == 1) {
-                name = userFileTreeDTOList.getFirst().getName() + "." + "zip";
-            }
-
-            return new DownloadedFile("application/zip", new ByteArrayInputStream(baos.toByteArray()), name);
-        }
-    }
-
-    /**
-     * 递归获取文件并压缩
-     *
-     * @param userFileTreeDTOList 用户文件
-     * @param zipOutputStream
-     * @param parentPath          父路径
-     */
-    private void zipFiles(List<UserFileTreeDTO> userFileTreeDTOList, ZipOutputStream zipOutputStream, String parentPath,
-            Boolean isRoot) {
-        for (var userFileTreeDTO : userFileTreeDTOList) {
-            var fileFullPath = parentPath == null ? userFileTreeDTO.getName()
-                    : FileUtils.generatePath(parentPath, userFileTreeDTO.getName());
-
-            try {
-                if (UserFileItemTypeEnum.isFolder(userFileTreeDTO.getItemType())) {
-                    if (isRoot && userFileTreeDTOList.size() == 1) {
-                        fileFullPath = null;
-                    } else {
-                        // 创建 ZipEntry 对象
-                        ZipEntry zipEntry = new ZipEntry(fileFullPath + "/");
-                        zipOutputStream.putNextEntry(zipEntry);
-                    }
-
-                    if (CollUtil.isNotEmpty(userFileTreeDTO.getChildUserFileDTOList())) {
-                        zipFiles(userFileTreeDTO.getChildUserFileDTOList(), zipOutputStream, fileFullPath, false);
-                    }
-                } else {
-                    // 创建 ZipEntry 对象
-                    ZipEntry zipEntry = new ZipEntry(fileFullPath);
-                    zipOutputStream.putNextEntry(zipEntry);
-
-                    byte[] bytes = new byte[1024];
-                    try (FileInputStream fileInputStream = new FileInputStream(
-                            FileUtils.generatePath(rootPath, userFileTreeDTO.getPath()))) {
-
-                        int length;
-                        while ((length = fileInputStream.read(bytes)) >= 0) {
-                            zipOutputStream.write(bytes, 0, length);
-                        }
-                    } catch (IOException e) {
-                        log.error(e.getMessage());
-                    }
-                }
-
-                zipOutputStream.closeEntry();
-            } catch (IOException e) {
-                log.error(e.getMessage());
-            }
-        }
+        return userFileDownloadService.download(userFileTreeDTOList, userId);
     }
 }
