@@ -72,6 +72,11 @@ public class UserFileDO {
     private Integer storageSourceType;
 
     /**
+     * 待迁移标记 0=否 1=是
+     */
+    private Integer migrationPending;
+
+    /**
      * 创建时间
      */
     private String createTime;

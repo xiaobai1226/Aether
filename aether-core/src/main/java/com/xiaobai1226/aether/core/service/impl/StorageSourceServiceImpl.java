@@ -15,7 +15,6 @@ import com.xiaobai1226.aether.dao.mapper.StorageSourceMapper;
 import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
-import org.noear.solon.annotation.Inject;
 import org.noear.solon.data.annotation.Tran;
 import org.noear.solon.data.tran.TranPolicy;
 
@@ -79,6 +78,15 @@ public class StorageSourceServiceImpl implements StorageSourceService {
         return ChainWrappers.lambdaQueryChain(storageSourceMapper)
                 .eq(StorageSourceDO::getId, id)
                 .eq(StorageSourceDO::getUserId, userId)
+                .eq(StorageSourceDO::getStatus, ENABLED.getStatus())
+                .one();
+    }
+
+    @Override
+    public StorageSourceDO getStorageSourceById(Long id) {
+        // 系统级查询，不校验userId，仅校验存储源状态
+        return ChainWrappers.lambdaQueryChain(storageSourceMapper)
+                .eq(StorageSourceDO::getId, id)
                 .eq(StorageSourceDO::getStatus, ENABLED.getStatus())
                 .one();
     }
@@ -292,4 +300,3 @@ public class StorageSourceServiceImpl implements StorageSourceService {
         }
     }
 }
-

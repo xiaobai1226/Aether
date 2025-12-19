@@ -187,7 +187,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         }
 
         // 删除回收站内容
-        var delRecycleBinFileCount = recycleBinMapper.deleteBatchIds(recycleBinIds);
+        var delRecycleBinFileCount = recycleBinMapper.deleteByIds(recycleBinIds);
         if (delRecycleBinFileCount != recycleBinIds.size()) {
             throw new FailResultException(SYSTEM_ERROR);
         }
@@ -209,50 +209,17 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         }
 
         // 删除用户文件内容
-        var delUserFileCount = userFileMapper.deleteBatchIds(userFileIds);
+        var delUserFileCount = userFileMapper.deleteByIds(userFileIds);
         if (delUserFileCount != userFileIds.size()) {
             throw new FailResultException(SYSTEM_ERROR);
         }
 
-        // 更新用户所使用的空间
-        if (totalSize > 0) {
-            // 回收站占用空间：只有彻底删除才释放空间（集中到 QuotaService）
-            quotaService.decreaseUsed(userId, totalSize);
-        }
+        // 释放用户配额（QuotaService 内部已处理 bytes <= 0 的情况）
+        quotaService.decreaseUsed(userId, totalSize);
 
-        if (CollUtil.isEmpty(fileIds)) {
-            return;
-        }
-
-        // TODO 确认一个事务内，前面删除了，这里是否查得到，如果查得到会导致逻辑出错，file无法删除了
-        var userFileLambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
-        var userFileDOList = userFileLambdaQuery.in(UserFileDO::getFileId, fileIds).list();
-
-        var delFileIds = new HashSet<Long>();
-        // 如果为空，直接返回
-        if (CollUtil.isEmpty(userFileDOList)) {
-            delFileIds = fileIds;
-        } else {
-            for (var fileId : fileIds) {
-                var isExist = false;
-                for (var userFile : userFileDOList) {
-                    if (Objects.equals(fileId, userFile.getFileId())) {
-                        isExist = true;
-                        break;
-                    }
-                }
-                if (!isExist) {
-                    delFileIds.add(fileId);
-                }
-            }
-        }
-
-        if (CollUtil.isEmpty(delFileIds)) {
-            return;
-        }
-
-        // 彻底删除文件（FileDO + 物理对象）
-        filePurgeService.purgeFiles(userId, delFileIds);
+        // 注意：物理文件（FileDO + 物理对象）的清理由 FileCleanupService 定时任务统一处理
+        log.info("回收站文件已删除: userId={}, 删除{}个UserFile, 释放空间{}字节",
+                userId, userFileIds.size(), totalSize);
     }
 
     @Tran
@@ -282,7 +249,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
         }
 
         // 删除回收站内容
-        var delRecycleBinFileCount = recycleBinMapper.deleteBatchIds(recycleBinIds);
+        var delRecycleBinFileCount = recycleBinMapper.deleteByIds(recycleBinIds);
         if (delRecycleBinFileCount != recycleBinIds.size()) {
             throw new FailResultException(SYSTEM_ERROR);
         }

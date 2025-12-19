@@ -1,6 +1,5 @@
 package com.xiaobai1226.aether.core.application;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
@@ -12,7 +11,6 @@ import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.core.cache.DownloadCache;
-import com.xiaobai1226.aether.core.domain.dto.DownloadFileDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadFileCacheDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadResultDTO;
 import com.xiaobai1226.aether.core.domain.vo.*;
@@ -22,6 +20,8 @@ import com.xiaobai1226.aether.core.service.intf.QuotaService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
+import com.xiaobai1226.aether.core.usecase.file.*;
+import com.xiaobai1226.aether.core.usecase.storage.SetFolderStorageSourceUseCase;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO;
@@ -46,8 +46,6 @@ import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.PARAM_IS_INVALID;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
-import static com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.FILE;
-import static com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.FOLDER;
 import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 
 /**
@@ -76,6 +74,27 @@ public class FileOperationsFacade {
 
     @Inject
     private StorageSourceService storageSourceService;
+
+    @Inject
+    private MoveFileUseCase moveFileUseCase;
+
+    @Inject
+    private CopyFileUseCase copyFileUseCase;
+
+    @Inject
+    private DeleteFileUseCase deleteFileUseCase;
+
+    @Inject
+    private SetFolderStorageSourceUseCase setFolderStorageSourceUseCase;
+
+    @Inject
+    private RenameFileUseCase renameFileUseCase;
+
+    @Inject
+    private CreateFolderUseCase createFolderUseCase;
+
+    @Inject
+    private DownloadFileUseCase downloadFileUseCase;
 
     @Inject("${project.path.root}")
     private String rootPath;
@@ -196,15 +215,8 @@ public class FileOperationsFacade {
      * @param userId      用户ID
      */
     public void newFolder(NewFolderVO newFolderVO, Long userId) {
-        UserFileDO parentUserFileDO = null;
-        if (StrUtil.isNotEmpty(newFolderVO.getPath())) {
-            parentUserFileDO = userFileService.getParentFolderByPath(userId, 0L, newFolderVO.getPath());
-            if (parentUserFileDO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-        }
-
-        userFileService.newFolder(newFolderVO.getFolderName(), parentUserFileDO, userId);
+        // 调用UseCase执行业务逻辑
+        createFolderUseCase.execute(newFolderVO.getFolderName(), newFolderVO.getPath(), userId);
     }
 
     /**
@@ -214,22 +226,8 @@ public class FileOperationsFacade {
      * @param userId       用户ID
      */
     public void rename(FileRenameVO fileRenameVO, Long userId) {
-        var userFileDO = userFileService.getUserFileByIdAndUserId(fileRenameVO.getId(), userId, NORMAL);
-        if (userFileDO == null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        var existUserFileDO = userFileService.getUserFileByName(fileRenameVO.getNewName(), userId,
-                userFileDO.getParentId(), NORMAL);
-        if (existUserFileDO != null) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NAME_EXIST);
-        }
-
-        var result = userFileService.rename(fileRenameVO.getId(), userId, fileRenameVO.getNewName(), userFileDO,
-                NORMAL);
-        if (!result) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_RENAME);
-        }
+        // 调用UseCase执行业务逻辑
+        renameFileUseCase.execute(fileRenameVO.getId(), fileRenameVO.getNewName(), userId);
     }
 
     /**
@@ -239,6 +237,7 @@ public class FileOperationsFacade {
      * @param userId 用户ID
      */
     public void move(MoveVO moveVO, Long userId) {
+        // 1. 参数转换
         if (moveVO == null || StrUtil.isEmpty(moveVO.getSourceIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
         }
@@ -247,15 +246,8 @@ public class FileOperationsFacade {
                 .mapToLong(Long::parseLong)
                 .boxed()
                 .collect(Collectors.toList());
-        if (CollUtil.isEmpty(sourceIds)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
-        }
 
-        var sourceUserFileDOList = userFileService.getUserFileByIdsAndUserId(sourceIds, userId, NORMAL);
-        if (CollUtil.isEmpty(sourceUserFileDOList) || sourceUserFileDOList.size() != sourceIds.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
-        }
-
+        // 2. 获取目标ID
         Long targetId = 0L;
         if (StrUtil.isNotEmpty(moveVO.getTargetPath())) {
             var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, moveVO.getTargetPath());
@@ -265,79 +257,8 @@ public class FileOperationsFacade {
             targetId = targetUserFile.getId();
         }
 
-        if (Objects.equals(sourceUserFileDOList.getFirst().getParentId(), targetId)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_IN_CURRENT_FOLDER);
-        }
-
-        var sourceFileNames = new ArrayList<String>();
-        var sourceFolderNames = new ArrayList<String>();
-        var sourceFolderIds = new ArrayList<Long>();
-
-        sourceUserFileDOList.forEach(sourceUserFileDO -> {
-            if (UserFileItemTypeEnum.isFile(sourceUserFileDO.getItemType())) {
-                sourceFileNames.add(sourceUserFileDO.getName());
-            } else {
-                sourceFolderIds.add(sourceUserFileDO.getId());
-                sourceFolderNames.add(sourceUserFileDO.getName());
-            }
-        });
-
-        // 不能将文件移动到自身或其子目录下
-        if (CollUtil.isNotEmpty(sourceFolderIds)) {
-            if (sourceFolderIds.contains(targetId)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_TARGET_IS_ITSELF_OR_SUB);
-            }
-            var subfolderIds = userFileService.getAllSubfolders(userId, sourceFolderIds);
-            if (CollUtil.isNotEmpty(subfolderIds) && subfolderIds.contains(targetId)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_TARGET_IS_ITSELF_OR_SUB);
-            }
-        }
-
-        // 校验重名
-        if (CollUtil.isNotEmpty(sourceFileNames)) {
-            var existNameCount = userFileService.getCountByNames(sourceFileNames, userId, targetId, NORMAL, FILE);
-            if (existNameCount > 0) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_TARGET_CONTAIN_SAME_NAME_FILE);
-            }
-        }
-        if (CollUtil.isNotEmpty(sourceFolderNames)) {
-            var existNameCount = userFileService.getCountByNames(sourceFolderNames, userId, targetId, NORMAL, FOLDER);
-            if (existNameCount > 0) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_TARGET_CONTAIN_SAME_NAME_FOLDER);
-            }
-        }
-
-        userFileService.updateParentIdByIds(sourceIds, targetId, userId, NORMAL);
-
-        // 目标目录存储源
-        Long targetStorageSourceId;
-        if (targetId == 0) {
-            var defaultStorageSource = storageSourceService.getDefaultStorageSource(userId);
-            if (defaultStorageSource != null) {
-                targetStorageSourceId = defaultStorageSource.getId();
-            } else {
-                return;
-            }
-        } else {
-            var targetUserFile = userFileService.getUserFileByIdAndUserId(targetId, userId, NORMAL);
-            if (targetUserFile == null || targetUserFile.getStorageSourceId() == null) {
-                return;
-            }
-            targetStorageSourceId = targetUserFile.getStorageSourceId();
-        }
-
-        // 对于继承类型的文件/文件夹，如果存储源不一致，需要迁移
-        for (Long sourceId : sourceIds) {
-            var sourceUserFile = userFileService.getUserFileByIdAndUserId(sourceId, userId, NORMAL);
-            if (sourceUserFile == null) {
-                continue;
-            }
-            if (sourceUserFile.getStorageSourceType() != null && sourceUserFile.getStorageSourceType() == 1) {
-                if (!Objects.equals(sourceUserFile.getStorageSourceId(), targetStorageSourceId)) {
-                    userFileService.migrateUserFileStorageSource(sourceId, targetStorageSourceId, userId);
-                }
-            }
-        }
+        // 3. 调用UseCase执行业务逻辑
+        moveFileUseCase.execute(sourceIds, targetId, userId);
     }
 
     /**
@@ -347,6 +268,7 @@ public class FileOperationsFacade {
      * @param userId 用户ID
      */
     public void copy(CopyVO copyVO, Long userId) {
+        // 1. 参数转换
         if (copyVO == null || StrUtil.isEmpty(copyVO.getSourceIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
         }
@@ -355,15 +277,8 @@ public class FileOperationsFacade {
                 .mapToLong(Long::parseLong)
                 .boxed()
                 .collect(Collectors.toList());
-        if (CollUtil.isEmpty(sourceIds)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
-        }
 
-        var sourceUserFileTreeList = userFileService.getUserFileTreeListByIds(sourceIds, userId, NORMAL);
-        if (CollUtil.isEmpty(sourceUserFileTreeList) || sourceUserFileTreeList.size() != sourceIds.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
-        }
-
+        // 2. 获取目标ID
         Long targetId = 0L;
         if (StrUtil.isNotEmpty(copyVO.getTargetPath())) {
             var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, copyVO.getTargetPath());
@@ -373,52 +288,8 @@ public class FileOperationsFacade {
             targetId = targetUserFile.getId();
         }
 
-        if (Objects.equals(sourceUserFileTreeList.getFirst().getParentId(), targetId)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_IN_CURRENT_FOLDER);
-        }
-
-        var sourceFileNames = new ArrayList<String>();
-        var sourceFolderNames = new ArrayList<String>();
-        var sourceFolderIds = new ArrayList<Long>();
-
-        sourceUserFileTreeList.forEach(sourceUserFileDO -> {
-            if (UserFileItemTypeEnum.isFile(sourceUserFileDO.getItemType())) {
-                sourceFileNames.add(sourceUserFileDO.getName());
-            } else {
-                sourceFolderIds.add(sourceUserFileDO.getId());
-                sourceFolderNames.add(sourceUserFileDO.getName());
-            }
-        });
-
-        if (CollUtil.isNotEmpty(sourceFolderIds)) {
-            if (sourceFolderIds.contains(targetId)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_TARGET_IS_ITSELF_OR_SUB);
-            }
-            var subfolderIds = userFileService.getAllSubfolders(userId, sourceFolderIds);
-            if (CollUtil.isNotEmpty(subfolderIds) && subfolderIds.contains(targetId)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_TARGET_IS_ITSELF_OR_SUB);
-            }
-        }
-
-        if (CollUtil.isNotEmpty(sourceFileNames)) {
-            var existNameCount = userFileService.getCountByNames(sourceFileNames, userId, targetId, NORMAL, FILE);
-            if (existNameCount > 0) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_TARGET_CONTAIN_SAME_NAME_FILE);
-            }
-        }
-        if (CollUtil.isNotEmpty(sourceFolderNames)) {
-            var existNameCount = userFileService.getCountByNames(sourceFolderNames, userId, targetId, NORMAL, FOLDER);
-            if (existNameCount > 0) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_TARGET_CONTAIN_SAME_NAME_FOLDER);
-            }
-        }
-
-        userFileService.getSubUserFileTree(userId, sourceUserFileTreeList);
-        var totalSize = userFileService.getUserFileTreeSpaceUsage(sourceUserFileTreeList);
-
-        quotaService.checkEnough(userId, totalSize);
-
-        userFileService.copy(targetId, userId, sourceUserFileTreeList, totalSize);
+        // 3. 调用UseCase执行业务逻辑
+        copyFileUseCase.execute(sourceIds, targetId, userId);
     }
 
     /**
@@ -428,6 +299,7 @@ public class FileOperationsFacade {
      * @param userId   用户ID
      */
     public void deleteToRecycle(DeleteVO deleteVO, Long userId) {
+        // 1. 参数转换
         if (deleteVO == null || StrUtil.isEmpty(deleteVO.getIds())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
         }
@@ -436,69 +308,41 @@ public class FileOperationsFacade {
                 .mapToLong(Long::parseLong)
                 .boxed()
                 .collect(Collectors.toList());
-        if (CollUtil.isEmpty(ids)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
-        }
 
-        var delUserFileTreeList = userFileService.getUserFileTreeListByIds(ids, userId, NORMAL);
-        if (CollUtil.isEmpty(delUserFileTreeList) || delUserFileTreeList.size() != ids.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
-        }
-
-        userFileService.getSubUserFileTree(userId, delUserFileTreeList);
-        userFileService.delete(delUserFileTreeList, userId);
+        // 2. 调用UseCase执行业务逻辑
+        deleteFileUseCase.execute(ids, userId);
     }
 
     /**
      * 创建下载链接
      * 
-     * @param ids    文件ID列表
+     * @param ids    文件ID列表（逗号分隔）
      * @param userId 用户ID
-     * @return 下载链接
+     * @return 下载签名
      */
     public String createDownloadSign(String ids, Long userId) {
+        // 1. 参数转换
         List<Long> idList = Arrays.stream(ids.split(StrUtil.COMMA))
                 .mapToLong(Long::parseLong)
                 .boxed()
                 .collect(Collectors.toList());
-        if (CollUtil.isEmpty(idList)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DOWNLOAD_CONTENT_EMPTY);
-        }
 
-        var userFileDTOList = userFileService.getUserFileDTOListByIds(idList, userId, NORMAL);
-        if (CollUtil.isEmpty(userFileDTOList) || userFileDTOList.size() != idList.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-
-        String sign = RandomUtil.randomString(20);
-        downloadCache.setDownloadSign(new DownloadFileDTO(idList, userId), sign);
-        return sign;
+        // 2. 调用UseCase创建签名
+        return downloadFileUseCase.createDownloadSign(idList, userId);
     }
 
     /**
      * 下载文件
      * 
-     * @param sign 下载链接
+     * @param sign 下载签名
      * @return 下载文件
      */
     public DownloadedFile downloadBySign(String sign) {
         try {
-            var downloadFileDTO = downloadCache.getDownloadInfo(sign);
-            if (downloadFileDTO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_SIGN);
-            }
-
-            var userFileTreeDTOList = userFileService.getUserFileTreeListByIds(downloadFileDTO.getIds(),
-                    downloadFileDTO.getUserId(), NORMAL);
-            if (CollUtil.isEmpty(userFileTreeDTOList)
-                    || userFileTreeDTOList.size() != downloadFileDTO.getIds().size()) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            userFileService.getSubUserFileTree(downloadFileDTO.getUserId(), userFileTreeDTOList);
-            return userFileService.download(userFileTreeDTOList, downloadFileDTO.getUserId());
+            // 调用UseCase执行下载
+            return downloadFileUseCase.downloadBySign(sign);
         } catch (IOException e) {
-            log.error(e.getMessage(), e);
+            log.error("下载文件失败", e);
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -661,14 +505,14 @@ public class FileOperationsFacade {
      * 
      * @param setFolderStorageSourceVO 设置文件夹存储源VO
      * @param userId                   用户ID
-     * @return 设置文件夹存储源结果
      */
     public void setFolderStorageSource(SetFolderStorageSourceVO setFolderStorageSourceVO, Long userId) {
-        var result = userFileService.setFolderStorageSource(setFolderStorageSourceVO.getFolderId(),
-                setFolderStorageSourceVO.getStorageSourceId(), userId);
-        if (!result) {
-            throw new FailResultException(BAD_REQUEST_ERROR);
-        }
+        // 调用UseCase执行业务逻辑（异步迁移，用户无感知）
+        setFolderStorageSourceUseCase.execute(
+                setFolderStorageSourceVO.getFolderId(),
+                setFolderStorageSourceVO.getStorageSourceId(),
+                userId
+        );
     }
 
     /**

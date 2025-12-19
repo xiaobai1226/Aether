@@ -48,6 +48,16 @@ public interface StorageSourceService {
     StorageSourceDO getStorageSourceById(Long id, Long userId);
 
     /**
+     * 根据ID获取存储源（系统级，不校验用户）
+     * 
+     * 用于系统级操作（如定时清理任务）直接通过存储源ID获取存储源信息
+     *
+     * @param id 存储源ID
+     * @return 存储源
+     */
+    StorageSourceDO getStorageSourceById(Long id);
+
+    /**
      * 添加存储源
      *
      * @param addStorageSourceVO 添加存储源VO
@@ -92,4 +102,3 @@ public interface StorageSourceService {
      */
     boolean validateStoragePath(String path, Long userId);
 }
-

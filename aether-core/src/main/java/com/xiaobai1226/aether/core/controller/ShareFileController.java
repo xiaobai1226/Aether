@@ -8,22 +8,18 @@ import com.xiaobai1226.aether.core.cache.ShareCache;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.core.domain.vo.share.*;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
-import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.ShareFileService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.ShareFileDTO;
-import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
 
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
 import static com.xiaobai1226.aether.core.constant.result.error.ResultShareErrMsgConsts.*;
