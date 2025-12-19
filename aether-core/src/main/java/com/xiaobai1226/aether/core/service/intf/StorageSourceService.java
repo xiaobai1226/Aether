@@ -58,6 +58,13 @@ public interface StorageSourceService {
     StorageSourceDO getStorageSourceById(Long id);
 
     /**
+     * 获取所有存储源（系统级，用于定时清理任务）
+     * 
+     * @return 所有存储源列表
+     */
+    List<StorageSourceDO> getAllStorageSources();
+
+    /**
      * 添加存储源
      *
      * @param addStorageSourceVO 添加存储源VO

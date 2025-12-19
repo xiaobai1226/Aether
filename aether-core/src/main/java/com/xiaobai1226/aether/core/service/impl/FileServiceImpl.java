@@ -154,6 +154,24 @@ public class FileServiceImpl implements FileService {
         }
     }
 
+    @Override
+    public void updateThumbnail(Long fileId, String thumbnail) {
+        if (fileId == null) {
+            log.warn("文件ID为空，无法更新缩略图");
+            return;
+        }
+
+        try {
+            var fileDO = new FileDO();
+            fileDO.setId(fileId);
+            fileDO.setThumbnail(thumbnail);
+            fileMapper.updateById(fileDO);
+            log.debug("缩略图已更新: fileId={}, thumbnail={}", fileId, thumbnail);
+        } catch (Exception e) {
+            log.error("更新缩略图失败: fileId={}, thumbnail={}", fileId, thumbnail, e);
+        }
+    }
+
     // @Override
     // public Integer mergeFiless(Integer userId, String taskId) {
     // // 获取缓存中数据

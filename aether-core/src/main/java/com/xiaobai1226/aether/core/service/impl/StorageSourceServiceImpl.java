@@ -92,6 +92,14 @@ public class StorageSourceServiceImpl implements StorageSourceService {
     }
 
     @Override
+    public List<StorageSourceDO> getAllStorageSources() {
+        // 系统级查询，获取所有启用的存储源
+        return ChainWrappers.lambdaQueryChain(storageSourceMapper)
+                .eq(StorageSourceDO::getStatus, ENABLED.getStatus())
+                .list();
+    }
+
+    @Override
     @Tran(policy = TranPolicy.required)
     public boolean addStorageSource(AddStorageSourceVO addStorageSourceVO, Long userId) {
         // 验证路径格式（必须是绝对路径）

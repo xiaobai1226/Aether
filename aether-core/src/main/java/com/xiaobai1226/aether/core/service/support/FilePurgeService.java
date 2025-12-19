@@ -142,6 +142,8 @@ public class FilePurgeService {
     /**
      * 删除缩略图（如果有）
      * 
+     * 注意：删除前需要检查引用计数，只有没有其他 File 记录使用这个缩略图时才能删除
+     * 
      * @param fileDO 文件DO
      */
     private void deleteThumbnailIfNeeded(FileDO fileDO) {
@@ -150,7 +152,19 @@ public class FilePurgeService {
         }
 
         try {
-            // 统一使用 FileThumbnailService 删除缩略图
+            // 检查是否还有其他 File 记录使用这个缩略图路径
+            // 注意：此时当前 File 记录可能已被删除，所以查询结果不包含当前记录
+            long refCount = ChainWrappers.lambdaQueryChain(fileMapper)
+                    .eq(FileDO::getThumbnail, fileDO.getThumbnail())
+                    .count();
+            
+            if (refCount >= 1) {
+                // 还有其他 File 使用这个缩略图，不能删除
+                log.debug("缩略图仍被 {} 个文件引用，跳过删除: thumbnail={}", refCount, fileDO.getThumbnail());
+                return;
+            }
+            
+            // 引用计数为 0，可以安全删除缩略图
             fileThumbnailService.deleteThumbnail(fileDO.getThumbnail());
             log.debug("缩略图已删除: fileId={}, thumbnail={}", fileDO.getId(), fileDO.getThumbnail());
         } catch (Exception e) {

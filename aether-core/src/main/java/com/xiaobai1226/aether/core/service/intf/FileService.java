@@ -74,5 +74,14 @@ public interface FileService {
     FileDO copyFileToStorageSource(FileDO sourceFileDO, String sourceStoragePath, String targetStoragePath,
             Long targetStorageId);
 
+    /**
+     * 更新文件的缩略图路径
+     *
+     * @param fileId    文件ID
+     * @param thumbnail 缩略图路径
+     * @author bai
+     */
+    void updateThumbnail(Long fileId, String thumbnail);
+
 //    Integer mergeFiless(Integer userId, String taskId);
 }

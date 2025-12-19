@@ -1,12 +1,9 @@
 package com.xiaobai1226.aether.core.task;
 
 import cn.hutool.core.collection.CollUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xiaobai1226.aether.core.service.impl.StorageMigrationService;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
-import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.scheduling.annotation.Scheduled;
@@ -24,9 +21,6 @@ import java.util.List;
 @Slf4j
 public class StorageMigrationScheduler {
 
-    @Db
-    private UserFileMapper userFileMapper;
-
     @Inject
     private StorageMigrationService migrationService;
 
@@ -39,11 +33,7 @@ public class StorageMigrationScheduler {
     public void processPendingMigrations() {
         try {
             // 1. 查找待迁移文件（每次处理10个）
-            List<UserFileDO> pendingFiles = userFileMapper.selectList(
-                    new LambdaQueryWrapper<UserFileDO>()
-                            .eq(UserFileDO::getMigrationPending, 1)
-                            .last("LIMIT 10")
-            );
+            List<UserFileDO> pendingFiles = migrationService.getPendingMigrationFiles(10);
 
             if (CollUtil.isEmpty(pendingFiles)) {
                 return;
@@ -72,15 +62,5 @@ public class StorageMigrationScheduler {
         } catch (Exception e) {
             log.error("迁移调度任务执行失败", e);
         }
-    }
-
-    /**
-     * 获取待迁移文件数量（用于监控）
-     */
-    public long getPendingMigrationCount() {
-        return userFileMapper.selectCount(
-                new LambdaQueryWrapper<UserFileDO>()
-                        .eq(UserFileDO::getMigrationPending, 1)
-        );
     }
 }

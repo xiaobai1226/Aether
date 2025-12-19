@@ -1,6 +1,7 @@
 package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.xiaobai1226.aether.common.exception.FailResultException;
@@ -100,6 +101,20 @@ public class StorageMigrationService {
                 markForMigration(file.getId(), targetStorageSourceId, userId);
             }
         }
+    }
+
+    /**
+     * 获取待迁移的文件列表（供定时任务调用）
+     * 
+     * @param limit 查询数量限制
+     * @return 待迁移的文件列表
+     */
+    public List<UserFileDO> getPendingMigrationFiles(int limit) {
+        return userFileMapper.selectList(
+            new LambdaQueryWrapper<UserFileDO>()
+                .eq(UserFileDO::getMigrationPending, 1)
+                .last("LIMIT " + limit)
+        );
     }
 
     /**

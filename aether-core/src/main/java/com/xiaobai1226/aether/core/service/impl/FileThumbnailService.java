@@ -130,8 +130,7 @@ public class FileThumbnailService {
      */
     private boolean generateImageThumbnail(String sourcePath, String thumbnailPath) {
         try {
-            ImageUtils.createThumbnail(new File(sourcePath), 200, new File(thumbnailPath));
-            return true;
+            return ImageUtils.generateThumbnail(sourcePath, thumbnailPath, 200, -1);
         } catch (Exception e) {
             log.error("生成图片缩略图失败", e);
             return false;
@@ -143,8 +142,7 @@ public class FileThumbnailService {
      */
     private boolean generateVideoThumbnail(String sourcePath, String thumbnailPath) {
         try {
-            VideoUtils.createVideoThumbnail(new File(sourcePath), new File(thumbnailPath));
-            return true;
+            return VideoUtils.generateThumbnail(sourcePath, thumbnailPath, 200);
         } catch (Exception e) {
             log.error("生成视频缩略图失败", e);
             return false;
