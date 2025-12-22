@@ -409,7 +409,7 @@ const handleMove = (targetPath: string) => {
   }
 
   const data: MoveRequest = {
-    sourceIds: currentMoveOrCopyFileIds.value.join(',')
+    sourceIds: currentMoveOrCopyFileIds.value
   }
 
   if (targetPath != null) {
@@ -458,7 +458,7 @@ const handleCopy = (targetPath: string) => {
   }
 
   const data: CopyRequest = {
-    sourceIds: currentMoveOrCopyFileIds.value.join(',')
+    sourceIds: currentMoveOrCopyFileIds.value
   }
 
   if (targetPath != null) {
@@ -518,7 +518,7 @@ const delFile = (userFileInfo: UserFileInfo) => {
 const handleDelete = (currentDelFileIds: Array<number>, message: string) => {
   Confirm(message, () => {
     const data: DeleteRequest = {
-      ids: currentDelFileIds.join(',')
+      ids: currentDelFileIds
     }
 
     del(data).then(() => {

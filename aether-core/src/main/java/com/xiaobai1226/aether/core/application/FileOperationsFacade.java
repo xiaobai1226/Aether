@@ -237,17 +237,7 @@ public class FileOperationsFacade {
      * @param userId 用户ID
      */
     public void move(MoveVO moveVO, Long userId) {
-        // 1. 参数转换
-        if (moveVO == null || StrUtil.isEmpty(moveVO.getSourceIds())) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
-        }
-
-        List<Long> sourceIds = Arrays.stream(moveVO.getSourceIds().split(StrUtil.COMMA))
-                .mapToLong(Long::parseLong)
-                .boxed()
-                .collect(Collectors.toList());
-
-        // 2. 获取目标ID
+        // 1. 获取目标ID
         Long targetId = 0L;
         if (StrUtil.isNotEmpty(moveVO.getTargetPath())) {
             var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, moveVO.getTargetPath());
@@ -257,8 +247,8 @@ public class FileOperationsFacade {
             targetId = targetUserFile.getId();
         }
 
-        // 3. 调用UseCase执行业务逻辑
-        moveFileUseCase.execute(sourceIds, targetId, userId);
+        // 2. 调用UseCase执行业务逻辑
+        moveFileUseCase.execute(moveVO.getSourceIds(), targetId, userId);
     }
 
     /**
@@ -268,17 +258,7 @@ public class FileOperationsFacade {
      * @param userId 用户ID
      */
     public void copy(CopyVO copyVO, Long userId) {
-        // 1. 参数转换
-        if (copyVO == null || StrUtil.isEmpty(copyVO.getSourceIds())) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
-        }
-
-        List<Long> sourceIds = Arrays.stream(copyVO.getSourceIds().split(StrUtil.COMMA))
-                .mapToLong(Long::parseLong)
-                .boxed()
-                .collect(Collectors.toList());
-
-        // 2. 获取目标ID
+        // 1. 获取目标ID
         Long targetId = 0L;
         if (StrUtil.isNotEmpty(copyVO.getTargetPath())) {
             var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, copyVO.getTargetPath());
@@ -288,8 +268,8 @@ public class FileOperationsFacade {
             targetId = targetUserFile.getId();
         }
 
-        // 3. 调用UseCase执行业务逻辑
-        copyFileUseCase.execute(sourceIds, targetId, userId);
+        // 2. 调用UseCase执行业务逻辑
+        copyFileUseCase.execute(copyVO.getSourceIds(), targetId, userId);
     }
 
     /**
@@ -299,18 +279,8 @@ public class FileOperationsFacade {
      * @param userId   用户ID
      */
     public void deleteToRecycle(DeleteVO deleteVO, Long userId) {
-        // 1. 参数转换
-        if (deleteVO == null || StrUtil.isEmpty(deleteVO.getIds())) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
-        }
-
-        List<Long> ids = Arrays.stream(deleteVO.getIds().split(StrUtil.COMMA))
-                .mapToLong(Long::parseLong)
-                .boxed()
-                .collect(Collectors.toList());
-
-        // 2. 调用UseCase执行业务逻辑
-        deleteFileUseCase.execute(ids, userId);
+        // 调用UseCase执行业务逻辑
+        deleteFileUseCase.execute(deleteVO.getIds(), userId);
     }
 
     /**

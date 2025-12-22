@@ -303,7 +303,7 @@ const restoreFileBatch = () => {
 const handleRestore = (currentRecycleIds: Array<string>, message: string) => {
   Confirm(message, () => {
     const data: DeleteOrRestoreRequest = {
-      recycleIds: currentRecycleIds.join(',')
+      recycleIds: currentRecycleIds
     }
 
     restore(data).then(() => {
@@ -369,7 +369,7 @@ const clearRecycleBin = () => {
 const handleDelete = (currentRecycleIds: Array<string>, message: string) => {
   Confirm(message, () => {
     const data: DeleteOrRestoreRequest = {
-      recycleIds: currentRecycleIds.join(',')
+      recycleIds: currentRecycleIds
     }
 
     del(data).then(() => {
