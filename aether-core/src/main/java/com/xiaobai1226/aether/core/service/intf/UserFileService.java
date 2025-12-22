@@ -39,6 +39,17 @@ public interface UserFileService extends IService<UserFileDO> {
         UserFileDO getParentFolderByPath(final Long userId, Long parentId, String path);
 
         /**
+         * 根据path获取文件夹DTO（包含存储源信息）
+         * path为空时返回根目录
+         *
+         * @param userId 用户ID
+         * @param path   文件夹路径
+         * @return 文件夹DTO
+         * @author bai
+         */
+        UserFolderDTO getFolderDTO(final Long userId, String path);
+
+        /**
          * 根据path获取父文件夹ID，如果不存在则创建这个文件夹
          *
          * @param userId         用户ID

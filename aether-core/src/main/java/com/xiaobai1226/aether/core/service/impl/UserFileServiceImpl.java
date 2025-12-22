@@ -982,6 +982,48 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
+    public UserFolderDTO getFolderDTO(Long userId, String path) {
+
+        UserFolderDTO userFolderDTO = null;
+
+        // 如果path为空，返回根目录
+        if (StrUtil.isEmpty(path) || path.equals("/")) {
+            userFolderDTO = UserFolderDTO.createRoot(userId);
+        } else {
+            // 获取文件夹
+            UserFileDO userFile = getParentFolderByPath(userId, 0L, path);
+            if (userFile != null) {
+                userFolderDTO = BeanUtil.copyProperties(userFile, UserFolderDTO.class);
+            }
+        }
+
+        if (userFolderDTO == null) {
+            return null;
+        }
+
+        StorageSourceDO storageSource = null;
+
+        if (userFolderDTO.getId() == 0) {
+            storageSource = storageSourceService.getDefaultStorageSource(userId);
+            if (storageSource != null) {
+                userFolderDTO.setStorageSource(storageSource);
+                userFolderDTO.setStorageSourceId(storageSource.getId());
+            }
+        } else if (userFolderDTO.getStorageSourceId() != null) {
+            storageSource = storageSourceService.getStorageSourceById(userFolderDTO.getStorageSourceId(), userId);
+            if (storageSource != null) {
+                userFolderDTO.setStorageSource(storageSource);
+            }
+        }
+
+        if (userFolderDTO.getStorageSource() == null) {
+            return null;
+        }
+
+        return userFolderDTO;
+    }
+
+    @Override
     @Tran
     public boolean migrateUserFileStorageSource(Long userFileId, Long storageSourceId, final Long userId) {
         // 检查文件/文件夹是否存在

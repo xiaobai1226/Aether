@@ -125,16 +125,14 @@ public class FileOperationsFacade {
      * 分页获取文件夹列表（查询型：统一入口，避免 Controller 直调 Service）
      */
     public PageResult<UserFileDO> getFolderListByPage(UserFolderVO userFolderVO, Long userId) {
-        Long parentId = 0L;
-        if (StrUtil.isNotEmpty(userFolderVO.getPath())) {
-            var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, userFolderVO.getPath());
-            if (parentUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_PARENT_FOLDER_NO_EXIST);
-            }
-            parentId = parentUserFile.getId();
+        // 使用 getFolderDTO 简化 path 到 parentId 的转换
+        var folder = userFileService.getFolderDTO(userId, userFolderVO.getPath());
+
+        if (folder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
-        return userFileService.getFolderList(userId, parentId, userFolderVO);
+        return userFileService.getFolderList(userId, folder.getId(), userFolderVO);
     }
 
     /**
@@ -481,8 +479,7 @@ public class FileOperationsFacade {
         setFolderStorageSourceUseCase.execute(
                 setFolderStorageSourceVO.getFolderId(),
                 setFolderStorageSourceVO.getStorageSourceId(),
-                userId
-        );
+                userId);
     }
 
     /**
