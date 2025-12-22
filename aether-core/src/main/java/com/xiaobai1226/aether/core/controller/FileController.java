@@ -83,7 +83,7 @@ public class FileController {
      */
     @Post
     @Mapping(path = "/uploadFile")
-    public UploadResultDTO uploadFile(@Validated UploadFileVO uploadFileVO, UploadedFile file,
+    public UploadResultDTO uploadFile(@Validated UploadFileVO uploadFileVO, @Param("file") UploadedFile file,
             @CurrentUserId Long userId) {
         return fileOperationsFacade.uploadFile(uploadFileVO, file, userId);
     }
