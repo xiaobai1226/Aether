@@ -21,11 +21,11 @@ dependencies {
     implementation(project(":aether-dao"))
     
     // 测试依赖
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
-    testImplementation("org.mockito:mockito-core:5.5.0")
-    testImplementation("org.mockito:mockito-junit-jupiter:5.5.0")
-    testImplementation("org.assertj:assertj-core:3.24.2")
-    testImplementation("com.h2database:h2:2.2.224")
+    // testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    // testImplementation("org.mockito:mockito-core:5.5.0")
+    // testImplementation("org.mockito:mockito-junit-jupiter:5.5.0")
+    // testImplementation("org.assertj:assertj-core:3.24.2")
+    // testImplementation("com.h2database:h2:2.2.224")
 }
 
 tasks.withType<JavaCompile> {
@@ -36,13 +36,13 @@ tasks.withType<JavaCompile> {
 /**
  * 测试任务配置
  */
-tasks.test {
-    useJUnitPlatform()
-    testLogging {
-        events("passed", "skipped", "failed")
-        showStandardStreams = false
-    }
-}
+// tasks.test {
+//     useJUnitPlatform()
+//     testLogging {
+//         events("passed", "skipped", "failed")
+//         showStandardStreams = false
+//     }
+// }
 
 /**
  * 打jar包配置

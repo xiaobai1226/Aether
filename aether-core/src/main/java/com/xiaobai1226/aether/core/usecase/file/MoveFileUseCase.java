@@ -179,7 +179,7 @@ public class MoveFileUseCase {
                 if (!Objects.equals(sourceFile.getStorageSourceId(), targetStorageSourceId)) {
                     // 标记为待迁移（异步处理）
                     migrationService.markForMigration(sourceFile.getId(), targetStorageSourceId, userId);
-                    log.info("文件已标记为待迁移: fileId={}, targetStorageId={}", 
+                    log.info("文件已标记为待迁移: fileId={}, targetStorageId={}",
                             sourceFile.getId(), targetStorageSourceId);
                 }
             }
