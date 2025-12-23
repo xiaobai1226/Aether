@@ -78,7 +78,7 @@ public class CopyFileUseCase {
         // quotaService.checkEnough(userId, totalSize);
 
         // 9. 执行复制
-        userFileService.copy(targetFolder.getId(), userId, sourceFileTreeList, totalSize);
+        userFileService.copy(targetFolder, userId, sourceFileTreeList, totalSize);
 
         log.info("文件复制完成: sourceIds={}, targetId={}, totalSize={}", sourceIds, targetFolder.getId(), totalSize);
     }
