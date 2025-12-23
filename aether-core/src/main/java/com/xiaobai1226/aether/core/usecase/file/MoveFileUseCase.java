@@ -2,6 +2,7 @@ package com.xiaobai1226.aether.core.usecase.file;
 
 import cn.hutool.core.collection.CollUtil;
 import com.xiaobai1226.aether.common.exception.FailResultException;
+import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.impl.StorageMigrationService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
@@ -45,60 +46,38 @@ public class MoveFileUseCase {
     /**
      * 执行移动操作
      * 
-     * @param sourceIds 源文件/文件夹ID列表
-     * @param targetId  目标文件夹ID（0表示根目录）
-     * @param userId    用户ID
+     * @param sourceIds    源文件/文件夹ID列表
+     * @param targetFolder 目标文件夹DTO（可选，包含存储源信息，避免重复查询）
+     * @param userId       用户ID
      */
     @Tran
-    public void execute(List<Long> sourceIds, Long targetId, Long userId) {
-        log.info("开始移动文件: sourceIds={}, targetId={}, userId={}", sourceIds, targetId, userId);
+    public void execute(List<Long> sourceIds, UserFolderDTO targetFolder, Long userId) {
+        log.info("开始移动文件: sourceIds={}, targetId={}, userId={}", sourceIds, targetFolder.getId(), userId);
 
         // 1. 校验源文件
         List<UserFileDO> sourceFiles = userFileService.getUserFileByIdsAndUserId(sourceIds, userId, NORMAL);
-        validateSourceFiles(sourceFiles, sourceIds);
-
-        // 2. 校验目标文件夹
-        validateTargetFolder(targetId, userId);
+        if (CollUtil.isEmpty(sourceFiles) || sourceFiles.size() != sourceIds.size()) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
+        }
 
         // 3. 检查是否移动到当前目录
-        if (Objects.equals(sourceFiles.get(0).getParentId(), targetId)) {
+        if (Objects.equals(sourceFiles.get(0).getParentId(), targetFolder.getId())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_IN_CURRENT_FOLDER);
         }
 
         // 4. 检查是否移动到自身或子目录
-        validateNotMovingToSubfolder(sourceFiles, targetId, userId);
+        validateNotMovingToSubfolder(sourceFiles, targetFolder.getId(), userId);
 
         // 5. 检查重名
-        validateNoNameConflict(sourceFiles, targetId, userId);
+        validateNoNameConflict(sourceFiles, targetFolder.getId(), userId);
 
         // 6. 更新父目录
-        userFileService.updateParentIdByIds(sourceIds, targetId, userId, NORMAL);
+        userFileService.updateParentIdByIds(sourceIds, targetFolder.getId(), userId, NORMAL);
 
-        // 7. 处理存储源迁移（异步）
-        handleStorageMigrationIfNeeded(sourceFiles, targetId, userId);
+        // 7. 处理存储源迁移（异步），直接使用传入的 targetFolder
+        handleStorageMigrationIfNeeded(sourceFiles, targetFolder, userId);
 
-        log.info("文件移动完成: sourceIds={}, targetId={}", sourceIds, targetId);
-    }
-
-    /**
-     * 校验源文件
-     */
-    private void validateSourceFiles(List<UserFileDO> sourceFiles, List<Long> sourceIds) {
-        if (CollUtil.isEmpty(sourceFiles) || sourceFiles.size() != sourceIds.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_MOVE_CONTENT_EMPTY);
-        }
-    }
-
-    /**
-     * 校验目标文件夹
-     */
-    private void validateTargetFolder(Long targetId, Long userId) {
-        if (targetId != 0) {
-            var targetFolder = userFileService.getUserFileByIdAndUserId(targetId, userId, NORMAL);
-            if (targetFolder == null || !UserFileItemTypeEnum.isFolder(targetFolder.getItemType())) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
-            }
-        }
+        log.info("文件移动完成: sourceIds={}, targetId={}", sourceIds, targetFolder.getId());
     }
 
     /**
@@ -164,38 +143,20 @@ public class MoveFileUseCase {
     /**
      * 处理存储源迁移（如果需要）
      * 核心改进：异步标记，不阻塞用户操作
+     * 优化：直接使用传入的 targetFolder，避免重复查询
      */
-    private void handleStorageMigrationIfNeeded(List<UserFileDO> sourceFiles, Long targetId, Long userId) {
-        // 获取目标存储源ID
-        Long targetStorageSourceId = getTargetStorageSourceId(targetId, userId);
-        if (targetStorageSourceId == null) {
-            return;
-        }
-
+    private void handleStorageMigrationIfNeeded(List<UserFileDO> sourceFiles, UserFolderDTO targetFolder, Long userId) {
         // 检查每个文件是否需要迁移
         for (UserFileDO sourceFile : sourceFiles) {
             // 只处理继承类型的文件/文件夹
             if (sourceFile.getStorageSourceType() != null && sourceFile.getStorageSourceType() == 1) {
-                if (!Objects.equals(sourceFile.getStorageSourceId(), targetStorageSourceId)) {
+                if (!Objects.equals(sourceFile.getStorageSourceId(), targetFolder.getStorageSourceId())) {
                     // 标记为待迁移（异步处理）
-                    migrationService.markForMigration(sourceFile.getId(), targetStorageSourceId, userId);
+                    migrationService.markForMigration(sourceFile.getId(), targetFolder.getStorageSourceId(), userId);
                     log.info("文件已标记为待迁移: fileId={}, targetStorageId={}",
-                            sourceFile.getId(), targetStorageSourceId);
+                            sourceFile.getId(), targetFolder.getStorageSourceId());
                 }
             }
-        }
-    }
-
-    /**
-     * 获取目标存储源ID
-     */
-    private Long getTargetStorageSourceId(Long targetId, Long userId) {
-        if (targetId == 0) {
-            var defaultStorage = storageSourceService.getDefaultStorageSource(userId);
-            return defaultStorage != null ? defaultStorage.getId() : null;
-        } else {
-            var targetFolder = userFileService.getUserFileByIdAndUserId(targetId, userId, NORMAL);
-            return targetFolder != null ? targetFolder.getStorageSourceId() : null;
         }
     }
 }

@@ -2,6 +2,7 @@ package com.xiaobai1226.aether.core.usecase.file;
 
 import cn.hutool.core.collection.CollUtil;
 import com.xiaobai1226.aether.common.exception.FailResultException;
+import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.intf.QuotaService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
@@ -41,13 +42,13 @@ public class CopyFileUseCase {
     /**
      * 执行复制操作
      * 
-     * @param sourceIds 源文件/文件夹ID列表
-     * @param targetId  目标文件夹ID（0表示根目录）
-     * @param userId    用户ID
+     * @param sourceIds    源文件/文件夹ID列表
+     * @param targetFolder 目标文件夹DTO（可选，避免重复查询）
+     * @param userId       用户ID
      */
     @Tran
-    public void execute(List<Long> sourceIds, Long targetId, Long userId) {
-        log.info("开始复制文件: sourceIds={}, targetId={}, userId={}", sourceIds, targetId, userId);
+    public void execute(List<Long> sourceIds, UserFolderDTO targetFolder, Long userId) {
+        log.info("开始复制文件: sourceIds={}, targetId={}, userId={}", sourceIds, targetFolder.getId(), userId);
 
         // 1. 查找源文件树
         var sourceFileTreeList = userFileService.getUserFileTreeListByIds(sourceIds, userId, NORMAL);
@@ -56,19 +57,16 @@ public class CopyFileUseCase {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
         }
 
-        // 2. 校验目标目录
-        validateTargetFolder(targetId, userId);
-
         // 3. 检查是否复制到当前目录
-        if (Objects.equals(sourceFileTreeList.get(0).getParentId(), targetId)) {
+        if (Objects.equals(sourceFileTreeList.get(0).getParentId(), targetFolder.getId())) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_IN_CURRENT_FOLDER);
         }
 
         // 4. 检查是否复制到自身或子目录
-        validateNotCopyingToSubfolder(sourceFileTreeList, targetId, userId);
+        validateNotCopyingToSubfolder(sourceFileTreeList, targetFolder.getId(), userId);
 
         // 5. 检查重名
-        validateNoNameConflict(sourceFileTreeList, targetId, userId);
+        validateNoNameConflict(sourceFileTreeList, targetFolder.getId(), userId);
 
         // 6. 递归获取完整文件树
         userFileService.getSubUserFileTree(userId, sourceFileTreeList);
@@ -76,25 +74,13 @@ public class CopyFileUseCase {
         // 7. 计算总占用空间
         var totalSize = userFileService.getUserFileTreeSpaceUsage(sourceFileTreeList);
 
-        // 8. 检查配额
-        quotaService.checkEnough(userId, totalSize);
+        // 8. TODO 检查配额
+        // quotaService.checkEnough(userId, totalSize);
 
         // 9. 执行复制
-        userFileService.copy(targetId, userId, sourceFileTreeList, totalSize);
+        userFileService.copy(targetFolder.getId(), userId, sourceFileTreeList, totalSize);
 
-        log.info("文件复制完成: sourceIds={}, targetId={}, totalSize={}", sourceIds, targetId, totalSize);
-    }
-
-    /**
-     * 校验目标文件夹
-     */
-    private void validateTargetFolder(Long targetId, Long userId) {
-        if (targetId != 0) {
-            var targetFolder = userFileService.getUserFileByIdAndUserId(targetId, userId, NORMAL);
-            if (targetFolder == null || !UserFileItemTypeEnum.isFolder(targetFolder.getItemType())) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
-            }
-        }
+        log.info("文件复制完成: sourceIds={}, targetId={}, totalSize={}", sourceIds, targetFolder.getId(), totalSize);
     }
 
     /**

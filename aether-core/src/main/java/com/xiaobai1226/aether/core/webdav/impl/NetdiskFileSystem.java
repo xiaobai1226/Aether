@@ -90,11 +90,12 @@ public class NetdiskFileSystem implements FileSystem {
 
         Long parentId = 0L;
         if (StrUtil.isNotEmpty(reqPath)) {
-            var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, reqPath);
-            if (parentUserFile == null) {
+            // 使用 getFolderDTO 简化 path 到 parentId 的转换
+            var folder = userFileService.getFolderDTO(userId, reqPath);
+            if (folder == null) {
                 return null;
             }
-            parentId = parentUserFile.getId();
+            parentId = folder.getId();
         }
 
         var userFileDTOListPage = userFileService.getFileList(userId, parentId, null);

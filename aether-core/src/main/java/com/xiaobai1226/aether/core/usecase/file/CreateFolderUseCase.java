@@ -2,6 +2,7 @@ package com.xiaobai1226.aether.core.usecase.file;
 
 import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.common.exception.FailResultException;
+import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 import lombok.extern.slf4j.Slf4j;
@@ -38,13 +39,10 @@ public class CreateFolderUseCase {
     public UserFileDO execute(String folderName, String parentPath, Long userId) {
         log.info("开始创建文件夹: folderName={}, parentPath={}, userId={}", folderName, parentPath, userId);
 
-        // 1. 获取父文件夹
-        UserFileDO parentFolder = null;
-        if (StrUtil.isNotEmpty(parentPath)) {
-            parentFolder = userFileService.getParentFolderByPath(userId, 0L, parentPath);
-            if (parentFolder == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
+        // 1. 使用 getFolderDTO 获取父文件夹（包含存储源信息）
+        UserFolderDTO parentFolder = userFileService.getFolderDTO(userId, parentPath);
+        if (parentFolder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
         // 2. 创建文件夹（包含重名检查）

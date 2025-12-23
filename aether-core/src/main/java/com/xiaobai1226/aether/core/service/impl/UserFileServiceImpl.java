@@ -161,7 +161,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public UserFileDO getParentFolderByPathOrCreate(final Long userId, UserFileDO parentUserFile, String path) {
+    public UserFileDO getParentFolderByPathOrCreate(final Long userId, UserFolderDTO parentFolder, String path) {
         if (StrUtil.isEmpty(path)) {
             return null;
         }
@@ -177,7 +177,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         }
 
         LambdaQueryChainWrapper<UserFileDO> lambdaQuery;
-        UserFileDO userFileDO = parentUserFile != null ? parentUserFile : new UserFileDO().setId(0L);
+        UserFileDO userFileDO = parentFolder;
 
         // 是否新建
         var isCreate = false;
@@ -197,11 +197,13 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                             .eq(UserFileDO::getItemType, UserFileItemTypeEnum.FOLDER.flag()).one();
 
                     if (userFileDO == null) {
-                        userFileDO = newFolder(dirs[i], userFileDO, userId);
+                        var userFolderDTO = BeanUtil.copyProperties(userFileDO, UserFolderDTO.class);
+                        userFileDO = newFolder(dirs[i], userFolderDTO, userId);
                         isCreate = true;
                     }
                 } else {
-                    userFileDO = newFolder(dirs[i], userFileDO, userId);
+                    var userFolderDTO = BeanUtil.copyProperties(userFileDO, UserFolderDTO.class);
+                    userFileDO = newFolder(dirs[i], userFolderDTO, userId);
                 }
             } finally {
                 LockManager.unlock(lockKey);
@@ -306,14 +308,9 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public UserFileDO newFolder(String folderName, UserFileDO parentUserFileDO, final Long userId) {
-        // 获取存储源ID
-        Long storageSourceId = getStorageSourceIdByParent(parentUserFileDO, userId);
-        // 父文件夹ID
-        long parentId = parentUserFileDO != null ? parentUserFileDO.getId() : 0L;
-
-        return addUserFile(userId, null, parentId, folderName, UserFileItemTypeEnum.FOLDER, NORMAL, null,
-                storageSourceId);
+    public UserFileDO newFolder(String folderName, UserFolderDTO parentFolder, final Long userId) {
+        return addUserFile(userId, null, parentFolder.getId(), folderName, UserFileItemTypeEnum.FOLDER, NORMAL, null,
+                parentFolder.getStorageSourceId());
     }
 
     @Override
@@ -358,37 +355,23 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public UploadResultDTO secondUploadFile(final Long userId, UserFileDO parentUserFile, UploadFileVO uploadFileVO,
+    public UploadResultDTO secondUploadFile(final Long userId, UserFolderDTO parentFolder, UploadFileVO uploadFileVO,
             FileDO fileDO) {
-        // 获取父文件夹的存储源ID
-        Long storageSourceId = getStorageSourceIdByParent(parentUserFile, userId);
-
         // 插入数据库
-        addUserFile(userId, fileDO.getId(), parentUserFile.getParentId(), uploadFileVO.getFileName(), FILE, NORMAL,
+        addUserFile(userId, fileDO.getId(), parentFolder.getId(), uploadFileVO.getFileName(), FILE, NORMAL,
                 fileDO.getSize(),
-                storageSourceId);
+                parentFolder.getStorageSourceId());
         return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_SECOND.id());
     }
 
     @Override
-    public FileDO trySecondUpload(final Long userId, UserFileDO parentUserFile, UploadFileVO uploadFileVO) {
+    public FileDO trySecondUpload(final Long userId, UserFolderDTO parentUserFile, UploadFileVO uploadFileVO) {
         // TODO 检测存储空间是否足够
         // var userSpaceUsage = userService.getUserSpaceUsage(userId);
         // if (userSpaceUsage == null || userSpaceUsage.getRealRemainStorage() <
         // uploadFileVO.getFileSize()) {
         // throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
         // }
-
-        // 获取目标存储源ID和存储源对象
-        Long targetStorageSourceId = getStorageSourceIdByParent(parentUserFile, userId);
-        if (targetStorageSourceId == null) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-        }
-
-        var targetStorageSource = storageSourceService.getStorageSourceById(targetStorageSourceId, userId);
-        if (targetStorageSource == null) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-        }
 
         // 检测文件是否已存在（获取所有相同identifier的文件列表）
         List<FileDO> existingFileList = fileService.getFileListByIdentifier(uploadFileVO.getIdentifier());
@@ -401,7 +384,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         // 查找是否有同存储源的文件
         FileDO storageFileDO = existingFileList.stream()
                 .filter(f -> f.getStorageSourceId() != null
-                        && f.getStorageSourceId().equals(targetStorageSourceId))
+                        && f.getStorageSourceId().equals(parentUserFile.getStorageSourceId()))
                 .findFirst()
                 .orElse(null);
 
@@ -424,7 +407,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 复制文件到目标存储源
         storageFileDO = fileService.copyFileToStorageSource(sourceFileDO, sourceStorageSourceDO.getPath(),
-                targetStorageSource.getPath(), targetStorageSourceId);
+                parentUserFile.getStorageSource().getPath(), parentUserFile.getStorageSourceId());
 
         // TODO 如果前端传过来的文件大小，小于数据库中记录的，则重新判断空间是否足够
         // if (uploadFileVO.getFileSize() < newFileDO.getSize()) {
@@ -439,7 +422,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Tran
     @Override
-    public UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, UserFileDO parentUserFile,
+    public UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, UserFolderDTO parentFolder,
             UploadFileVO uploadFileVO, UploadFileCacheDTO uploadFileCacheDTO) throws IOException {
         UploadFileTempDTO uploadTempFileDTO;
 
@@ -449,7 +432,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         var tempDir = FileUtil.file(tempFolder);
         uploadFileCacheDTO.setTempDir(tempDir);
 
-        long parentId = parentUserFile != null ? parentUserFile.getId() : 0L;
+        // long parentId = parentUserFile != null ? parentUserFile.getId() : 0L;
 
         // 如果是第一片
         if (uploadFileVO.getChunkIndex() == 0) {
@@ -464,7 +447,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             var uploadFileTempDTO = BeanUtil.toBean(uploadFileVO, UploadFileTempDTO.class);
             uploadFileTempDTO.setUploadedSize(0L);
             uploadFileTempDTO.setTempFolder(tempFolder);
-            uploadFileTempDTO.setParentId(parentId);
+            uploadFileTempDTO.setParentId(parentFolder.getId());
             fileCache.putUploadTempFileInfo(userId, uploadFileVO.getTaskId(), uploadFileTempDTO);
 
             // 如果文件夹不存在则创建目录
@@ -515,21 +498,10 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         // 获取缓存中数据
         uploadTempFileDTO = fileCache.getUploadTempFileInfo(userId, uploadFileVO.getTaskId());
 
-        // 获取存储源（用于文件存储）
-        var storageSourceId = getStorageSourceIdByParent(parentUserFile, userId);
-        if (storageSourceId == null) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-        }
-
-        var storageSource = storageSourceService.getStorageSourceById(storageSourceId, userId);
-        if (storageSource == null) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-        }
-
         // 如果是最后一片，执行合并分片操作（文件存储到存储源）
         var finalFilePath = fileService.mergeFile(uploadTempFileDTO.getFileName(), uploadFileVO.getTaskId(), tempFolder,
-                storageSource.getPath());
-        var finalFullFilePath = FileUtils.generatePath(storageSource.getPath(), finalFilePath);
+                parentFolder.getStorageSource().getPath());
+        var finalFullFilePath = FileUtils.generatePath(parentFolder.getStorageSource().getPath(), finalFilePath);
         uploadFileCacheDTO.setFinalFilePath(finalFilePath);
 
         // 获取最终文件
@@ -538,15 +510,16 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         var finalFileSize = FileUtil.size(finalFile);
         var finalFileName = finalFile.getName();
 
-        // 如果最终文件大小，大于初始文件大小
-        if (finalFileSize > uploadTempFileDTO.getFileSize()) {
-            // 重新检测文件大小是否足够
-            var userSpaceUsage = userService.getUserSpaceUsage(userId);
-            // 如果空间不足则返回上传失败
-            if (userSpaceUsage.getRealRemainStorage() < (finalFileSize - uploadTempFileDTO.getFileSize())) {
-                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-            }
-        }
+        // TODO 如果最终文件大小，大于初始文件大小
+        // if (finalFileSize > uploadTempFileDTO.getFileSize()) {
+        // // 重新检测文件大小是否足够
+        // var userSpaceUsage = userService.getUserSpaceUsage(userId);
+        // // 如果空间不足则返回上传失败
+        // if (userSpaceUsage.getRealRemainStorage() < (finalFileSize -
+        // uploadTempFileDTO.getFileSize())) {
+        // throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
+        // }
+        // }
 
         var thumbnailSuffix = FileTypeEnum.isGif(FileNameUtil.extName(finalFileName).toLowerCase())
                 ? SystemConsts.THUMBNAIL_GIF_SUFFIX
@@ -575,21 +548,27 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         // 写入File库，获取文件ID（storageSourceId已在前面获取）
         var fileDO = fileService.addFile(finalFileName, finalFilePath, finalFileSize, uploadTempFileDTO.getIdentifier(),
-                thumbnailFileName, storageSourceId);
+                thumbnailFileName, parentFolder.getStorageSourceId());
 
         if (fileDO == null) {
             throw new FailResultException(SYSTEM_ERROR);
         }
 
         // 插入数据库
-        addUserFile(userId, fileDO.getId(), parentId, uploadFileVO.getFileName(), FILE, NORMAL, finalFileSize,
-                storageSourceId);
+        addUserFile(userId, fileDO.getId(), parentFolder.getId(), uploadFileVO.getFileName(), FILE, NORMAL,
+                finalFileSize, parentFolder.getStorageSourceId());
         // 删除缓存数据
         fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
         quotaService.releaseUploading(userId, uploadTempFileDTO.getFileSize());
         FileUtil.del(tempDir);
 
         return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FINISH.id());
+    }
+
+    @Override
+    public UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFolderDTO parentFolder,
+            String fileName, String identifier) throws IOException {
+        return uploadWholeFile(localFile, userId, (UserFileDO) parentFolder, fileName, identifier);
     }
 
     @Override
@@ -610,13 +589,13 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         // 预占上传空间
         quotaService.reserveUploading(userId, fileSize);
 
-        // 选择存储源
-        Long storageSourceId = getStorageSourceIdByParent(parentUserFile, userId);
-        var storageSource = storageSourceService.getStorageSourceById(storageSourceId, userId);
+        // 选择存储源（优化：如果 parentUserFile 是 UserFolderDTO，直接使用其存储源信息）
+        var storageSource = getStorageSourceByParent(parentUserFile, userId);
         if (storageSource == null) {
             quotaService.releaseUploading(userId, fileSize);
             throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
         }
+        Long storageSourceId = storageSource.getId();
 
         // 生成任务ID与存储文件名
         String taskId = IdUtil.simpleUUID();
@@ -825,42 +804,23 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Tran
     @Override
-    public void copy(Long targetId, final Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList,
+    public void copy(UserFolderDTO targetFolder, final Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList,
             Long totalSize) {
+        // TODO 存储空间
         if (totalSize > 0) {
             // 预占上传空间（整个文件大小）
-            quotaService.reserveUploading(userId, totalSize);
+            // quotaService.reserveUploading(userId, totalSize);
         }
 
-        // 获取目标目录的存储源ID
-        Long targetStorageSourceId;
-        if (targetId == 0) {
-            // 目标是根目录，获取默认存储源
-            var defaultStorageSource = storageSourceService.getDefaultStorageSource(userId);
-            if (defaultStorageSource != null) {
-                targetStorageSourceId = defaultStorageSource.getId();
-            } else {
-                targetStorageSourceId = null;
-            }
-        } else {
-            // 获取目标目录的存储源
-            var targetUserFile = getUserFileByIdAndUserId(targetId, userId, NORMAL);
-            if (targetUserFile != null) {
-                targetStorageSourceId = targetUserFile.getStorageSourceId();
-            } else {
-                targetStorageSourceId = null;
-            }
-        }
+        insertUserFileTree(sourceUserFileTreeDTOList, userId, targetFolder);
 
-        insertUserFileTree(sourceUserFileTreeDTOList, userId, targetId, targetStorageSourceId);
-
-        // 更新用户所使用的空间
-        if (totalSize > 0) {
-            // 更新用户已使用存储空间
-            quotaService.increaseUsed(userId, totalSize);
-            // 释放上传预占（整个文件大小）
-            quotaService.releaseUploading(userId, totalSize);
-        }
+        // TODO 更新用户所使用的空间
+        // if (totalSize > 0) {
+        // // 更新用户已使用存储空间
+        // quotaService.increaseUsed(userId, totalSize);
+        // // 释放上传预占（整个文件大小）
+        // quotaService.releaseUploading(userId, totalSize);
+        // }
     }
 
     @Tran
@@ -961,7 +921,6 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Override
     public Long getStorageSourceIdByParent(UserFileDO parentUserFile, Long userId) {
-
         StorageSourceDO storageSource = null;
 
         // 如果是根目录，使用默认存储源
@@ -974,11 +933,39 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             return storageSource.getId();
         }
 
+        // 优化：如果传入的是 UserFolderDTO 且已包含存储源信息，直接返回，避免重复查询
+        if (parentUserFile instanceof UserFolderDTO folder && folder.getStorageSource() != null) {
+            return folder.getStorageSource().getId();
+        }
+
         if (parentUserFile.getStorageSourceId() == null) {
             throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
         }
 
         return parentUserFile.getStorageSourceId();
+    }
+
+    /**
+     * 根据父文件夹获取存储源对象
+     * 优化：如果传入的是 UserFolderDTO 且已包含存储源信息，直接返回，避免重复查询
+     * 
+     * @param parentUserFile 父文件夹
+     * @param userId         用户ID
+     * @return 存储源对象
+     */
+    private StorageSourceDO getStorageSourceByParent(UserFileDO parentUserFile, Long userId) {
+        // 优化：如果传入的是 UserFolderDTO 且已包含存储源信息，直接返回，避免重复查询
+        if (parentUserFile instanceof UserFolderDTO folder && folder.getStorageSource() != null) {
+            return folder.getStorageSource();
+        }
+
+        // 否则通过 ID 查询
+        Long storageSourceId = getStorageSourceIdByParent(parentUserFile, userId);
+        if (storageSourceId == null) {
+            return null;
+        }
+
+        return storageSourceService.getStorageSourceById(storageSourceId, userId);
     }
 
     @Override
@@ -1339,12 +1326,11 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
      *
      * @param userFileTreeList      要插入的元素集合
      * @param userId                用户ID
-     * @param parentId              父文件夹ID
+     * @param targetFolder          父文件夹
      * @param targetStorageSourceId 目标存储源ID
      */
     @Tran
-    private void insertUserFileTree(List<UserFileTreeDTO> userFileTreeList, Long userId, Long parentId,
-            Long targetStorageSourceId) {
+    private void insertUserFileTree(List<UserFileTreeDTO> userFileTreeList, Long userId, UserFileDO targetFolder) {
         if (CollUtil.isEmpty(userFileTreeList)) {
             return;
         }
@@ -1358,16 +1344,15 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
             userFileDO.setId(null);
             userFileDO.setUserId(userId);
-            userFileDO.setParentId(parentId);
+            userFileDO.setParentId(targetFolder.getId());
             userFileDO.setCreateTime(null);
             userFileDO.setUpdateTime(null);
 
             // 对于继承类型的文件/文件夹，如果目标存储源与原存储源不同，需要更新存储源
-            if (targetStorageSourceId != null && userFileDO.getStorageSourceType() != null
-                    && userFileDO.getStorageSourceType() == 1
-                    && !Objects.equals(userFileDO.getStorageSourceId(), targetStorageSourceId)) {
+            if (userFileDO.getStorageSourceType() == 1
+                    && !Objects.equals(userFileDO.getStorageSourceId(), targetFolder.getStorageSourceId())) {
                 // 更新为目标存储源
-                userFileDO.setStorageSourceId(targetStorageSourceId);
+                userFileDO.setStorageSourceId(targetFolder.getStorageSourceId());
                 // 标记需要迁移
                 needMigrateList.add(userFileDO);
             }
@@ -1394,7 +1379,8 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                         // 获取源存储源和目标存储源
                         var sourceStorageSource = storageSourceService
                                 .getStorageSourceById(oldFileDO.getStorageSourceId(), userId);
-                        var targetStorageSource = storageSourceService.getStorageSourceById(targetStorageSourceId,
+                        var targetStorageSource = storageSourceService.getStorageSourceById(
+                                targetFolder.getStorageSourceId(),
                                 userId);
 
                         if (sourceStorageSource != null && targetStorageSource != null) {
@@ -1402,7 +1388,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                             var newFileDO = fileService.copyFileToStorageSource(oldFileDO,
                                     sourceStorageSource.getPath(),
                                     targetStorageSource.getPath(),
-                                    targetStorageSourceId);
+                                    targetFolder.getStorageSourceId());
 
                             if (newFileDO != null) {
                                 // 更新UserFile记录的fileId
@@ -1425,9 +1411,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             }
 
             // 插入子节点对象，传递当前节点的存储源ID
-            Long childTargetStorageSourceId = userFileList.get(i).getStorageSourceId();
-            insertUserFileTree(userFileTree.getChildUserFileDTOList(), userId, userFileList.get(i).getId(),
-                    childTargetStorageSourceId);
+            insertUserFileTree(userFileTree.getChildUserFileDTOList(), userId, userFileList.get(i));
         }
     }
 

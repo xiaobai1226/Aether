@@ -1,5 +1,6 @@
 package com.xiaobai1226.aether.core.application;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
@@ -13,6 +14,7 @@ import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.core.cache.DownloadCache;
 import com.xiaobai1226.aether.core.domain.dto.UploadFileCacheDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadResultDTO;
+import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.domain.vo.*;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.intf.FileService;
@@ -105,11 +107,12 @@ public class FileOperationsFacade {
     public PageResult<UserFileDTO> getFileListByPage(UserFileVO userFileVO, Long userId) {
         var parentId = 0L;
         if (userFileVO.getCategory() == null && StrUtil.isNotEmpty(userFileVO.getPath())) {
-            var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, userFileVO.getPath());
-            if (parentUserFile == null) {
+            // 使用 getFolderDTO 简化 path 到 parentId 的转换
+            var folder = userFileService.getFolderDTO(userId, userFileVO.getPath());
+            if (folder == null) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_PARENT_FOLDER_NO_EXIST);
             }
-            parentId = parentUserFile.getId();
+            parentId = folder.getId();
         }
 
         if (userFileVO.getSortingField() == null) {
@@ -144,12 +147,10 @@ public class FileOperationsFacade {
      * @return 上传结果
      */
     public UploadResultDTO uploadFile(UploadFileVO uploadFileVO, UploadedFile file, Long userId) {
-        UserFileDO parentUserFile = null;
-        if (StrUtil.isNotEmpty(uploadFileVO.getPath())) {
-            parentUserFile = userFileService.getParentFolderByPath(userId, 0L, uploadFileVO.getPath());
-            if (parentUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
+        // 获取父文件夹对象（包含存储源信息）
+        UserFolderDTO parentFolder = userFileService.getFolderDTO(userId, uploadFileVO.getPath());
+        if (parentFolder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
         // 如果是上传文件夹，判断文件路径
@@ -160,10 +161,14 @@ public class FileOperationsFacade {
                 relativePath = relativePath.substring(0, lastIndex);
             }
 
-            parentUserFile = userFileService.getParentFolderByPathOrCreate(userId, parentUserFile, relativePath);
-            if (parentUserFile == null) {
+            var newParentUserFileDO = userFileService.getParentFolderByPathOrCreate(userId, parentFolder, relativePath);
+            if (newParentUserFileDO == null) {
                 throw new FailResultException(SYSTEM_ERROR);
             }
+            var newParentFolder = BeanUtil.copyProperties(newParentUserFileDO, UserFolderDTO.class);
+            newParentFolder.setStorageSourceId(parentFolder.getStorageSourceId());
+            newParentFolder.setStorageSource(parentFolder.getStorageSource()); // 继承父目录的存储源对象
+            parentFolder = newParentFolder;
         }
 
         // 如果taskId为空，则生成taskId
@@ -175,15 +180,15 @@ public class FileOperationsFacade {
 
         // 如果是第一片文件，尝试秒传
         if (uploadFileVO.getChunkIndex() == 0) {
-            var storageFileDO = userFileService.trySecondUpload(userId, parentUserFile, uploadFileVO);
+            var storageFileDO = userFileService.trySecondUpload(userId, parentFolder, uploadFileVO);
             if (storageFileDO != null) {
-                return userFileService.secondUploadFile(userId, parentUserFile, uploadFileVO, storageFileDO);
+                return userFileService.secondUploadFile(userId, parentFolder, uploadFileVO, storageFileDO);
             }
         }
 
         var uploadFileCacheDTO = new UploadFileCacheDTO();
         try {
-            return userFileService.splitUploadFile(file, userId, parentUserFile, uploadFileVO, uploadFileCacheDTO);
+            return userFileService.splitUploadFile(file, userId, parentFolder, uploadFileVO, uploadFileCacheDTO);
         } catch (FailResultException e) {
             userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
                     uploadFileCacheDTO);
@@ -235,18 +240,13 @@ public class FileOperationsFacade {
      * @param userId 用户ID
      */
     public void move(MoveVO moveVO, Long userId) {
-        // 1. 获取目标ID
-        Long targetId = 0L;
-        if (StrUtil.isNotEmpty(moveVO.getTargetPath())) {
-            var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, moveVO.getTargetPath());
-            if (targetUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
-            }
-            targetId = targetUserFile.getId();
+        var targetFolder = userFileService.getFolderDTO(userId, moveVO.getTargetPath());
+        if (targetFolder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
         }
 
-        // 2. 调用UseCase执行业务逻辑
-        moveFileUseCase.execute(moveVO.getSourceIds(), targetId, userId);
+        // 调用UseCase执行业务逻辑，传递 targetFolder 避免重复查询存储源
+        moveFileUseCase.execute(moveVO.getSourceIds(), targetFolder, userId);
     }
 
     /**
@@ -256,18 +256,13 @@ public class FileOperationsFacade {
      * @param userId 用户ID
      */
     public void copy(CopyVO copyVO, Long userId) {
-        // 1. 获取目标ID
-        Long targetId = 0L;
-        if (StrUtil.isNotEmpty(copyVO.getTargetPath())) {
-            var targetUserFile = userFileService.getParentFolderByPath(userId, targetId, copyVO.getTargetPath());
-            if (targetUserFile == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
-            }
-            targetId = targetUserFile.getId();
+        var targetFolder = userFileService.getFolderDTO(userId, copyVO.getTargetPath());
+        if (targetFolder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
         }
 
-        // 2. 调用UseCase执行业务逻辑
-        copyFileUseCase.execute(copyVO.getSourceIds(), targetId, userId);
+        // 调用UseCase执行业务逻辑，传递 targetFolder 避免重复查询
+        copyFileUseCase.execute(copyVO.getSourceIds(), targetFolder, userId);
     }
 
     /**
@@ -534,12 +529,14 @@ public class FileOperationsFacade {
             }
 
             Long targetParentId = 0L;
+            UserFolderDTO targetParentFolder = null;
             if (StrUtil.isNotEmpty(targetParentPath)) {
-                var targetParentFile = userFileService.getParentFolderByPath(userId, 0L, targetParentPath);
-                if (targetParentFile == null) {
+                // 使用 getFolderDTO 获取目标父文件夹（包含存储源信息）
+                targetParentFolder = userFileService.getFolderDTO(userId, targetParentPath);
+                if (targetParentFolder == null) {
                     return false;
                 }
-                targetParentId = targetParentFile.getId();
+                targetParentId = targetParentFolder.getId();
             }
 
             var sourceTreeList = new ArrayList<UserFileTreeDTO>();
@@ -555,7 +552,7 @@ public class FileOperationsFacade {
             }
 
             Long totalSize = userFileService.getUserFileTreeSpaceUsage(sourceTreeList);
-            userFileService.copy(targetParentId, userId, sourceTreeList, totalSize);
+            userFileService.copy(targetParentFolder, userId, sourceTreeList, totalSize);
             return true;
         } catch (Exception e) {
             log.error("WebDAV按路径复制失败: reqPath={}, descPath={}", reqPath, descPath, e);
@@ -589,11 +586,12 @@ public class FileOperationsFacade {
 
             Long targetParentId = 0L;
             if (StrUtil.isNotEmpty(targetParentPath)) {
-                var targetParentFile = userFileService.getParentFolderByPath(userId, 0L, targetParentPath);
-                if (targetParentFile == null) {
+                // 使用 getFolderDTO 获取目标父文件夹（包含存储源信息）
+                var targetParentFolder = userFileService.getFolderDTO(userId, targetParentPath);
+                if (targetParentFolder == null) {
                     return false;
                 }
-                targetParentId = targetParentFile.getId();
+                targetParentId = targetParentFolder.getId();
             }
 
             boolean needRename = !sourceFileDTO.getName().equals(targetName);
@@ -630,14 +628,16 @@ public class FileOperationsFacade {
                 folderName = reqPath.substring(1);
             }
 
-            UserFileDO parentUserFile = null;
+            // 使用 UserFolderDTO 保持存储源信息，避免向下转型丢失信息
+            UserFolderDTO parentFolder = null;
             Long parentId = 0L;
             if (StrUtil.isNotEmpty(parentPath)) {
-                parentUserFile = userFileService.getParentFolderByPath(userId, 0L, parentPath);
-                if (parentUserFile == null) {
+                // 使用 getFolderDTO 获取父文件夹（包含存储源信息）
+                parentFolder = userFileService.getFolderDTO(userId, parentPath);
+                if (parentFolder == null) {
                     return false;
                 }
-                parentId = parentUserFile.getId();
+                parentId = parentFolder.getId();
             }
 
             var existingFolder = userFileService.getUserFileByName(folderName, userId, parentId, NORMAL);
@@ -646,7 +646,7 @@ public class FileOperationsFacade {
             }
 
             // 复用已有 newFolder 逻辑（保持一致的存储源继承策略）
-            userFileService.newFolder(folderName, parentUserFile, userId);
+            userFileService.newFolder(folderName, parentFolder, userId);
             return true;
         } catch (Exception e) {
             log.error("WebDAV按路径创建目录失败: reqPath={}", reqPath, e);
@@ -676,15 +676,16 @@ public class FileOperationsFacade {
                 fileName = reqPath.substring(1);
             }
 
-            // 获取父目录
-            UserFileDO parentUserFile = null;
+            // 获取父目录（使用 UserFolderDTO 保持存储源信息）
+            UserFolderDTO parentFolder = null;
             Long parentId = 0L;
             if (StrUtil.isNotEmpty(parentPath)) {
-                parentUserFile = userFileService.getParentFolderByPath(userId, 0L, parentPath);
-                if (parentUserFile == null) {
+                // 使用 getFolderDTO 获取父文件夹（包含存储源信息）
+                parentFolder = userFileService.getFolderDTO(userId, parentPath);
+                if (parentFolder == null) {
                     return false;
                 }
-                parentId = parentUserFile.getId();
+                parentId = parentFolder.getId();
             }
 
             // 覆盖：若同名存在，先删除到回收站（保持与现有删除语义一致）
@@ -717,7 +718,7 @@ public class FileOperationsFacade {
             }
 
             String identifier = bytesToHex(md5.digest());
-            userFileService.uploadWholeFile(tempFile, userId, parentUserFile, fileName, identifier);
+            userFileService.uploadWholeFile(tempFile, userId, parentFolder, fileName, identifier);
             return true;
         } catch (Exception e) {
             log.error("WebDAV putFile 失败: reqPath={}", reqPath, e);

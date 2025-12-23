@@ -53,12 +53,12 @@ public interface UserFileService extends IService<UserFileDO> {
          * 根据path获取父文件夹ID，如果不存在则创建这个文件夹
          *
          * @param userId         用户ID
-         * @param parentUserFile 父文件夹对象
+         * @param parentFolder   父文件夹对象
          * @param path           所属文件夹路径
          * @return 文件夹对象
          * @author bai
          */
-        UserFileDO getParentFolderByPathOrCreate(final Long userId, UserFileDO parentUserFile, String path);
+        UserFileDO getParentFolderByPathOrCreate(final Long userId, UserFolderDTO parentFolder, String path);
 
         /**
          * 根据path获取用户文件数据
@@ -106,7 +106,7 @@ public interface UserFileService extends IService<UserFileDO> {
          * @return 文件夹对象
          * @author bai
          */
-        UserFileDO newFolder(String folderName, UserFileDO parentUserFileDO, final Long userId);
+        UserFileDO newFolder(String folderName, UserFolderDTO parentFolder, final Long userId);
 
         /**
          * 设置文件夹存储源并迁移文件
@@ -149,7 +149,7 @@ public interface UserFileService extends IService<UserFileDO> {
          * @return 上传结果，如果返回null表示无法秒传，需要继续正常上传流程
          * @author bai
          */
-        FileDO trySecondUpload(final Long userId, UserFileDO parentUserFile, UploadFileVO uploadFileVO);
+        FileDO trySecondUpload(final Long userId, UserFolderDTO parentUserFile, UploadFileVO uploadFileVO);
 
         /**
          * 根据文件ID获取文件数据
@@ -190,14 +190,13 @@ public interface UserFileService extends IService<UserFileDO> {
          * 秒传文件（当文件已存在时使用）
          *
          * @param userId       用户ID
-         * @param parentId     父ID
+         * @param parentFolder 父文件夹对象
          * @param uploadFileVO 上传文件相关信息
          * @param fileDO       文件信息
          * @return 上传结果
          * @author bai
          */
-        UploadResultDTO secondUploadFile(final Long userId, UserFileDO parentUserFile, UploadFileVO uploadFileVO,
-                        FileDO fileDO);
+        UploadResultDTO secondUploadFile(final Long userId, UserFolderDTO parentFolder, UploadFileVO uploadFileVO, FileDO fileDO);
 
         /**
          * 分片上传文件
@@ -210,7 +209,7 @@ public interface UserFileService extends IService<UserFileDO> {
          * @return 上传结果
          * @author bai
          */
-        UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, UserFileDO parentUserFile,
+        UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, UserFolderDTO parentFolder,
                         UploadFileVO uploadFileVO,
                         UploadFileCacheDTO uploadFileCacheDTO) throws IOException;
 
@@ -228,6 +227,18 @@ public interface UserFileService extends IService<UserFileDO> {
          * @param identifier     内容标识（例如 MD5）
          */
         UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFileDO parentUserFile, String fileName,
+                        String identifier) throws IOException;
+
+        /**
+         * 上传整文件（优化版本：接收 UserFolderDTO，避免重复查询存储源）
+         *
+         * @param localFile      本地临时文件
+         * @param userId         用户ID
+         * @param parentFolder   父文件夹DTO（包含存储源信息，可为 null 表示根目录）
+         * @param fileName       用户侧展示名称
+         * @param identifier     内容标识（例如 MD5）
+         */
+        UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFolderDTO parentFolder, String fileName,
                         String identifier) throws IOException;
 
         /**
@@ -351,12 +362,12 @@ public interface UserFileService extends IService<UserFileDO> {
         /**
          * 复制
          *
-         * @param targetId                  目标文件夹ID
+         * @param targetFolder              目标文件夹
          * @param userId                    用户ID
          * @param sourceUserFileTreeDTOList 源文件或文件夹对象集合
          * @param totalSize                 总占用空间
          */
-        void copy(Long targetId, final Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long totalSize);
+        void copy(UserFolderDTO targetFolder, final Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long totalSize);
 
         /**
          * 删除文件或文件夹
