@@ -10,7 +10,7 @@ const menus: Menu[] = [
     icon: "main",
     name: "首页",
     category: "main",
-    path: "/netdisk/all",
+    path: "/",
     allShow: true,
     menuCode: ""
   },
