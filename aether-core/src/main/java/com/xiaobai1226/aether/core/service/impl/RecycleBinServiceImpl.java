@@ -78,6 +78,9 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
     @Inject
     private FilePurgeService filePurgeService;
 
+    @Inject
+    private StorageMigrationService storageMigrationService;
+
     @Tran
     @Override
     public Boolean insertBatch(List<RecycleBinDO> recycleBinList) {
@@ -368,10 +371,12 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
                 targetStorageSourceId = parentUserFile.getStorageSourceId();
             }
 
-            // 如果存储源不一致，需要迁移
+            // 如果存储源不一致，标记为待迁移（异步处理）
             if (!Objects.equals(userFileDO.getStorageSourceId(), targetStorageSourceId)) {
-                // 调用存储源迁移逻辑
-                userFileService.migrateUserFileStorageSource(userFileDO.getId(), targetStorageSourceId, userId);
+                // 标记为待迁移
+                storageMigrationService.markForMigration(userFileDO.getId(), targetStorageSourceId, userId);
+                log.info("回收站还原文件需要迁移存储源: userFileId={}, targetStorageId={}",
+                        userFileDO.getId(), targetStorageSourceId);
             }
         }
     }

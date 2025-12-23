@@ -109,17 +109,6 @@ public interface UserFileService extends IService<UserFileDO> {
         UserFileDO newFolder(String folderName, UserFolderDTO parentFolder, final Long userId);
 
         /**
-         * 设置文件夹存储源并迁移文件
-         *
-         * @param folderId        文件夹ID
-         * @param storageSourceId 新的存储源ID
-         * @param userId          用户ID
-         * @return 是否成功
-         * @author bai
-         */
-        boolean setFolderStorageSource(Long folderId, Long storageSourceId, final Long userId);
-
-        /**
          * 根据父目录获取存储源ID
          *
          * @param parentUserFile 父文件夹对象
@@ -128,17 +117,6 @@ public interface UserFileService extends IService<UserFileDO> {
          * @author bai
          */
         Long getStorageSourceIdByParent(UserFileDO parentUserFile, Long userId);
-
-        /**
-         * 迁移用户文件/文件夹的存储源（保持存储源类型不变）
-         *
-         * @param userFileId      用户文件ID
-         * @param storageSourceId 新的存储源ID
-         * @param userId          用户ID
-         * @return 是否成功
-         * @author bai
-         */
-        boolean migrateUserFileStorageSource(Long userFileId, Long storageSourceId, final Long userId);
 
         /**
          * 尝试秒传文件（检查文件是否已存在，如果存在则直接秒传或复制）
