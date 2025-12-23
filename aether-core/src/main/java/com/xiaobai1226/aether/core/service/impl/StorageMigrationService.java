@@ -104,16 +104,14 @@ public class StorageMigrationService {
     }
 
     /**
-     * 获取待迁移的文件列表（供定时任务调用）
+     * 获取所有待迁移的文件列表，不限制数量（供定时任务调用）
      * 
-     * @param limit 查询数量限制
      * @return 待迁移的文件列表
      */
-    public List<UserFileDO> getPendingMigrationFiles(int limit) {
+    public List<UserFileDO> getPendingMigrationFiles() {
         return userFileMapper.selectList(
             new LambdaQueryWrapper<UserFileDO>()
                 .eq(UserFileDO::getMigrationPending, 1)
-                .last("LIMIT " + limit)
         );
     }
 
@@ -140,21 +138,21 @@ public class StorageMigrationService {
         Long targetStorageSourceId = userFile.getStorageSourceId();
         if (targetStorageSourceId == null) {
             log.warn("迁移失败：目标存储源为空, userFileId={}", userFileId);
-            clearMigrationFlag(userFileId);
+            // clearMigrationFlag(userFileId);
             return;
         }
 
         // 获取当前文件信息
         if (userFile.getFileId() == null) {
             // 文件夹，清除标记
-            clearMigrationFlag(userFileId);
+            // clearMigrationFlag(userFileId);
             return;
         }
 
         var oldFile = fileMapper.selectById(userFile.getFileId());
         if (oldFile == null) {
             log.warn("迁移失败：文件记录不存在, userFileId={}, fileId={}", userFileId, userFile.getFileId());
-            clearMigrationFlag(userFileId);
+            // clearMigrationFlag(userFileId);
             return;
         }
 

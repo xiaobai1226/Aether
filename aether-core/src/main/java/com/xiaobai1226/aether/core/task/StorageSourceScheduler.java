@@ -11,29 +11,30 @@ import org.noear.solon.scheduling.annotation.Scheduled;
 import java.util.List;
 
 /**
- * 存储源迁移调度器
+ * 存储源调度器
  * 
- * 职责：定时扫描待迁移文件并执行迁移
+ * 职责：管理存储源相关的定时任务（如文件迁移等）
  * 
  * @author bai
  */
 @Component
 @Slf4j
-public class StorageMigrationScheduler {
+public class StorageSourceScheduler {
 
     @Inject
     private StorageMigrationService migrationService;
 
     /**
-     * 每分钟执行一次迁移任务
+     * 任务1：处理待迁移文件
+     * 每分钟执行一次
      * 
-     * 说明：每次处理10个文件，避免占用过多资源
+     * 说明：处理所有待迁移的文件
      */
-    @Scheduled(fixedDelay = 60000)
+    @Scheduled(fixedDelay = 1 * 60 * 1000)
     public void processPendingMigrations() {
         try {
-            // 1. 查找待迁移文件（每次处理10个）
-            List<UserFileDO> pendingFiles = migrationService.getPendingMigrationFiles(10);
+            // 1. 查找待迁移文件（查询全部符合条件的）
+            List<UserFileDO> pendingFiles = migrationService.getPendingMigrationFiles();
 
             if (CollUtil.isEmpty(pendingFiles)) {
                 return;
@@ -51,7 +52,7 @@ public class StorageMigrationScheduler {
                     successCount++;
                 } catch (Exception e) {
                     failCount++;
-                    log.error("迁移文件失败，将在下次重试: userFileId={}, error={}", 
+                    log.error("迁移文件失败，将在下次重试: userFileId={}, error={}",
                             userFile.getId(), e.getMessage());
                     // 失败了不影响其他文件，下次定时任务会重试
                 }
@@ -60,7 +61,7 @@ public class StorageMigrationScheduler {
             log.info("迁移任务完成: 成功{}个，失败{}个", successCount, failCount);
 
         } catch (Exception e) {
-            log.error("迁移调度任务执行失败", e);
+            log.error("存储源迁移调度任务执行失败", e);
         }
     }
 }

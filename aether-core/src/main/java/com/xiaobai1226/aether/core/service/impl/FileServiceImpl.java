@@ -132,9 +132,7 @@ public class FileServiceImpl implements FileService {
                 log.info("目标文件已存在，跳过复制. targetKey: {}", targetKey);
             }
 
-            // 注意：缩略图不需要复制，因为缩略图是统一路径，可以共用
-
-            // 创建新的File记录（缩略图路径保持和源文件一致，因为是共用的）
+            // 创建新的File记录
             var newFile = addFile(sourceFileDO.getName(), targetKey, sourceFileDO.getSize(),
                     sourceFileDO.getIdentifier(), sourceFileDO.getThumbnail(), targetStorageId);
 

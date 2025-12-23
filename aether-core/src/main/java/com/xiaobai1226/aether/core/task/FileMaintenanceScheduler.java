@@ -10,15 +10,15 @@ import org.noear.solon.scheduling.annotation.Scheduled;
 import java.util.List;
 
 /**
- * 文件清理调度器
+ * 文件维护调度器
  * 
- * 职责：定时清理孤立的文件记录、物理文件和缩略图
+ * 职责：管理 File 数据库记录和物理文件的清理维护
  * 
  * @author bai
  */
 @Component
 @Slf4j
-public class FileCleanupScheduler {
+public class FileMaintenanceScheduler {
 
     @Inject
     private FileCleanupService cleanupService;
@@ -28,7 +28,7 @@ public class FileCleanupScheduler {
      * 每小时执行一次
      * 
      * 说明：仅删除数据库记录，不删除缩略图和物理文件
-     * - 缩略图由任务3清理
+     * - 缩略图由 ThumbnailScheduler 清理
      * - 物理文件由任务2清理
      */
     @Scheduled(cron = "0 0 * * * ?")
@@ -36,8 +36,8 @@ public class FileCleanupScheduler {
         try {
             log.info("开始清理孤立 File 记录");
 
-            // 1. 查找无引用的文件（每次最多10000个）
-            List<Long> orphanFileIds = cleanupService.findOrphanFiles(10000);
+            // 1. 查找无引用的文件（查询全部符合条件的）
+            List<Long> orphanFileIds = cleanupService.findOrphanFiles();
 
             if (CollUtil.isEmpty(orphanFileIds)) {
                 log.info("没有需要清理的孤立 File 记录");
@@ -70,23 +70,6 @@ public class FileCleanupScheduler {
             log.info("孤立物理文件清理任务完成");
         } catch (Exception e) {
             log.error("清理孤立物理文件任务执行失败", e);
-        }
-    }
-
-    /**
-     * 任务3：清理孤立的缩略图
-     * 每周日凌晨 4 点执行
-     * 
-     * 说明：扫描缩略图目录，找出数据库中没有引用的缩略图并删除
-     */
-    @Scheduled(cron = "0 0 4 ? * SUN")
-    public void cleanOrphanThumbnails() {
-        try {
-            log.info("开始清理孤立缩略图任务");
-            cleanupService.cleanupOrphanThumbnails();
-            log.info("孤立缩略图清理任务完成");
-        } catch (Exception e) {
-            log.error("清理孤立缩略图任务执行失败", e);
         }
     }
 }

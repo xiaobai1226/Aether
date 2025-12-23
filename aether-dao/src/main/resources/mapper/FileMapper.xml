@@ -8,6 +8,5 @@
         FROM file f
         LEFT JOIN user_file uf ON f.id = uf.file_id
         WHERE uf.id IS NULL
-        LIMIT #{limit}
     </select>
 </mapper>

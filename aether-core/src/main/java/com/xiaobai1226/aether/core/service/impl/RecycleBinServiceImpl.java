@@ -217,10 +217,9 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             throw new FailResultException(SYSTEM_ERROR);
         }
 
-        // 释放用户配额（QuotaService 内部已处理 bytes <= 0 的情况）
-        quotaService.decreaseUsed(userId, totalSize);
+        // TODO 释放用户配额（QuotaService 内部已处理 bytes <= 0 的情况）
+        // quotaService.decreaseUsed(userId, totalSize);
 
-        // 注意：物理文件（FileDO + 物理对象）的清理由 FileCleanupService 定时任务统一处理
         log.info("回收站文件已删除: userId={}, 删除{}个UserFile, 释放空间{}字节",
                 userId, userFileIds.size(), totalSize);
     }

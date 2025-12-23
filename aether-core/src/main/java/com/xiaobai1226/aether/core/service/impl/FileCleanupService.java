@@ -57,37 +57,20 @@ public class FileCleanupService {
     private String rootPath;
 
     /**
-     * 查找无引用的文件（使用 SQL 联表查询，高效）
+     * 查找无引用的文件，不限制数量（使用 SQL 联表查询，高效）
      * 
-     * @param limit 查询数量限制
      * @return 无引用的文件ID列表
      */
-    public List<Long> findOrphanFiles(int limit) {
+    public List<Long> findOrphanFiles() {
         try {
-            // 使用 SQL 联表查询，效率高
-            List<Long> orphanFileIds = fileMapper.findOrphanFileIds(limit);
+            // 使用 SQL 联表查询，不限制数量
+            List<Long> orphanFileIds = fileMapper.findOrphanFileIds();
             log.info("发现{}个无引用文件", orphanFileIds.size());
             return orphanFileIds;
         } catch (Exception e) {
             log.error("查找无引用文件失败", e);
             return new ArrayList<>();
         }
-    }
-
-    /**
-     * 获取文件引用计数
-     * 
-     * @param fileId 文件ID
-     * @return 引用计数
-     */
-    public int getReferenceCount(Long fileId) {
-        if (fileId == null) {
-            return 0;
-        }
-
-        return userFileMapper.selectCount(new LambdaQueryChainWrapper<>(userFileMapper)
-                .eq(UserFileDO::getFileId, fileId))
-                .intValue();
     }
 
     /**
@@ -202,7 +185,7 @@ public class FileCleanupService {
                 }
             }
 
-            log.info("存储源清理完成: storageSourceId={}, 删除{}个孤立文件", 
+            log.info("存储源清理完成: storageSourceId={}, 删除{}个孤立文件",
                     storageSource.getId(), deletedCount);
 
         } catch (Exception e) {
@@ -222,7 +205,7 @@ public class FileCleanupService {
 
         try {
             String thumbnailDir = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL);
-            
+
             if (!FileUtil.exist(thumbnailDir)) {
                 log.warn("缩略图目录不存在: {}", thumbnailDir);
                 return;
@@ -262,5 +245,4 @@ public class FileCleanupService {
             log.error("清理孤立缩略图任务失败", e);
         }
     }
-
 }
