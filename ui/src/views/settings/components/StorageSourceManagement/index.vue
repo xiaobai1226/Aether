@@ -26,13 +26,13 @@
       style="width: 100%"
       :empty-text="loading ? '加载中...' : '暂无数据'"
     >
-      <el-table-column prop="name" label="名称" min-width="150" />
+      <el-table-column prop="name" label="名称" width="180" />
       <el-table-column prop="type" label="类型" width="120">
         <template #default="{ row }">
           {{ getTypeName(row.type) }}
         </template>
       </el-table-column>
-      <el-table-column prop="path" label="存储路径" min-width="250" show-overflow-tooltip />
+      <el-table-column prop="path" label="存储路径" min-width="300" show-overflow-tooltip />
       <el-table-column prop="isDefault" label="默认" width="100">
         <template #default="{ row }">
           <el-tag v-if="row.isDefault === 1" type="success">是</el-tag>
@@ -45,7 +45,7 @@
           <el-tag v-else type="danger">禁用</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="250" fixed="right">
+      <el-table-column label="操作" width="250">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
           <el-button
@@ -303,6 +303,8 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .storage-source-management {
+  height: 100%;
+  
   .header {
     display: flex;
     justify-content: space-between;
@@ -320,6 +322,10 @@ onMounted(() => {
     font-size: 12px;
     color: #999;
     margin-top: 5px;
+  }
+
+  :deep(.el-table) {
+    font-size: 14px;
   }
 }
 </style>
