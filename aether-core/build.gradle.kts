@@ -16,7 +16,6 @@ dependencies {
 
     // 内部模块
     implementation(project(":aether-common"))
-    implementation(project(":aether-admin"))
     implementation(project(":aether-domain"))
     implementation(project(":aether-dao"))
 }

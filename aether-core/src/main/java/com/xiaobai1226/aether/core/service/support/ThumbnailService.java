@@ -14,17 +14,23 @@ import com.xiaobai1226.aether.common.util.VideoUtils;
 import com.xiaobai1226.aether.core.domain.dto.ThumbnailGenerationResultDTO;
 
 import lombok.extern.slf4j.Slf4j;
+import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Inject;
+import org.noear.solon.core.handle.DownloadedFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Date;
 
 /**
- * 缩略图工具类
+ * 缩略图服务类
  * 
- * 负责处理文件缩略图的生成、路径管理等操作
+ * 负责处理文件缩略图的生成、查询、删除等操作
  * 
  * @author bai
  */
 @Slf4j
+@Component
 public class ThumbnailService {
 
     /**
@@ -38,10 +44,10 @@ public class ThumbnailService {
     private static final long MAX_VIDEO_SIZE_FOR_THUMBNAIL = 100 * 1024 * 1024;
 
     /**
-     * 私有构造函数，防止实例化
+     * 项目根路径（从配置文件注入）
      */
-    private ThumbnailService() {
-    }
+    @Inject("${project.path.root}")
+    private String rootPath;
 
     /**
      * 为文件生成缩略图（带业务判断）
@@ -52,18 +58,16 @@ public class ThumbnailService {
      * @param sourceFilePath 源文件的绝对路径
      * @param fileName       文件名（用于判断文件类型）
      * @param fileSize       文件大小（字节）
-     * @param rootPath       项目根路径
      * @return 缩略图生成结果，包含缩略图文件名和完整路径；如果不需要生成则返回失败结果
      */
-    public static ThumbnailGenerationResultDTO generateThumbnail(String sourceFilePath, String fileName,
-            Long fileSize, String rootPath) {
+    public ThumbnailGenerationResultDTO generateThumbnail(String sourceFilePath, String fileName, Long fileSize) {
         // 判断是否需要生成缩略图
         if (!needsThumbnail(fileName, fileSize)) {
             log.debug("文件不需要生成缩略图: fileName={}, fileSize={}", fileName, fileSize);
             return new ThumbnailGenerationResultDTO(false, null, null);
         }
 
-        return generateThumbnailInternal(sourceFilePath, fileName, rootPath);
+        return generateThumbnailInternal(sourceFilePath, fileName);
     }
 
     /**
@@ -73,14 +77,12 @@ public class ThumbnailService {
      * 
      * @param sourceFilePath 源文件的绝对路径
      * @param fileName       文件名（用于判断文件类型）
-     * @param rootPath       项目根路径
      * @return 缩略图生成结果，包含缩略图文件名和完整路径
      */
-    public static ThumbnailGenerationResultDTO generateThumbnailInternal(String sourceFilePath, String fileName,
-            String rootPath) {
-        if (StrUtil.isBlank(sourceFilePath) || StrUtil.isBlank(fileName) || StrUtil.isBlank(rootPath)) {
-            log.warn("缩略图生成参数不完整: sourceFilePath={}, fileName={}, rootPath={}",
-                    sourceFilePath, fileName, rootPath);
+    public ThumbnailGenerationResultDTO generateThumbnailInternal(String sourceFilePath, String fileName) {
+        if (StrUtil.isBlank(sourceFilePath) || StrUtil.isBlank(fileName)) {
+            log.warn("缩略图生成参数不完整: sourceFilePath={}, fileName={}",
+                    sourceFilePath, fileName);
             return new ThumbnailGenerationResultDTO(false, null, null);
         }
 
@@ -143,11 +145,10 @@ public class ThumbnailService {
      * 删除缩略图文件
      * 
      * @param thumbnailFileName 缩略图文件名（相对路径）
-     * @param rootPath          项目根路径
      */
-    public static void deleteThumbnail(String thumbnailFileName, String rootPath) {
-        if (StrUtil.isBlank(thumbnailFileName) || StrUtil.isBlank(rootPath)) {
-            log.warn("删除缩略图参数不完整: thumbnailFileName={}, rootPath={}", thumbnailFileName, rootPath);
+    public void deleteThumbnail(String thumbnailFileName) {
+        if (StrUtil.isBlank(thumbnailFileName)) {
+            log.warn("删除缩略图参数不完整: thumbnailFileName={}", thumbnailFileName);
             return;
         }
 
@@ -160,6 +161,33 @@ public class ThumbnailService {
         } else {
             log.debug("缩略图文件不存在，无需删除: {}", thumbnailFilePath);
         }
+    }
+
+    /**
+     * 获取缩略图文件
+     * 
+     * @param thumbnailFileName 缩略图文件名（相对路径）
+     * @return 缩略图文件
+     * @throws IOException 如果文件读取失败
+     */
+    public DownloadedFile getThumbnailFile(String thumbnailFileName) throws IOException {
+        if (StrUtil.isBlank(thumbnailFileName)) {
+            log.warn("获取缩略图参数为空");
+            return null;
+        }
+
+        var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
+                thumbnailFileName);
+        
+        if (!FileUtil.exist(thumbnailFilePath)) {
+            log.warn("缩略图文件不存在: {}", thumbnailFilePath);
+            return null;
+        }
+
+        File file = FileUtil.file(thumbnailFilePath);
+        DownloadedFile downloadedFile = new DownloadedFile(file);
+        downloadedFile.asAttachment(false);
+        return downloadedFile;
     }
 
     /**

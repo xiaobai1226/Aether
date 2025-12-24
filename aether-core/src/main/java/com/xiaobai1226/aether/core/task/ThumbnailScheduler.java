@@ -50,6 +50,9 @@ public class ThumbnailScheduler {
     @Inject("${project.path.root}")
     private String rootPath;
 
+    @Inject
+    private ThumbnailService thumbnailService;
+
     /**
      * 任务1：定时生成缺失的缩略图
      * 每 2 分钟执行一次
@@ -144,11 +147,10 @@ public class ThumbnailScheduler {
             }
 
             // 2. 生成缩略图（直接使用 ThumbnailService）
-            var thumbnailResult = ThumbnailService.generateThumbnail(
+            var thumbnailResult = thumbnailService.generateThumbnail(
                     absolutePath,
                     fileDO.getName(),
-                    fileDO.getSize(),
-                    rootPath);
+                    fileDO.getSize());
 
             if (!thumbnailResult.isSuccess()) {
                 log.warn("缩略图生成失败: fileId={}, path={}", fileDO.getId(), fileDO.getPath());

@@ -42,6 +42,9 @@ public class FilePurgeService {
     @Inject("${project.path.root}")
     private String rootPath;
 
+    @Inject
+    private ThumbnailService thumbnailService;
+
     /**
      * 彻底删除文件（用户级操作）
      * 
@@ -164,7 +167,7 @@ public class FilePurgeService {
             }
             
             // 引用计数为 0，可以安全删除缩略图
-            ThumbnailService.deleteThumbnail(fileDO.getThumbnail(), rootPath);
+            thumbnailService.deleteThumbnail(fileDO.getThumbnail());
             log.debug("缩略图已删除: fileId={}, thumbnail={}", fileDO.getId(), fileDO.getThumbnail());
         } catch (Exception e) {
             log.warn("删除缩略图失败: fileId={}, thumbnail={}", fileDO.getId(), fileDO.getThumbnail(), e);

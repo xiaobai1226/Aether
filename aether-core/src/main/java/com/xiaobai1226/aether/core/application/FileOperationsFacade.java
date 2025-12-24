@@ -5,7 +5,6 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
@@ -22,6 +21,7 @@ import com.xiaobai1226.aether.core.service.intf.QuotaService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.service.intf.UserService;
+import com.xiaobai1226.aether.core.service.support.ThumbnailService;
 import com.xiaobai1226.aether.core.usecase.file.*;
 import com.xiaobai1226.aether.core.usecase.storage.SetFolderStorageSourceUseCase;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
@@ -100,6 +100,9 @@ public class FileOperationsFacade {
 
     @Inject
     private UploadFileUseCase uploadFileUseCase;
+
+    @Inject
+    private ThumbnailService thumbnailService;
 
     @Inject("${project.path.root}")
     private String rootPath;
@@ -321,16 +324,10 @@ public class FileOperationsFacade {
      */
     public DownloadedFile getThumbnail(String thumbnail) {
         try {
-            final var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
-                    thumbnail);
-            if (!FileUtil.exist(thumbnailFilePath)) {
-                // 保持原逻辑：文件不存在时，目前没有明确返回策略
+            var downloadedFile = thumbnailService.getThumbnailFile(thumbnail);
+            if (downloadedFile == null) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
-
-            var file = FileUtil.file(thumbnailFilePath);
-            var downloadedFile = new DownloadedFile(file);
-            downloadedFile.asAttachment(false);
             return downloadedFile;
         } catch (IOException e) {
             log.error(e.getMessage(), e);

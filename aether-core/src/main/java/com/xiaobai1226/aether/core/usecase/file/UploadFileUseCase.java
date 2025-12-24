@@ -83,6 +83,9 @@ public class UploadFileUseCase {
     @Inject
     private UserFileService userFileService;
 
+    @Inject
+    private ThumbnailService thumbnailService;
+
     /**
      * 秒传文件（当文件已存在时使用）
      *
@@ -279,7 +282,7 @@ public class UploadFileUseCase {
         // }
 
         // 生成缩略图
-        var thumbnailResult = ThumbnailService.generateThumbnail(finalFullFilePath, finalFileName, finalFileSize, rootPath);
+        var thumbnailResult = thumbnailService.generateThumbnail(finalFullFilePath, finalFileName, finalFileSize);
         String thumbnailFileName = thumbnailResult.isSuccess() ? thumbnailResult.getThumbnailFileName() : null;
         uploadFileCacheDTO.setThumbnailFilePath(thumbnailResult.getThumbnailFilePath());
 
@@ -369,7 +372,7 @@ public class UploadFileUseCase {
             String thumbnailToStore = null;
             String absPath = backend.tryResolveAbsolutePath(storageSource.getPath(), relativePath);
             if (absPath != null) {
-                var thumbnailResult = ThumbnailService.generateThumbnail(absPath, storedFileName, fileSize, rootPath);
+                var thumbnailResult = thumbnailService.generateThumbnail(absPath, storedFileName, fileSize);
                 thumbnailToStore = thumbnailResult.isSuccess() ? thumbnailResult.getThumbnailFileName() : null;
             }
 
