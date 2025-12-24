@@ -44,15 +44,6 @@ public interface UserFileMapper extends BaseMapper<UserFileDO> {
      */
     UserFileDTO getUserFileDTOByNameAndParentId(@Param("userFileDO") UserFileDO userFileDO);
 
-
-    /**
-     * 获取文件列表
-     *
-     * @param userFileDO 用户文件数据属性
-     * @return 文件列表
-     */
-    List<UserFileTreeDTO> getUserFileTreeDTOByIdsAndUserId(@Param("userFileDO") UserFileDO userFileDO, @Param("ids") List<Long> ids);
-
     /**
      * 获取文件列表
      *

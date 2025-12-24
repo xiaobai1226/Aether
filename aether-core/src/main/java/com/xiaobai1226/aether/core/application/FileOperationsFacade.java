@@ -102,7 +102,7 @@ public class FileOperationsFacade {
     private String rootPath;
 
     /**
-     * 分页获取文件列表（查询型：统一入口，避免 Controller 直调 Service）
+     * 分页获取文件列表
      */
     public PageResult<UserFileDTO> getFileListByPage(UserFileVO userFileVO, Long userId) {
         var parentId = 0L;

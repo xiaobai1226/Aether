@@ -11,7 +11,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.baomidou.mybatisplus.extension.toolkit.ChainWrappers;
 import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
@@ -53,7 +52,6 @@ import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
-import java.util.HashMap;
 import java.util.Objects;
 import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
@@ -1128,160 +1126,6 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             // 递归删除子节点对象
             getDelInfo(userFileTree.getChildUserFileDTOList(), delIds, recycleBinList, userId, tempRecycleId, 0);
         }
-    }
-
-    @Override
-    public List<UserFileDO> getUserFileListByUserIdAndParentId(final Long userId, Long parentId,
-            Integer userFileStatus) {
-        var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
-        return lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getParentId, parentId)
-                .eq(UserFileDO::getFileStatus, userFileStatus).list();
-    }
-
-    @Override
-    public UserFileDO getParentUserFileByPathAndItemType(final Long userId, String path) {
-        if (StrUtil.isEmpty(path)) {
-            return null;
-        }
-
-        String[] dirs = path.split("/");
-
-        if (dirs.length == 0) {
-            return null;
-        }
-
-        var parentId = 0L;
-        for (int i = 1; i < dirs.length; i++) {
-            var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
-            var userFileDO = lambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getParentId, parentId)
-                    .eq(UserFileDO::getName, dirs[i]).eq(UserFileDO::getFileStatus, NORMAL.flag())
-                    .eq(UserFileDO::getItemType, UserFileItemTypeEnum.FOLDER.flag()).one();
-            if (userFileDO == null) {
-                break;
-            } else if (i == dirs.length - 1) {
-                return userFileDO;
-            } else {
-                parentId = userFileDO.getId();
-            }
-        }
-
-        return null;
-    }
-
-    @Override
-    public List<UserFileTreeDTO> getUserFileTreeDTOByIdsAndUserId(List<Long> ids, final Long userId,
-            Integer userFileStatus) {
-        var userFileDO = new UserFileDO();
-        userFileDO.setUserId(userId);
-        userFileDO.setFileStatus(userFileStatus);
-        return userFileMapper.getUserFileTreeDTOByIdsAndUserId(userFileDO, ids);
-    }
-
-    @Override
-    public void recursiveGetUserFileTreeDTO(List<UserFileTreeDTO> sourceUserFileTreeDTOList, final Long userId) {
-        for (UserFileTreeDTO sourceUserFileTreeDTO : sourceUserFileTreeDTOList) {
-
-            if (Objects.equals(FILE.flag(), sourceUserFileTreeDTO.getItemType())) {
-                continue;
-            }
-
-            var childrenUserFileDTOList = recursiveGetChildrenFile(sourceUserFileTreeDTO, userId);
-
-            if (childrenUserFileDTOList != null && !childrenUserFileDTOList.isEmpty()) {
-                sourceUserFileTreeDTO.setChildUserFileDTOList(childrenUserFileDTOList);
-            }
-
-        }
-    }
-
-    /**
-     * 递归获取文件对象
-     *
-     * @param userId          用户ID
-     * @param userFileTreeDTO 父文件对象
-     */
-    private List<UserFileTreeDTO> recursiveGetChildrenFile(UserFileTreeDTO userFileTreeDTO, Long userId) {
-
-        var userFileDO = new UserFileDO();
-        userFileDO.setUserId(userId);
-        userFileDO.setFileStatus(NORMAL.flag());
-        userFileDO.setParentId(userFileTreeDTO.getId());
-        var childUserFileTreeDTOList = userFileMapper.getUserFileDTOByParentIdAndUserId(userFileDO);
-
-        if (childUserFileTreeDTOList == null || childUserFileTreeDTOList.isEmpty()) {
-            return null;
-        }
-
-        for (UserFileTreeDTO childUserFileTreeDTO : childUserFileTreeDTOList) {
-            if (Objects.equals(FILE.flag(), childUserFileTreeDTO.getItemType())) {
-                continue;
-            }
-
-            var childrenUserFileDTOList = recursiveGetChildrenFile(childUserFileTreeDTO, userId);
-
-            if (childrenUserFileDTOList != null && !childrenUserFileDTOList.isEmpty()) {
-                childUserFileTreeDTO.setChildUserFileDTOList(childrenUserFileDTOList);
-            }
-        }
-
-        return childUserFileTreeDTOList;
-    }
-
-    // @Override
-    // public Integer updateFilePathByParentId(Integer parentId, Integer userId,
-    // String newPath, UserFileStatusEnum userFileStatusEnum) {
-    // LambdaUpdateWrapper<UserFileDO> lambdaUpdateWrapper = new
-    // LambdaUpdateWrapper<>();
-    // lambdaUpdateWrapper.set(UserFileDO::getPath,
-    // newPath).eq(UserFileDO::getParentId, parentId).eq(UserFileDO::getUserId,
-    // userId).eq(UserFileDO::getFileStatus, userFileStatusEnum.flag());
-    // return userFileMapper.update(null, lambdaUpdateWrapper);
-    // }
-
-    /**
-     * 根据文件ID获取文件数据
-     *
-     * @param id             文件或文件夹ID
-     * @param userId         用户ID
-     * @param userFileStatus 文件状态 1 正常 -1 删除 null 全部
-     * @return 文件夹数据
-     * @author bai
-     */
-    @Override
-    public UserFileDO getUserFileById(Long id, final Long userId, Integer userFileStatus) {
-        // try {
-        // var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
-        // return lambdaQuery.eq(UserFileDO::getUserId,
-        // userId).eq(UserFileDO::getParentId, parentId).eq(UserFileDO::getItemType,
-        // itemType).eq(UserFileDO::getName, name).count();
-        //
-        // return userFileMapper. .getUserFileById(id, userId, userFileStatus);
-        // } catch (SQLException e) {
-        // e.printStackTrace();
-        // }
-
-        return null;
-    }
-
-    /**
-     * 根据文件路径模糊查询文件数据
-     *
-     * @param filePath       文件或文件夹路径
-     * @param userId         用户ID
-     * @param userFileStatus 文件状态 1 正常 -1 删除
-     * @return 文件夹数据
-     * @author bai
-     */
-    @Override
-    public List<UserFileDO> getUserFileByLikeFilePath(String filePath, final Long userId, Integer userFileStatus) {
-        // try {
-        // return userFileDao.getUserFileByLikeFilePath(filePath, userId,
-        // userFileStatus);
-        // } catch (SQLException e) {
-        // e.printStackTrace();
-        // }
-
-        return null;
     }
 
     @Override
