@@ -2,6 +2,7 @@ package com.xiaobai1226.aether.admin.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
@@ -11,6 +12,7 @@ import com.xiaobai1226.aether.admin.service.intf.FileService;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
+import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.common.util.VideoUtils;
@@ -85,30 +87,34 @@ public class FileServiceImpl implements FileService {
     public void generateThumbnails(List<FileDO> fileDOList) {
         fileDOList.forEach(fileDO -> {
             try {
-//                if (CategoryEnum.isPictureBySuffix(fileDO.getSuffix()) || CategoryEnum.isVideoBySuffix(fileDO.getSuffix())) {
-                String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH + FileUtils.replaceFileExtName(fileDO.getName(), SystemConsts.THUMBNAIL_SUFFIX);
-                // 设置文件存储全路径
-                var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL, thumbnailFileName);
-
                 var finalFullFilePath = FileUtils.generatePath(rootPath, fileDO.getPath());
-
-                // 图片生成缩略图
+                
+                // 根据文件类型确定缩略图后缀
+                var thumbnailSuffix = FileTypeEnum.isGif(FileNameUtil.extName(fileDO.getName()).toLowerCase())
+                        ? SystemConsts.THUMBNAIL_GIF_SUFFIX
+                        : SystemConsts.THUMBNAIL_SUFFIX;
+                
+                // 生成缩略图相对文件名（按日期分目录存储）
+                String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH
+                        + FileUtils.replaceFileExtName(fileDO.getName(), thumbnailSuffix);
+                
+                // 生成缩略图完整路径
+                var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
+                        thumbnailFileName);
+                
+                // 根据文件类型生成缩略图
+                boolean result = false;
                 if (CategoryEnum.isPictureBySuffix(fileDO.getSuffix())) {
-                    var result = ImageUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150, -1);
-                    thumbnailFileName = result ? thumbnailFileName : null;
-                } else if (CategoryEnum.isVideoBySuffix(fileDO.getSuffix())) { // 视频生成缩略图
-                    var result = VideoUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150);
-                    thumbnailFileName = result ? thumbnailFileName : null;
-                } else {
-                    thumbnailFileName = null;
+                    result = ImageUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150, -1);
+                } else if (CategoryEnum.isVideoBySuffix(fileDO.getSuffix())) {
+                    result = VideoUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150);
                 }
-
-                if (thumbnailFileName != null) {
+                
+                if (result) {
                     updateFileThumbnail(fileDO.getId(), thumbnailFileName);
                 }
-//                }
             } catch (Exception e) {
-                log.error(e.getMessage());
+                log.error("生成缩略图失败: fileId={}, fileName={}", fileDO.getId(), fileDO.getName(), e);
             }
         });
     }

@@ -3,7 +3,6 @@ package com.xiaobai1226.aether.core.service.support;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.extension.toolkit.ChainWrappers;
 import com.xiaobai1226.aether.core.infrastructure.storage.StorageBackendFactory;
-import com.xiaobai1226.aether.core.service.impl.FileThumbnailService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
@@ -40,8 +39,8 @@ public class FilePurgeService {
     @Inject
     private StorageBackendFactory storageBackendFactory;
 
-    @Inject
-    private FileThumbnailService fileThumbnailService;
+    @Inject("${project.path.root}")
+    private String rootPath;
 
     /**
      * 彻底删除文件（用户级操作）
@@ -165,7 +164,7 @@ public class FilePurgeService {
             }
             
             // 引用计数为 0，可以安全删除缩略图
-            fileThumbnailService.deleteThumbnail(fileDO.getThumbnail());
+            ThumbnailService.deleteThumbnail(fileDO.getThumbnail(), rootPath);
             log.debug("缩略图已删除: fileId={}, thumbnail={}", fileDO.getId(), fileDO.getThumbnail());
         } catch (Exception e) {
             log.warn("删除缩略图失败: fileId={}, thumbnail={}", fileDO.getId(), fileDO.getThumbnail(), e);

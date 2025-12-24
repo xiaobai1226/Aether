@@ -2,8 +2,6 @@ package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
@@ -11,16 +9,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.xiaobai1226.aether.common.constant.SystemConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
-import com.xiaobai1226.aether.common.constant.FolderNameConsts;
-import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import com.xiaobai1226.aether.core.cache.FileCache;
 import com.xiaobai1226.aether.core.cache.UserCache;
 import com.xiaobai1226.aether.core.domain.dto.*;
-import com.xiaobai1226.aether.common.util.ImageUtils;
-import com.xiaobai1226.aether.common.util.VideoUtils;
-import com.xiaobai1226.aether.core.domain.vo.UploadFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFolderVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
@@ -40,7 +32,6 @@ import com.xiaobai1226.aether.core.service.support.UserFileTreeService;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO;
-import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.domain.entity.RecycleBinDO;
 import com.xiaobai1226.aether.dao.domain.entity.StorageSourceDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
@@ -54,19 +45,15 @@ import org.noear.solon.annotation.Inject;
 
 import java.util.Objects;
 import org.noear.solon.core.handle.DownloadedFile;
-import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.data.annotation.Tran;
 
 import java.io.*;
 import java.util.*;
-import java.nio.file.Files;
 
 import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
 import static com.xiaobai1226.aether.common.enums.CategoryEnum.OTHER;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
-import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.PARAM_IS_INVALID;
-import static com.xiaobai1226.aether.core.enums.UploadStatusEnum.*;
 import static com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.FILE;
 import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 
@@ -84,9 +71,6 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Db
     private FileMapper fileMapper;
-
-    @Inject("${project.path.root}")
-    private String rootPath;
 
     @Inject
     private FileCache fileCache;
@@ -356,345 +340,6 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
     }
 
     @Override
-    public UploadResultDTO secondUploadFile(final Long userId, UserFolderDTO parentFolder, UploadFileVO uploadFileVO,
-            FileDO fileDO) {
-        // 插入数据库
-        var userFile = addUserFile(userId, fileDO.getId(), parentFolder.getId(), uploadFileVO.getFileName(), FILE,
-                NORMAL,
-                fileDO.getSize(),
-                parentFolder.getStorageSourceId());
-
-        // 检查是否需要异步迁移存储源
-        if (!Objects.equals(fileDO.getStorageSourceId(), parentFolder.getStorageSourceId())) {
-            // 文件的存储源与目标文件夹的存储源不一致，标记为待迁移
-            storageMigrationService.markForMigration(userFile.getId(), parentFolder.getStorageSourceId(), userId);
-            log.info("秒传文件需要迁移存储源: userFileId={}, sourceStorageId={}, targetStorageId={}",
-                    userFile.getId(), fileDO.getStorageSourceId(), parentFolder.getStorageSourceId());
-        }
-
-        return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_SECOND.id());
-    }
-
-    @Override
-    public FileDO trySecondUpload(final Long userId, UserFolderDTO parentUserFile, UploadFileVO uploadFileVO) {
-        // TODO 检测存储空间是否足够
-        // var userSpaceUsage = userService.getUserSpaceUsage(userId);
-        // if (userSpaceUsage == null || userSpaceUsage.getRealRemainStorage() <
-        // uploadFileVO.getFileSize()) {
-        // throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-        // }
-
-        // 检测文件是否已存在（获取所有相同identifier的文件列表）
-        List<FileDO> existingFileList = fileService.getFileListByIdentifier(uploadFileVO.getIdentifier());
-
-        // 若文件列表为空，返回null表示无法秒传
-        if (CollUtil.isEmpty(existingFileList)) {
-            return null;
-        }
-
-        // 查找是否有同存储源的文件
-        FileDO storageFileDO = existingFileList.stream()
-                .filter(f -> f.getStorageSourceId() != null
-                        && f.getStorageSourceId().equals(parentUserFile.getStorageSourceId()))
-                .findFirst()
-                .orElse(null);
-
-        if (storageFileDO != null) {
-            // 情况2：有同存储源的文件，直接秒传
-            // TODO 如果前端传过来的文件大小，小于数据库中记录的，则重新判断空间是否足够
-            // if (uploadFileVO.getFileSize() < sameStorageFileDO.getSize()) {
-            // if (userSpaceUsage.getRealRemainStorage() < sameStorageFileDO.getSize()) {
-            // throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-            // }
-            // }
-
-            return null;
-        }
-
-        // 情况3：有文件但没有同存储源的，直接使用已存在的文件，异步迁移存储源
-        FileDO sourceFileDO = existingFileList.get(0); // 选择第一个作为源文件
-
-        // TODO 如果前端传过来的文件大小，小于数据库中记录的，则重新判断空间是否足够
-        // if (uploadFileVO.getFileSize() < sourceFileDO.getSize()) {
-        // if (userSpaceUsage.getRealRemainStorage() < sourceFileDO.getSize()) {
-        // throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-        // }
-        // }
-
-        // 需要执行秒传操作，返回已存在的文件（后续会标记异步迁移）
-        return sourceFileDO;
-    }
-
-    @Tran
-    @Override
-    public UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, UserFolderDTO parentFolder,
-            UploadFileVO uploadFileVO, UploadFileCacheDTO uploadFileCacheDTO) throws IOException {
-        UploadFileTempDTO uploadTempFileDTO;
-
-        // 设置暂存临时目录（使用配置的rootPath）
-        var tempFolder = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_TEMP_FILE_FULL, userId.toString(),
-                uploadFileVO.getTaskId());
-        var tempDir = FileUtil.file(tempFolder);
-        uploadFileCacheDTO.setTempDir(tempDir);
-
-        // long parentId = parentUserFile != null ? parentUserFile.getId() : 0L;
-
-        // 如果是第一片
-        if (uploadFileVO.getChunkIndex() == 0) {
-            if (file.getContentSize() > uploadFileVO.getFileSize()) {
-                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_FILE_SIZE_OVERFLOW);
-            }
-
-            // 预占上传空间（整个文件大小）
-            quotaService.reserveUploading(userId, uploadFileVO.getFileSize());
-
-            // 切片是0，则表示redis中还没有数据，要新增
-            var uploadFileTempDTO = BeanUtil.toBean(uploadFileVO, UploadFileTempDTO.class);
-            uploadFileTempDTO.setUploadedSize(0L);
-            uploadFileTempDTO.setTempFolder(tempFolder);
-            uploadFileTempDTO.setParentId(parentFolder.getId());
-            fileCache.putUploadTempFileInfo(userId, uploadFileVO.getTaskId(), uploadFileTempDTO);
-
-            // 如果文件夹不存在则创建目录
-            if (!FileUtil.isDirectory(tempDir)) {
-                if (!FileUtil.exist(tempDir)) {
-                    FileUtil.mkdir(tempDir);
-                }
-            }
-        } else {
-            // 获取缓存中数据
-            // var uploadTempFileDTO = fileCache.getUploadTempFileInfo(userId,
-            // uploadFileVO.getTaskId());
-            //
-            // // 如果缓存中没有数据，则返回上传失败
-            // if (uploadTempFileDTO == null) {
-            // // 删除缓存数据
-            // fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-            // userCache.decrementUploadingFileSize(userId, uploadFileVO.getFileSize());
-            // FileUtil.del(tempDir);
-            //
-            // return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FAIL.id());
-            // }
-            //
-            // // 如果缓存中有数据，但是实际上传文件大小已超过初始文件大小
-            // if (uploadTempFileDTO.getFileSize() < (uploadTempFileDTO.getUploadedSize() +
-            // file.getSize())) {
-            // // 删除缓存数据
-            // fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-            // userCache.decrementUploadingFileSize(userId, uploadFileVO.getFileSize());
-            // FileUtil.del(tempDir);
-            //
-            // return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FAIL.id());
-            // }
-
-            // 不是第一片，增加uploadedSize
-            fileCache.updateUploadedSize(userId, uploadFileVO.getTaskId(), file.getContentSize());
-        }
-
-        // 将文件写入临时目录
-        File tempFile = FileUtil.file(tempDir, uploadFileVO.getChunkIndex().toString());
-        file.transferTo(tempFile);
-
-        // 如果不是最后一片，直接返回上传中
-        if (uploadFileVO.getChunkIndex() < uploadFileVO.getTotalChunks() - 1) {
-            return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOADING.id());
-        }
-
-        // 获取缓存中数据
-        uploadTempFileDTO = fileCache.getUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-
-        // 如果是最后一片，执行合并分片操作（文件存储到存储源）
-        var finalFilePath = fileService.mergeFile(uploadTempFileDTO.getFileName(), uploadFileVO.getTaskId(), tempFolder,
-                parentFolder.getStorageSource().getPath());
-        var finalFullFilePath = FileUtils.generatePath(parentFolder.getStorageSource().getPath(), finalFilePath);
-        uploadFileCacheDTO.setFinalFilePath(finalFilePath);
-
-        // 获取最终文件
-        var finalFile = FileUtil.file(finalFullFilePath);
-        // 获取最终文件大小
-        var finalFileSize = FileUtil.size(finalFile);
-        var finalFileName = finalFile.getName();
-
-        // TODO 如果最终文件大小，大于初始文件大小
-        // if (finalFileSize > uploadTempFileDTO.getFileSize()) {
-        // // 重新检测文件大小是否足够
-        // var userSpaceUsage = userService.getUserSpaceUsage(userId);
-        // // 如果空间不足则返回上传失败
-        // if (userSpaceUsage.getRealRemainStorage() < (finalFileSize -
-        // uploadTempFileDTO.getFileSize())) {
-        // throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-        // }
-        // }
-
-        var thumbnailSuffix = FileTypeEnum.isGif(FileNameUtil.extName(finalFileName).toLowerCase())
-                ? SystemConsts.THUMBNAIL_GIF_SUFFIX
-                : SystemConsts.THUMBNAIL_SUFFIX;
-        String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH
-                + FileUtils.replaceFileExtName(finalFileName, thumbnailSuffix);
-        // 设置缩略图存储全路径（使用配置的rootPath）
-        var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
-                thumbnailFileName);
-        uploadFileCacheDTO.setThumbnailFilePath(thumbnailFilePath);
-
-        // 图片生成缩略图
-        if (CategoryEnum.isPictureByName(uploadTempFileDTO.getFileName())) {
-            var result = ImageUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150, -1);
-            thumbnailFileName = result ? thumbnailFileName : null;
-        } else if (CategoryEnum.isVideoByName(uploadTempFileDTO.getFileName())) { // 视频生成缩略图
-            var result = VideoUtils.generateThumbnail(finalFullFilePath, thumbnailFilePath, 150);
-            thumbnailFileName = result ? thumbnailFileName : null;
-        } else {
-            thumbnailFileName = null;
-        }
-
-        if (thumbnailFileName == null) {
-            uploadFileCacheDTO.setThumbnailFilePath(null);
-        }
-
-        // 写入File库，获取文件ID（storageSourceId已在前面获取）
-        var fileDO = fileService.addFile(finalFileName, finalFilePath, finalFileSize, uploadTempFileDTO.getIdentifier(),
-                thumbnailFileName, parentFolder.getStorageSourceId());
-
-        if (fileDO == null) {
-            throw new FailResultException(SYSTEM_ERROR);
-        }
-
-        // 插入数据库
-        addUserFile(userId, fileDO.getId(), parentFolder.getId(), uploadFileVO.getFileName(), FILE, NORMAL,
-                finalFileSize, parentFolder.getStorageSourceId());
-        // 删除缓存数据
-        fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-        quotaService.releaseUploading(userId, uploadTempFileDTO.getFileSize());
-        FileUtil.del(tempDir);
-
-        return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FINISH.id());
-    }
-
-    @Override
-    public UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFolderDTO parentFolder,
-            String fileName, String identifier) throws IOException {
-        return uploadWholeFile(localFile, userId, (UserFileDO) parentFolder, fileName, identifier);
-    }
-
-    @Override
-    @Tran
-    public UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFileDO parentUserFile,
-            String fileName, String identifier) throws IOException {
-        if (localFile == null || !localFile.exists() || localFile.isDirectory()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-        }
-        if (StrUtil.isBlank(fileName)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NAME_EMPTY);
-        }
-        if (StrUtil.isBlank(identifier)) {
-            throw new FailResultException(PARAM_IS_INVALID);
-        }
-
-        long fileSize = localFile.length();
-        // 预占上传空间
-        quotaService.reserveUploading(userId, fileSize);
-
-        // 选择存储源（优化：如果 parentUserFile 是 UserFolderDTO，直接使用其存储源信息）
-        var storageSource = getStorageSourceByParent(parentUserFile, userId);
-        if (storageSource == null) {
-            quotaService.releaseUploading(userId, fileSize);
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-        }
-        Long storageSourceId = storageSource.getId();
-
-        // 生成任务ID与存储文件名
-        String taskId = IdUtil.simpleUUID();
-        var storedFileName = FileUtils.rename(fileName, taskId);
-        var relativePath = FileUtils.generatePath(FolderNameConsts.PATH_UPLOAD_FILE_FULL,
-                DateUtil.format(new Date(), "yyyy/MM/dd"), storedFileName);
-
-        // 先落盘（轻量一致性套路：先落物理对象，再落库；失败时清理物理对象）
-        var backend = storageBackendFactory.getByType(0);
-        try {
-            backend.putFile(storageSource.getPath(), relativePath, localFile, true);
-
-            // 缩略图（仍使用 rootPath 统一存储）
-            var thumbnailSuffix = FileTypeEnum.isGif(FileNameUtil.extName(storedFileName).toLowerCase())
-                    ? SystemConsts.THUMBNAIL_GIF_SUFFIX
-                    : SystemConsts.THUMBNAIL_SUFFIX;
-            String thumbnailFileName = DateUtil.format(new Date(), "yyyy/MM/dd") + StrUtil.SLASH
-                    + FileUtils.replaceFileExtName(storedFileName, thumbnailSuffix);
-            var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
-                    thumbnailFileName);
-
-            String absPath = backend.tryResolveAbsolutePath(storageSource.getPath(), relativePath);
-            String thumbnailToStore = null;
-            if (absPath != null) {
-                if (CategoryEnum.isPictureByName(storedFileName)) {
-                    var ok = ImageUtils.generateThumbnail(absPath, thumbnailFilePath, 150, -1);
-                    thumbnailToStore = ok ? thumbnailFileName : null;
-                } else if (CategoryEnum.isVideoByName(storedFileName)) {
-                    var ok = VideoUtils.generateThumbnail(absPath, thumbnailFilePath, 150);
-                    thumbnailToStore = ok ? thumbnailFileName : null;
-                }
-            }
-
-            // FileDO
-            var fileDO = fileService.addFile(storedFileName, relativePath, fileSize, identifier, thumbnailToStore,
-                    storageSourceId);
-            if (fileDO == null) {
-                throw new FailResultException(SYSTEM_ERROR);
-            }
-
-            long parentId = parentUserFile != null ? parentUserFile.getId() : 0L;
-            addUserFile(userId, fileDO.getId(), parentId, fileName, FILE, NORMAL, fileSize, storageSourceId);
-
-            // 释放上传预占（已用空间由 addUserFile 内统一增加）
-            quotaService.releaseUploading(userId, fileSize);
-            return new UploadResultDTO(taskId, UPLOAD_FINISH.id());
-        } catch (Exception e) {
-            // 清理：释放预占 + 删除已落盘文件（尽量）
-            quotaService.releaseUploading(userId, fileSize);
-            try {
-                backend.delete(storageSource.getPath(), relativePath);
-            } catch (Exception ignore) {
-            }
-            if (e instanceof FailResultException fre) {
-                throw fre;
-            }
-            throw new FailResultException(SYSTEM_ERROR);
-        } finally {
-            // 清理临时文件（WebDAV场景）
-            try {
-                Files.deleteIfExists(localFile.toPath());
-            } catch (Exception ignore) {
-            }
-        }
-    }
-
-    @Override
-    public void cancelUploadFile(final Long userId, String taskId) {
-
-        var uploadTempFileInfo = fileCache.getUploadTempFileInfo(userId, taskId);
-
-        if (uploadTempFileInfo == null) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_CANCEL_UPLOAD);
-        }
-        // 删除缓存数据
-        fileCache.delUploadTempFileInfo(userId, taskId);
-        quotaService.releaseUploading(userId, uploadTempFileInfo.getFileSize());
-        var tempFolder = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_TEMP_FILE_FULL, userId, taskId);
-        var tempDir = FileUtil.file(tempFolder);
-        FileUtil.del(tempDir);
-    }
-
-    @Override
-    public void clearUploadFileCache(final Long userId, String taskId, Long fileSize,
-            UploadFileCacheDTO uploadFileCacheDTO) {
-        // 删除缓存数据
-        fileCache.delUploadTempFileInfo(userId, taskId);
-        quotaService.releaseUploading(userId, fileSize);
-        FileUtil.del(uploadFileCacheDTO.getTempDir());
-        FileUtil.del(uploadFileCacheDTO.getFinalFilePath());
-        FileUtil.del(uploadFileCacheDTO.getThumbnailFilePath());
-    }
-
-    @Override
     public PageResult<UserFileDO> getFolderList(final Long userId, Long parentId, UserFolderVO userFolderVO) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         var userFolderListPage = lambdaQuery.eq(UserFileDO::getUserId, userId)
@@ -948,29 +593,6 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         }
 
         return parentUserFile.getStorageSourceId();
-    }
-
-    /**
-     * 根据父文件夹获取存储源对象
-     * 优化：如果传入的是 UserFolderDTO 且已包含存储源信息，直接返回，避免重复查询
-     * 
-     * @param parentUserFile 父文件夹
-     * @param userId         用户ID
-     * @return 存储源对象
-     */
-    private StorageSourceDO getStorageSourceByParent(UserFileDO parentUserFile, Long userId) {
-        // 优化：如果传入的是 UserFolderDTO 且已包含存储源信息，直接返回，避免重复查询
-        if (parentUserFile instanceof UserFolderDTO folder && folder.getStorageSource() != null) {
-            return folder.getStorageSource();
-        }
-
-        // 否则通过 ID 查询
-        Long storageSourceId = getStorageSourceIdByParent(parentUserFile, userId);
-        if (storageSourceId == null) {
-            return null;
-        }
-
-        return storageSourceService.getStorageSourceById(storageSourceId, userId);
     }
 
     @Override

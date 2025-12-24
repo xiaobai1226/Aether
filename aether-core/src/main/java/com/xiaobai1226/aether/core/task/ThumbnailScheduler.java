@@ -7,9 +7,9 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xiaobai1226.aether.core.infrastructure.storage.StorageBackendFactory;
 import com.xiaobai1226.aether.core.service.impl.FileCleanupService;
-import com.xiaobai1226.aether.core.service.impl.FileThumbnailService;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
+import com.xiaobai1226.aether.core.service.support.ThumbnailService;
 import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.mapper.FileMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,6 @@ import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.scheduling.annotation.Scheduled;
 
-import java.io.File;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -37,9 +36,6 @@ public class ThumbnailScheduler {
     private FileMapper fileMapper;
 
     @Inject
-    private FileThumbnailService fileThumbnailService;
-
-    @Inject
     private FileService fileService;
 
     @Inject
@@ -50,6 +46,9 @@ public class ThumbnailScheduler {
 
     @Inject
     private FileCleanupService cleanupService;
+
+    @Inject("${project.path.root}")
+    private String rootPath;
 
     /**
      * 任务1：定时生成缺失的缩略图
@@ -144,20 +143,22 @@ public class ThumbnailScheduler {
                 return false;
             }
 
-            // 2. 生成缩略图
-            String thumbnailPath = fileThumbnailService.generateThumbnail(
-                    new File(absolutePath),
-                    fileDO.getSuffix(),
-                    fileDO.getSize());
+            // 2. 生成缩略图（直接使用 ThumbnailService）
+            var thumbnailResult = ThumbnailService.generateThumbnail(
+                    absolutePath,
+                    fileDO.getName(),
+                    fileDO.getSize(),
+                    rootPath);
 
-            if (thumbnailPath == null) {
+            if (!thumbnailResult.isSuccess()) {
                 log.warn("缩略图生成失败: fileId={}, path={}", fileDO.getId(), fileDO.getPath());
                 return false;
             }
 
             // 3. 更新数据库
-            fileService.updateThumbnail(fileDO.getId(), thumbnailPath);
-            log.info("缩略图补偿生成成功: fileId={}, thumbnail={}", fileDO.getId(), thumbnailPath);
+            fileService.updateThumbnail(fileDO.getId(), thumbnailResult.getThumbnailFileName());
+            log.info("缩略图补偿生成成功: fileId={}, thumbnail={}", fileDO.getId(), 
+                    thumbnailResult.getThumbnailFileName());
             return true;
 
         } catch (Exception e) {

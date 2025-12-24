@@ -2,7 +2,6 @@ package com.xiaobai1226.aether.core.service.intf;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.xiaobai1226.aether.core.domain.dto.*;
-import com.xiaobai1226.aether.core.domain.vo.UploadFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFolderVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
@@ -10,14 +9,11 @@ import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO;
-import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 
 import org.noear.solon.core.handle.DownloadedFile;
-import org.noear.solon.core.handle.UploadedFile;
 
 import java.io.IOException;
-import java.io.File;
 import java.util.List;
 
 /**
@@ -119,17 +115,6 @@ public interface UserFileService extends IService<UserFileDO> {
         Long getStorageSourceIdByParent(UserFileDO parentUserFile, Long userId);
 
         /**
-         * 尝试秒传文件（检查文件是否已存在，如果存在则直接秒传或复制）
-         *
-         * @param userId         用户ID
-         * @param parentUserFile 父文件夹对象
-         * @param uploadFileVO   上传文件信息
-         * @return 上传结果，如果返回null表示无法秒传，需要继续正常上传流程
-         * @author bai
-         */
-        FileDO trySecondUpload(final Long userId, UserFolderDTO parentUserFile, UploadFileVO uploadFileVO);
-
-        /**
          * 根据文件ID获取文件数据
          *
          * @param id             文件或文件夹ID
@@ -163,82 +148,6 @@ public interface UserFileService extends IService<UserFileDO> {
          */
         Boolean rename(Long id, final Long userId, String newName, UserFileDO userFileDO,
                         UserFileStatusEnum userFileStatus);
-
-        /**
-         * 秒传文件（当文件已存在时使用）
-         *
-         * @param userId       用户ID
-         * @param parentFolder 父文件夹对象
-         * @param uploadFileVO 上传文件相关信息
-         * @param fileDO       文件信息
-         * @return 上传结果
-         * @author bai
-         */
-        UploadResultDTO secondUploadFile(final Long userId, UserFolderDTO parentFolder, UploadFileVO uploadFileVO, FileDO fileDO);
-
-        /**
-         * 分片上传文件
-         *
-         * @param file               上传的文件
-         * @param userId             用户ID
-         * @param parentUserFile     父文件夹对象
-         * @param uploadFileVO       上传文件相关信息
-         * @param uploadFileCacheDTO 上传文件缓存相关信息
-         * @return 上传结果
-         * @author bai
-         */
-        UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, UserFolderDTO parentFolder,
-                        UploadFileVO uploadFileVO,
-                        UploadFileCacheDTO uploadFileCacheDTO) throws IOException;
-
-        /**
-         * 上传整文件（用于 WebDAV 等非 Multipart 场景）
-         *
-         * <p>
-         * 说明：该方法会复用现有的存储源选择、缩略图生成、FileDO/UserFile 记录落库与空间统计规则。
-         * </p>
-         *
-         * @param localFile      本地临时文件
-         * @param userId         用户ID
-         * @param parentUserFile 父目录（可为 null 表示根目录）
-         * @param fileName       用户侧展示名称
-         * @param identifier     内容标识（例如 MD5）
-         */
-        UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFileDO parentUserFile, String fileName,
-                        String identifier) throws IOException;
-
-        /**
-         * 上传整文件（优化版本：接收 UserFolderDTO，避免重复查询存储源）
-         *
-         * @param localFile      本地临时文件
-         * @param userId         用户ID
-         * @param parentFolder   父文件夹DTO（包含存储源信息，可为 null 表示根目录）
-         * @param fileName       用户侧展示名称
-         * @param identifier     内容标识（例如 MD5）
-         */
-        UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFolderDTO parentFolder, String fileName,
-                        String identifier) throws IOException;
-
-        /**
-         * 取消上传
-         *
-         * @param userId 用户ID
-         * @param taskId 任务ID
-         * @author bai
-         */
-        void cancelUploadFile(final Long userId, String taskId);
-
-        /**
-         * 清除缓存数据
-         *
-         * @param userId             用户ID
-         * @param taskId             任务ID
-         * @param fileSize           文件大小
-         * @param uploadFileCacheDTO 上传文件缓存相关信息
-         * @author bai
-         */
-        void clearUploadFileCache(final Long userId, String taskId, Long fileSize,
-                        UploadFileCacheDTO uploadFileCacheDTO);
 
         /**
          * 获取文件夹列表

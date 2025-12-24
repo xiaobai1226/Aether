@@ -98,6 +98,9 @@ public class FileOperationsFacade {
     @Inject
     private DownloadFileUseCase downloadFileUseCase;
 
+    @Inject
+    private UploadFileUseCase uploadFileUseCase;
+
     @Inject("${project.path.root}")
     private String rootPath;
 
@@ -180,22 +183,22 @@ public class FileOperationsFacade {
 
         // 如果是第一片文件，尝试秒传
         if (uploadFileVO.getChunkIndex() == 0) {
-            var storageFileDO = userFileService.trySecondUpload(userId, parentFolder, uploadFileVO);
+            var storageFileDO = uploadFileUseCase.trySecondUpload(userId, parentFolder, uploadFileVO);
             if (storageFileDO != null) {
-                return userFileService.secondUploadFile(userId, parentFolder, uploadFileVO, storageFileDO);
+                return uploadFileUseCase.secondUploadFile(userId, parentFolder, uploadFileVO, storageFileDO);
             }
         }
 
         var uploadFileCacheDTO = new UploadFileCacheDTO();
         try {
-            return userFileService.splitUploadFile(file, userId, parentFolder, uploadFileVO, uploadFileCacheDTO);
+            return uploadFileUseCase.splitUploadFile(file, userId, parentFolder, uploadFileVO, uploadFileCacheDTO);
         } catch (FailResultException e) {
-            userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
+            uploadFileUseCase.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
                     uploadFileCacheDTO);
             throw e;
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            userFileService.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
+            uploadFileUseCase.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
                     uploadFileCacheDTO);
             throw new FailResultException(SYSTEM_ERROR);
         }
@@ -208,7 +211,7 @@ public class FileOperationsFacade {
      * @param userId 用户ID
      */
     public void cancelUploadFile(String taskId, Long userId) {
-        userFileService.cancelUploadFile(userId, taskId);
+        uploadFileUseCase.cancelUploadFile(userId, taskId);
     }
 
     /**
@@ -718,7 +721,7 @@ public class FileOperationsFacade {
             }
 
             String identifier = bytesToHex(md5.digest());
-            userFileService.uploadWholeFile(tempFile, userId, parentFolder, fileName, identifier);
+            uploadFileUseCase.uploadWholeFile(tempFile, userId, parentFolder, fileName, identifier);
             return true;
         } catch (Exception e) {
             log.error("WebDAV putFile 失败: reqPath={}", reqPath, e);

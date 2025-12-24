@@ -45,9 +45,6 @@ public class FileCleanupService {
     private FilePurgeService filePurgeService;
 
     @Inject
-    private FileThumbnailService fileThumbnailService;
-
-    @Inject
     private StorageSourceService storageSourceService;
 
     @Inject
