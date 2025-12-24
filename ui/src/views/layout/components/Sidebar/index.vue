@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import {ref} from "vue";
-import {useRouter} from "vue-router";
+import {ref, onMounted, watch} from "vue";
+import {useRouter, useRoute} from "vue-router";
 import type {Menu} from "@/views/old/types/Menu";
 
 const router = useRouter();
+const route = useRoute();
 
 const menus: Menu[] = [
   {
@@ -34,7 +35,7 @@ const menus: Menu[] = [
     name: "设置",
     category: "settings",
     menuCode: "settings",
-    path: "/settings/storage",
+    path: "/settings",
     allShow: true
   },
 ];
@@ -42,6 +43,25 @@ const menus: Menu[] = [
 const currentMenu = ref<Menu>(menus[0]);
 
 const currentPath = ref<string>(menus[0].path);
+
+/**
+ * 根据路径更新菜单高亮状态
+ * @param path - 当前路径
+ */
+const updateMenuByPath = (path: string) => {
+  // 找到匹配的菜单项（支持路径前缀匹配）
+  const matchedMenu = menus.find(item => {
+    if (item.path === path) return true;
+    // 支持子路径匹配（如 /settings/storage 匹配 /settings）
+    if (item.path !== '/' && path.startsWith(item.path)) return true;
+    return false;
+  }) || menus.find(item => item.path === '/'); // 默认首页
+
+  if (matchedMenu) {
+    currentMenu.value = matchedMenu;
+    currentPath.value = path;
+  }
+};
 
 const setMenu = (menuCode: string, path: string) => {
   if (menuCode) {
@@ -62,6 +82,16 @@ const jump = (menuCode: string, path: string) => {
   router.push(path);
   setMenu(menuCode, path);
 };
+
+// 监听路由变化，自动更新菜单高亮
+watch(() => route.path, (newPath) => {
+  updateMenuByPath(newPath);
+}, { immediate: true });
+
+// 组件挂载时初始化菜单状态
+onMounted(() => {
+  updateMenuByPath(route.path);
+});
 </script>
 
 <template>

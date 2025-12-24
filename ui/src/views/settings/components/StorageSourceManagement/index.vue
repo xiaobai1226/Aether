@@ -81,7 +81,7 @@
             <el-option label="本地存储" :value="0" />
           </el-select>
         </el-form-item>
-        <el-form-item label="存储路径" prop="path">
+        <el-form-item label="存储路径" prop="path" class="has-tip">
           <el-input v-model="addForm.path" placeholder="请输入绝对路径，如：/data/aether" />
           <div class="form-tip">路径必须是绝对路径，且具有读写权限</div>
         </el-form-item>
@@ -101,7 +101,7 @@
         <el-form-item label="名称" prop="name">
           <el-input v-model="editForm.name" placeholder="请输入存储源名称" />
         </el-form-item>
-        <el-form-item label="存储路径">
+        <el-form-item label="存储路径" class="has-tip">
           <el-input v-model="editForm.path" disabled />
           <div class="form-tip">路径不可修改</div>
         </el-form-item>
@@ -322,6 +322,18 @@ onMounted(() => {
     font-size: 12px;
     color: #999;
     margin-top: 5px;
+  }
+
+  // 修复包含提示信息的表单项标签对齐问题
+  :deep(.el-form-item) {
+    &.has-tip {
+      align-items: flex-start;
+      
+      .el-form-item__label {
+        padding-top: 0;
+        line-height: 32px; // 与输入框高度对齐
+      }
+    }
   }
 
   :deep(.el-table) {
