@@ -18,6 +18,7 @@ dependencies {
     implementation(project(":aether-common"))
     implementation(project(":aether-domain"))
     implementation(project(":aether-dao"))
+    implementation(project(":aether-admin"))
 }
 
 tasks.withType<JavaCompile> {
