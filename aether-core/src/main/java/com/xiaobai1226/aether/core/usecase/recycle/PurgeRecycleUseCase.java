@@ -4,8 +4,6 @@ import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
-import com.xiaobai1226.aether.core.service.intf.QuotaService;
-import com.xiaobai1226.aether.core.service.support.FilePurgeService;
 import com.xiaobai1226.aether.dao.domain.entity.RecycleBinDO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.dao.mapper.RecycleBinMapper;
@@ -13,7 +11,6 @@ import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
-import org.noear.solon.annotation.Inject;
 import org.noear.solon.data.annotation.Tran;
 
 import java.util.*;
@@ -39,12 +36,6 @@ public class PurgeRecycleUseCase {
 
     @Db
     private UserFileMapper userFileMapper;
-
-    @Inject
-    private QuotaService quotaService;
-
-    @Inject
-    private FilePurgeService filePurgeService;
 
     /**
      * 执行彻底删除操作
@@ -79,7 +70,7 @@ public class PurgeRecycleUseCase {
         }
 
         // 3. 删除回收站记录
-        var delRecycleBinCount = recycleBinMapper.deleteBatchIds(recycleBinIds);
+        var delRecycleBinCount = recycleBinMapper.deleteByIds(recycleBinIds);
         if (delRecycleBinCount != recycleBinIds.size()) {
             throw new FailResultException(SYSTEM_ERROR);
         }
@@ -104,18 +95,13 @@ public class PurgeRecycleUseCase {
         }
 
         // 6. 删除用户文件记录
-        var delUserFileCount = userFileMapper.deleteBatchIds(userFileIds);
+        var delUserFileCount = userFileMapper.deleteByIds(userFileIds);
         if (delUserFileCount != userFileIds.size()) {
             throw new FailResultException(SYSTEM_ERROR);
         }
 
-        // 7. 释放配额（QuotaService 内部已处理 bytes <= 0 的情况）
-        quotaService.decreaseUsed(userId, totalSize);
-
-        // 8. 删除物理文件（FilePurgeService 会检查引用计数，只删除没有被引用的文件）
-        if (CollUtil.isNotEmpty(fileIds)) {
-            filePurgeService.purgeFiles(userId, fileIds);
-        }
+        // 7. TODO 释放配额（QuotaService 内部已处理 bytes <= 0 的情况）
+        // quotaService.decreaseUsed(userId, totalSize);
 
         log.info("文件彻底删除完成: 共删除{}个UserFile, 释放空间{}字节", userFileIds.size(), totalSize);
     }
