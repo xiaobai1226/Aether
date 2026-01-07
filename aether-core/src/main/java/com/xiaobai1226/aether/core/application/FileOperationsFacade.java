@@ -354,7 +354,12 @@ public class FileOperationsFacade {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
 
-            var fileFullPath = FileUtils.generatePath(rootPath, fileDO.getPath());
+            var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
+            if (storageSource == null) {
+                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
+            }
+
+            var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());
             if (!FileUtil.exist(fileFullPath)) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
@@ -400,10 +405,7 @@ public class FileOperationsFacade {
 
             var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
             if (storageSource == null) {
-                storageSource = storageSourceService.getDefaultStorageSource(userId);
-                if (storageSource == null) {
-                    throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-                }
+                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
             }
 
             var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());
@@ -442,10 +444,7 @@ public class FileOperationsFacade {
 
             var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
             if (storageSource == null) {
-                storageSource = storageSourceService.getDefaultStorageSource(userId);
-                if (storageSource == null) {
-                    throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-                }
+                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
             }
 
             var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());

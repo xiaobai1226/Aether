@@ -561,10 +561,11 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             throw new FailResultException(SYSTEM_ERROR);
         }
 
-        if (UserFileItemTypeEnum.isFile(userFileItemType)) {
-            // 更新用户已使用存储空间（集中到 QuotaService，避免多流程漏改）
-            quotaService.increaseUsed(userId, fileSize == null ? 0L : fileSize);
-        }
+        // TODO 存储空间
+        // if (UserFileItemTypeEnum.isFile(userFileItemType)) {
+        // // 更新用户已使用存储空间（集中到 QuotaService，避免多流程漏改）
+        // quotaService.increaseUsed(userId, fileSize == null ? 0L : fileSize);
+        // }
 
         return userFileDO;
     }
@@ -652,7 +653,7 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         }
 
         var userFileList = new ArrayList<UserFileDO>();
-        var needMigrateList = new ArrayList<UserFileDO>(); // 需要迁移存储源的文件列表
+        Long targetStorageSourceId = targetFolder.getStorageSourceId();
 
         for (var userFileTree : userFileTreeList) {
             var userFileDO = new UserFileDO();
@@ -664,13 +665,17 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
             userFileDO.setCreateTime(null);
             userFileDO.setUpdateTime(null);
 
-            // 对于继承类型的文件/文件夹，如果目标存储源与原存储源不同，需要更新存储源
-            if (userFileDO.getStorageSourceType() == 1
-                    && !Objects.equals(userFileDO.getStorageSourceId(), targetFolder.getStorageSourceId())) {
-                // 更新为目标存储源
-                userFileDO.setStorageSourceId(targetFolder.getStorageSourceId());
-                // 标记需要迁移
-                needMigrateList.add(userFileDO);
+            // 复制操作：统一使用目标父目录的存储源，并设置为继承类型
+            Long originalStorageSourceId = userFileDO.getStorageSourceId();
+            userFileDO.setStorageSourceId(targetStorageSourceId);
+            userFileDO.setStorageSourceType(1); // 设置为继承类型
+
+            // 如果是文件，且新的存储源和原先不一致，设置迁移标记
+            if (UserFileItemTypeEnum.isFile(userFileDO.getItemType())
+                    && !Objects.equals(originalStorageSourceId, targetStorageSourceId)) {
+                userFileDO.setMigrationPending(1);
+            } else {
+                userFileDO.setMigrationPending(0);
             }
 
             userFileList.add(userFileDO);
@@ -680,18 +685,6 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
         if (!saveBatchResult) {
             throw new FailResultException(SYSTEM_ERROR);
-        }
-
-        // 对需要迁移的文件标记为待迁移（异步处理）
-        for (int i = 0; i < userFileList.size(); i++) {
-            var userFileDO = userFileList.get(i);
-
-            // 如果是文件且需要迁移，标记为待迁移
-            if (UserFileItemTypeEnum.isFile(userFileDO.getItemType()) && needMigrateList.contains(userFileDO)) {
-                storageMigrationService.markForMigration(userFileDO.getId(), targetFolder.getStorageSourceId(), userId);
-                log.info("复制文件需要迁移存储源: userFileId={}, targetStorageId={}",
-                        userFileDO.getId(), targetFolder.getStorageSourceId());
-            }
         }
 
         // 递归插入子节点

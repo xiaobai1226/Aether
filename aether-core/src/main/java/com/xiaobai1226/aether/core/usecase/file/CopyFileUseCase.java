@@ -52,7 +52,7 @@ public class CopyFileUseCase {
 
         // 1. 查找源文件树
         var sourceFileTreeList = userFileService.getUserFileTreeListByIds(sourceIds, userId, NORMAL);
-        
+
         if (CollUtil.isEmpty(sourceFileTreeList) || sourceFileTreeList.size() != sourceIds.size()) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_COPY_CONTENT_EMPTY);
         }
@@ -71,7 +71,7 @@ public class CopyFileUseCase {
         // 6. 递归获取完整文件树
         userFileService.getSubUserFileTree(userId, sourceFileTreeList);
 
-        // 7. 计算总占用空间
+        // 7. TODO 计算总占用空间
         var totalSize = userFileService.getUserFileTreeSpaceUsage(sourceFileTreeList);
 
         // 8. TODO 检查配额

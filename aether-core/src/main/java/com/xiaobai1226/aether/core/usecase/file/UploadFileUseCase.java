@@ -200,8 +200,8 @@ public class UploadFileUseCase {
                 throw new FailResultException(BAD_REQUEST_ERROR, ERROR_FILE_SIZE_OVERFLOW);
             }
 
-            // 预占上传空间（整个文件大小）
-            quotaService.reserveUploading(userId, uploadFileVO.getFileSize());
+            // TODO 预占上传空间（整个文件大小）
+            // quotaService.reserveUploading(userId, uploadFileVO.getFileSize());
 
             // 切片是0，则表示redis中还没有数据，要新增
             var uploadFileTempDTO = BeanUtil.toBean(uploadFileVO, UploadFileTempDTO.class);
@@ -299,7 +299,8 @@ public class UploadFileUseCase {
                 finalFileSize, parentFolder.getStorageSourceId());
         // 删除缓存数据
         fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-        quotaService.releaseUploading(userId, uploadTempFileDTO.getFileSize());
+        // TODO 释放上传预占空间
+        // quotaService.releaseUploading(userId, uploadTempFileDTO.getFileSize());
         FileUtil.del(tempDir);
 
         return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FINISH.id());
@@ -308,11 +309,11 @@ public class UploadFileUseCase {
     /**
      * 上传整文件（优化版本：接收 UserFolderDTO，避免重复查询存储源）
      *
-     * @param localFile      本地临时文件
-     * @param userId         用户ID
-     * @param parentFolder   父文件夹DTO（包含存储源信息，可为 null 表示根目录）
-     * @param fileName       用户侧展示名称
-     * @param identifier     内容标识（例如 MD5）
+     * @param localFile    本地临时文件
+     * @param userId       用户ID
+     * @param parentFolder 父文件夹DTO（包含存储源信息，可为 null 表示根目录）
+     * @param fileName     用户侧展示名称
+     * @param identifier   内容标识（例如 MD5）
      */
     public UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFolderDTO parentFolder,
             String fileName, String identifier) throws IOException {

@@ -2,6 +2,8 @@ package com.xiaobai1226.aether.core.service.support;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.IoUtil;
+
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.infrastructure.storage.StorageBackendFactory;
@@ -16,6 +18,9 @@ import java.io.*;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_NO_STORAGE_SOURCE;
 
 /**
  * 下载服务（从 UserFileServiceImpl 中抽离）
@@ -40,11 +45,7 @@ public class UserFileDownloadService {
             var node = userFileTreeDTOList.getFirst();
             var storageSource = storageSourceService.getStorageSourceById(node.getStorageSourceId(), userId);
             if (storageSource == null) {
-                storageSource = storageSourceService.getDefaultStorageSource(userId);
-            }
-            if (storageSource == null) {
-                // 回退到旧逻辑（不阻塞下载）
-                return new DownloadedFile(new File(FileUtils.generatePath(rootPath, node.getPath())), node.getName());
+                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
             }
 
             var backend = storageBackendFactory.getByType(storageSource.getType());
@@ -95,10 +96,7 @@ public class UserFileDownloadService {
                     var storageSource = storageSourceService.getStorageSourceById(userFileTreeDTO.getStorageSourceId(),
                             userId);
                     if (storageSource == null) {
-                        storageSource = storageSourceService.getDefaultStorageSource(userId);
-                    }
-                    if (storageSource == null) {
-                        throw new IOException("无法获取存储源");
+                        throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
                     }
 
                     var backend = storageBackendFactory.getByType(storageSource.getType());

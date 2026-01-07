@@ -1,14 +1,16 @@
 package com.xiaobai1226.aether.core.usecase.file;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
-import com.xiaobai1226.aether.core.service.impl.StorageMigrationService;
-import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
+import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.data.annotation.Tran;
@@ -37,11 +39,8 @@ public class MoveFileUseCase {
     @Inject
     private UserFileService userFileService;
 
-    @Inject
-    private StorageMigrationService migrationService;
-
-    @Inject
-    private StorageSourceService storageSourceService;
+    @Db
+    private UserFileMapper userFileMapper;
 
     /**
      * 执行移动操作
@@ -71,13 +70,57 @@ public class MoveFileUseCase {
         // 5. 检查重名
         validateNoNameConflict(sourceFiles, targetFolder.getId(), userId);
 
+        List<Long> needStorageMigrationFileIds = new ArrayList<>();
+        List<Long> needStorageMigrationFolderIds = new ArrayList<>();
+
+        sourceFiles.forEach(sourceFile -> {
+            // 如果是文件，且存储源与目标文件夹不一致，则需要迁移存储源
+            if (UserFileItemTypeEnum.isFile(sourceFile.getItemType())
+                    && sourceFile.getStorageSourceId() != targetFolder.getStorageSourceId()) {
+                needStorageMigrationFileIds.add(sourceFile.getId());
+            } else if (UserFileItemTypeEnum.isFolder(sourceFile.getItemType())
+                    && sourceFile.getStorageSourceType() == 1
+                    && sourceFile.getStorageSourceId() != targetFolder.getStorageSourceId()) { // 如果是文件夹，且存储源为继承父目录，且存储源与目标文件夹不一致，则需要迁移存储源
+                needStorageMigrationFolderIds.add(sourceFile.getId());
+            }
+        });
+
+        if (CollUtil.isNotEmpty(needStorageMigrationFolderIds)) {
+            // 递归收集需要迁移的子文件和子文件夹ID
+            List<Long> tempFolderIds = new ArrayList<>(needStorageMigrationFolderIds);
+            for (Long folderId : tempFolderIds) {
+                collectInheritedFileAndFolderIds(folderId, userId, needStorageMigrationFolderIds,
+                        needStorageMigrationFileIds);
+            }
+        }
+
         // 6. 更新父目录
         userFileService.updateParentIdByIds(sourceIds, targetFolder.getId(), userId, NORMAL);
 
-        // 7. 处理存储源迁移（异步），直接使用传入的 targetFolder
-        handleStorageMigrationIfNeeded(sourceFiles, targetFolder, userId);
+        // 7. 批量更新文件夹存储源（文件夹没有实际数据，只需更新元数据）
+        if (CollUtil.isNotEmpty(needStorageMigrationFolderIds)) {
+            userFileMapper.update(null, new UpdateWrapper<UserFileDO>()
+                    .lambda()
+                    .in(UserFileDO::getId, needStorageMigrationFolderIds)
+                    .set(UserFileDO::getStorageSourceId, targetFolder.getStorageSourceId()));
+            log.info("批量更新文件夹存储源完成: count={}, targetStorageId={}",
+                    needStorageMigrationFolderIds.size(), targetFolder.getStorageSourceId());
+        }
 
-        log.info("文件移动完成: sourceIds={}, targetId={}", sourceIds, targetFolder.getId());
+        // 8. 批量更新文件存储源并标记迁移（文件有实际数据，需要异步迁移）
+        if (CollUtil.isNotEmpty(needStorageMigrationFileIds)) {
+            userFileMapper.update(null, new UpdateWrapper<UserFileDO>()
+                    .lambda()
+                    .in(UserFileDO::getId, needStorageMigrationFileIds)
+                    .set(UserFileDO::getStorageSourceId, targetFolder.getStorageSourceId())
+                    .set(UserFileDO::getMigrationPending, 1));
+            log.info("批量标记文件迁移完成: count={}, targetStorageId={}",
+                    needStorageMigrationFileIds.size(), targetFolder.getStorageSourceId());
+        }
+
+        log.info("文件移动完成: sourceIds={}, targetId={}, 文件夹数={}, 文件数={}",
+                sourceIds, targetFolder.getId(), needStorageMigrationFolderIds.size(),
+                needStorageMigrationFileIds.size());
     }
 
     /**
@@ -141,21 +184,47 @@ public class MoveFileUseCase {
     }
 
     /**
-     * 处理存储源迁移（如果需要）
-     * 核心改进：异步标记，不阻塞用户操作
-     * 优化：直接使用传入的 targetFolder，避免重复查询
+     * 递归收集需要迁移的文件和文件夹ID
+     * 
+     * 逻辑：
+     * - 显式指定存储源（storageSourceType=2）的文件夹：跳过该项及其所有子项
+     * - 继承存储源（storageSourceType=1 或 null）的文件夹：将ID加入文件夹列表，递归处理子项
+     * - 继承存储源（storageSourceType=1 或 null）的文件：将ID加入文件列表
+     * 
+     * @param folderId                      文件夹ID
+     * @param userId                        用户ID
+     * @param needStorageMigrationFolderIds 需要迁移的文件夹ID列表（输出参数）
+     * @param needStorageMigrationFileIds   需要迁移的文件ID列表（输出参数）
      */
-    private void handleStorageMigrationIfNeeded(List<UserFileDO> sourceFiles, UserFolderDTO targetFolder, Long userId) {
-        // 检查每个文件是否需要迁移
-        for (UserFileDO sourceFile : sourceFiles) {
-            // 只处理继承类型的文件/文件夹
-            if (sourceFile.getStorageSourceType() != null && sourceFile.getStorageSourceType() == 1) {
-                if (!Objects.equals(sourceFile.getStorageSourceId(), targetFolder.getStorageSourceId())) {
-                    // 标记为待迁移（异步处理）
-                    migrationService.markForMigration(sourceFile.getId(), targetFolder.getStorageSourceId(), userId);
-                    log.info("文件已标记为待迁移: fileId={}, targetStorageId={}",
-                            sourceFile.getId(), targetFolder.getStorageSourceId());
+    private void collectInheritedFileAndFolderIds(Long folderId, Long userId,
+            List<Long> needStorageMigrationFolderIds, List<Long> needStorageMigrationFileIds) {
+        var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
+        var children = lambdaQuery
+                .eq(UserFileDO::getUserId, userId)
+                .eq(UserFileDO::getParentId, folderId)
+                .eq(UserFileDO::getFileStatus, NORMAL.flag())
+                .list();
+
+        if (CollUtil.isEmpty(children)) {
+            return;
+        }
+
+        for (var child : children) {
+            // 处理继承类型的项（storageSourceType=1 或 null）
+            if (UserFileItemTypeEnum.isFolder(child.getItemType())) {
+                // 跳过显式指定存储源的文件夹（storageSourceType=2）
+                if (child.getStorageSourceType() != null && child.getStorageSourceType() == 2) {
+                    log.debug("跳过显式指定存储源的项: id={}, name={}", child.getId(), child.getName());
+                    continue; // 跳过该项及其所有子项
                 }
+
+                // 文件夹：加入列表，递归处理子项
+                needStorageMigrationFolderIds.add(child.getId());
+                collectInheritedFileAndFolderIds(child.getId(), userId, needStorageMigrationFolderIds,
+                        needStorageMigrationFileIds);
+            } else {
+                // 文件：加入列表
+                needStorageMigrationFileIds.add(child.getId());
             }
         }
     }

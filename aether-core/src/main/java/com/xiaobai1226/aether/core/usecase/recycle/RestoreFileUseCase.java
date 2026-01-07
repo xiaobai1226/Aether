@@ -82,7 +82,7 @@ public class RestoreFileUseCase {
         }
 
         // 3. 删除回收站记录
-        var delCount = recycleBinMapper.deleteBatchIds(recycleBinIds);
+        var delCount = recycleBinMapper.deleteByIds(recycleBinIds);
         if (delCount != recycleBinIds.size()) {
             throw new FailResultException(SYSTEM_ERROR);
         }

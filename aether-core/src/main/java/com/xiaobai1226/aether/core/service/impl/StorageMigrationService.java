@@ -55,7 +55,7 @@ public class StorageMigrationService {
     private StorageBackendFactory storageBackendFactory;
 
     /**
-     * 标记文件/文件夹为待迁移（异步迁移入口）
+     * 标记文件/文件夹为待迁移（智能处理，自动区分文件和文件夹）
      * 
      * @param userFileId            用户文件ID
      * @param targetStorageSourceId 目标存储源ID
@@ -68,38 +68,99 @@ public class StorageMigrationService {
             return;
         }
 
-        // 只标记继承类型的文件
-        if (userFile.getStorageSourceType() != null && userFile.getStorageSourceType() == 1) {
-            // 标记为待迁移
-            userFileMapper.update(null, new UpdateWrapper<UserFileDO>()
-                    .eq("id", userFileId)
-                    .set("migration_pending", 1));
-
-            log.info("文件已标记为待迁移: userFileId={}, targetStorageId={}", userFileId, targetStorageSourceId);
+        // 如果是文件夹，递归处理所有子文件
+        if (UserFileItemTypeEnum.isFolder(userFile.getItemType())) {
+            markFolderForMigrationInternal(userFileId, targetStorageSourceId, userId);
+        } else {
+            // 如果是文件，直接标记
+            markSingleFileForMigration(userFileId, userFile, targetStorageSourceId);
         }
     }
 
     /**
-     * 标记文件夹及其所有子文件为待迁移
+     * 标记文件夹及其所有子文件为待迁移（内部方法）
+     * 递归处理逻辑：
+     * 1. 显式指定存储源（type=2）的项：跳过，不处理
+     * 2. 继承存储源（type=1）的文件夹：更新存储源，不标记迁移，递归处理子项
+     * 3. 继承存储源（type=1）的文件：更新存储源，标记迁移
      * 
      * @param folderId              文件夹ID
      * @param targetStorageSourceId 目标存储源ID
      * @param userId                用户ID
      */
-    public void markFolderForMigration(Long folderId, Long targetStorageSourceId, Long userId) {
-        // 递归查找所有子文件
-        List<UserFileDO> allFiles = new ArrayList<>();
-        collectSubFiles(folderId, userId, allFiles);
+    private void markFolderForMigrationInternal(Long folderId, Long targetStorageSourceId, Long userId) {
+        var folder = userFileMapper.selectById(folderId);
+        if (folder == null) {
+            log.warn("文件夹不存在: folderId={}", folderId);
+            return;
+        }
 
-        log.info("标记文件夹迁移: folderId={}, 共{}个文件", folderId, allFiles.size());
+        // 1. 先处理文件夹本身（如果是继承类型）
+        if (folder.getStorageSourceType() == null || folder.getStorageSourceType() == 1) {
+            userFileMapper.update(null, new UpdateWrapper<UserFileDO>()
+                    .eq("id", folderId)
+                    .set("storage_source_id", targetStorageSourceId));
+            log.info("更新文件夹存储源: folderId={}, targetStorageId={}", folderId, targetStorageSourceId);
+        } else if (folder.getStorageSourceType() == 2) {
+            // 显式指定的文件夹，跳过不处理
+            log.info("文件夹为显式指定存储源，跳过: folderId={}", folderId);
+            return;
+        }
 
-        // 批量标记
-        for (UserFileDO file : allFiles) {
-            if (UserFileItemTypeEnum.isFile(file.getItemType())
-                    && file.getStorageSourceType() != null
-                    && file.getStorageSourceType() == 1) {
-                markForMigration(file.getId(), targetStorageSourceId, userId);
-            }
+        // 2. 递归收集需要处理的子文件和子文件夹
+        List<UserFileDO> inheritedFolders = new ArrayList<>();
+        List<UserFileDO> inheritedFiles = new ArrayList<>();
+
+        collectInheritedItems(folderId, userId, inheritedFolders, inheritedFiles);
+
+        log.info("标记文件夹迁移: folderId={}, 子文件夹数={}, 子文件数={}",
+                folderId, inheritedFolders.size(), inheritedFiles.size());
+
+        // 3. 批量更新子文件夹存储源（不标记迁移）
+        if (CollUtil.isNotEmpty(inheritedFolders)) {
+            List<Long> folderIds = inheritedFolders.stream()
+                    .map(UserFileDO::getId)
+                    .toList();
+
+            userFileMapper.update(null, new UpdateWrapper<UserFileDO>()
+                    .in("id", folderIds)
+                    .set("storage_source_id", targetStorageSourceId));
+
+            log.info("批量更新子文件夹存储源完成: count={}", folderIds.size());
+        }
+
+        // 4. 批量更新子文件存储源并标记迁移
+        if (CollUtil.isNotEmpty(inheritedFiles)) {
+            List<Long> fileIds = inheritedFiles.stream()
+                    .map(UserFileDO::getId)
+                    .toList();
+
+            userFileMapper.update(null, new UpdateWrapper<UserFileDO>()
+                    .in("id", fileIds)
+                    .set("storage_source_id", targetStorageSourceId)
+                    .set("migration_pending", 1));
+
+            log.info("批量标记子文件迁移完成: count={}", fileIds.size());
+        }
+    }
+
+    /**
+     * 标记单个文件为待迁移（内部方法）
+     * 
+     * @param userFileId            用户文件ID
+     * @param userFile              用户文件实体（可选，避免重复查询）
+     * @param targetStorageSourceId 目标存储源ID
+     */
+    private void markSingleFileForMigration(Long userFileId, UserFileDO userFile, Long targetStorageSourceId) {
+        // 只标记继承类型的文件
+        if (userFile.getStorageSourceType() != null && userFile.getStorageSourceType() == 1) {
+            // 标记为待迁移，并更新目标存储源ID（迁移时需要通过此ID判断目标存储源）
+            userFileMapper.update(null, new UpdateWrapper<UserFileDO>()
+                    .eq("id", userFileId)
+                    .set("migration_pending", 1)
+                    .set("storage_source_id", targetStorageSourceId));
+
+            log.info("文件已标记为待迁移: userFileId={}, targetStorageId={}", userFileId, targetStorageSourceId);
         }
     }
 
@@ -110,9 +171,8 @@ public class StorageMigrationService {
      */
     public List<UserFileDO> getPendingMigrationFiles() {
         return userFileMapper.selectList(
-            new LambdaQueryWrapper<UserFileDO>()
-                .eq(UserFileDO::getMigrationPending, 1)
-        );
+                new LambdaQueryWrapper<UserFileDO>()
+                        .eq(UserFileDO::getMigrationPending, 1));
     }
 
     /**
@@ -235,9 +295,22 @@ public class StorageMigrationService {
     }
 
     /**
-     * 递归收集子文件
+     * 递归收集继承类型的子文件和文件夹
+     * 
+     * 逻辑：
+     * - 显式指定（storageSourceType=2）：跳过该项及其所有子项
+     * - 继承（storageSourceType=1）：
+     * - 文件夹：加入 folders 列表，递归处理子项
+     * - 文件：加入 files 列表
+     * - null或其他类型：按继承处理（兼容旧数据）
+     * 
+     * @param parentId 父文件夹ID
+     * @param userId   用户ID
+     * @param folders  收集的文件夹列表（输出参数）
+     * @param files    收集的文件列表（输出参数）
      */
-    private void collectSubFiles(Long parentId, Long userId, List<UserFileDO> result) {
+    private void collectInheritedItems(Long parentId, Long userId,
+            List<UserFileDO> folders, List<UserFileDO> files) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
         var children = lambdaQuery
                 .eq(UserFileDO::getUserId, userId)
@@ -250,9 +323,20 @@ public class StorageMigrationService {
         }
 
         for (var child : children) {
-            result.add(child);
+            // 跳过显式指定存储源的项（storageSourceType=2）
+            if (child.getStorageSourceType() != null && child.getStorageSourceType() == 2) {
+                log.debug("跳过显式指定存储源的项: id={}, name={}", child.getId(), child.getName());
+                continue; // 跳过该项及其子项
+            }
+
+            // 处理继承类型的项（storageSourceType=1 或 null）
             if (UserFileItemTypeEnum.isFolder(child.getItemType())) {
-                collectSubFiles(child.getId(), userId, result);
+                // 文件夹：加入列表，递归处理子项
+                folders.add(child);
+                collectInheritedItems(child.getId(), userId, folders, files);
+            } else {
+                // 文件：加入列表
+                files.add(child);
             }
         }
     }
