@@ -1,7 +1,7 @@
-// val appVersion by extra("0.9.0")
+val appVersion by extra("0.9.0")
 //
 //group = "com.xiaobai1226"
-//version = appVersion
+// version = appVersion
 
 dependencies {
     implementation("org.noear:solon-web")
