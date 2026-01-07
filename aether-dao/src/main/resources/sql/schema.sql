@@ -49,8 +49,7 @@ CREATE TABLE file (
     identifier varchar(50) NOT NULL COMMENT 'md5唯一标识',
     storage_source_id bigint unsigned NULL COMMENT '存储源ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
-    update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    constraint file_pk2 unique (name)
+    update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间'
 ) COMMENT '文件表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
 -- ----------------------------
 -- Table structure for
