@@ -84,8 +84,10 @@
     }
 
     .op {
-      width: 340px;
+      width: 240px;
       margin-left: 15px;
+      display: flex;
+      align-items: center;
 
       .iconfont {
         font-size: 13px;
@@ -96,6 +98,19 @@
 
       .iconfont::before {
         margin-right: 3px;
+      }
+
+      .more-btn {
+        display: inline-flex;
+        align-items: center;
+        font-size: 13px;
+        margin-left: 10px;
+        color: #06a7ff;
+        cursor: pointer;
+        
+        i {
+          margin-left: 2px;
+        }
       }
     }
 

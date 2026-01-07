@@ -7,13 +7,13 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.scheduling.annotation.Scheduled;
 
 /**
- * 定时任务管理器
+ * 回收站定时任务管理器
  *
  * @author bai
  */
 @Component
 @Slf4j
-public class ScheduledTaskManager {
+public class RecycleBinScheduler {
 
     @Inject
     private RecycleBinService recycleBinService;

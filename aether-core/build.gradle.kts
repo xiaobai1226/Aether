@@ -1,4 +1,4 @@
-//val appVersion by extra("0.4.1")
+// val appVersion by extra("0.9.0")
 //
 //group = "com.xiaobai1226"
 //version = appVersion
@@ -16,9 +16,9 @@ dependencies {
 
     // 内部模块
     implementation(project(":aether-common"))
-    implementation(project(":aether-admin"))
     implementation(project(":aether-domain"))
     implementation(project(":aether-dao"))
+    implementation(project(":aether-admin"))
 }
 
 tasks.withType<JavaCompile> {
@@ -69,8 +69,8 @@ tasks.withType<ProcessResources> {
 /**
  * 打印版本号
  */
-tasks.register("printVersion") {
-    doLast {
-        println("$version")
-    }
-}
+// tasks.register("printVersion") {
+//     doLast {
+//         println("$version")
+//     }
+// }

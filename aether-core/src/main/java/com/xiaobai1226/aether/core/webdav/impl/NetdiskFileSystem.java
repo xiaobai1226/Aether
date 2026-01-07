@@ -2,16 +2,15 @@ package com.xiaobai1226.aether.core.webdav.impl;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
+import com.xiaobai1226.aether.core.application.FileOperationsFacade;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.core.webdav.intf.FileInfo;
 import com.xiaobai1226.aether.core.webdav.intf.FileSystem;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
-import com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO;
 
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
@@ -19,15 +18,11 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.Utils;
 import org.noear.solon.web.webdav.impl.ShardingInputStream;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-
-import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 
 /**
  * 网盘文件系统
@@ -41,6 +36,9 @@ public class NetdiskFileSystem implements FileSystem {
 
     @Inject
     private UserFileService userFileService;
+
+    @Inject
+    private FileOperationsFacade fileOperationsFacade;
 
     @Override
     public FileInfo fileInfo(String reqPath, Long userId) {
@@ -92,11 +90,12 @@ public class NetdiskFileSystem implements FileSystem {
 
         Long parentId = 0L;
         if (StrUtil.isNotEmpty(reqPath)) {
-            var parentUserFile = userFileService.getParentFolderByPath(userId, parentId, reqPath);
-            if (parentUserFile == null) {
+            // 使用 getFolderDTO 简化 path 到 parentId 的转换
+            var folder = userFileService.getFolderDTO(userId, reqPath);
+            if (folder == null) {
                 return null;
             }
-            parentId = parentUserFile.getId();
+            parentId = folder.getId();
         }
 
         var userFileDTOListPage = userFileService.getFileList(userId, parentId, null);
@@ -133,263 +132,27 @@ public class NetdiskFileSystem implements FileSystem {
 
     @Override
     public boolean putFile(String reqPath, InputStream in, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath)) {
-                return false;
-            }
-
-            // 解析路径，获取父目录和文件名
-            int lastSlashIndex = reqPath.lastIndexOf("/");
-            String parentPath = "";
-            String fileName = reqPath;
-            
-            if (lastSlashIndex > 0) {
-                parentPath = reqPath.substring(0, lastSlashIndex);
-                fileName = reqPath.substring(lastSlashIndex + 1);
-            } else if (lastSlashIndex == 0) {
-                fileName = reqPath.substring(1);
-            }
-
-            // 获取父目录ID
-            Long parentId = 0L;
-            if (StrUtil.isNotEmpty(parentPath)) {
-                var parentUserFile = userFileService.getParentFolderByPath(userId, 0L, parentPath);
-                if (parentUserFile == null) {
-                    return false;
-                }
-                parentId = parentUserFile.getId();
-            }
-
-            // 检查文件是否已存在
-            var existingFile = userFileService.getUserFileByName(fileName, userId, parentId, NORMAL);
-            
-            // 创建临时文件
-            String tempFileName = "webdav_" + IdUtil.simpleUUID();
-            String tempFilePath = FileUtils.generatePath(rootPath, "temp", tempFileName);
-            File tempFile = new File(tempFilePath);
-            tempFile.getParentFile().mkdirs();
-
-            // 将输入流写入临时文件
-            try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = in.read(buffer)) != -1) {
-                    fos.write(buffer, 0, bytesRead);
-                }
-            }
-
-            // TODO: 这里应该调用完整的上传逻辑，包括计算MD5、检查秒传等
-            // 目前简化实现：如果文件存在则删除，然后创建新文件
-            if (existingFile != null) {
-                var fileTreeList = new ArrayList<UserFileTreeDTO>();
-                var fileTree = new UserFileTreeDTO();
-                fileTree.setId(existingFile.getId());
-                fileTree.setItemType(existingFile.getItemType());
-                fileTreeList.add(fileTree);
-                userFileService.delete(fileTreeList, userId);
-            }
-
-            // 创建新文件记录
-            // TODO: 实现完整的文件创建逻辑
-            
-            // 清理临时文件
-            tempFile.delete();
-
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV putFile error: {}", e.getMessage(), e);
-            return false;
-        }
+        return fileOperationsFacade.putFileByPath(reqPath, in, userId);
     }
 
     @Override
     public boolean del(String reqPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath)) {
-                return false;
-            }
-
-            var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-            if (userFileDTO == null) {
-                return false;
-            }
-
-            // 构建文件树并删除
-            var fileTreeList = new ArrayList<UserFileTreeDTO>();
-            var fileTree = new UserFileTreeDTO();
-            fileTree.setId(userFileDTO.getId());
-            fileTree.setItemType(userFileDTO.getItemType());
-            fileTreeList.add(fileTree);
-
-            // 如果是文件夹，需要获取完整的子文件树
-            if (UserFileItemTypeEnum.isFolder(userFileDTO.getItemType())) {
-                userFileService.getSubUserFileTree(userId, fileTreeList);
-            }
-
-            userFileService.delete(fileTreeList, userId);
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV del error: {}", e.getMessage(), e);
-            return false;
-        }
+        return fileOperationsFacade.deleteByPath(reqPath, userId);
     }
 
     @Override
     public boolean copy(String reqPath, String descPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath) || StrUtil.isEmpty(descPath)) {
-                return false;
-            }
-
-            // 获取源文件
-            var sourceFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-            if (sourceFileDTO == null) {
-                return false;
-            }
-
-            // 解析目标路径
-            int lastSlashIndex = descPath.lastIndexOf("/");
-            String targetParentPath = "";
-            
-            if (lastSlashIndex > 0) {
-                targetParentPath = descPath.substring(0, lastSlashIndex);
-            }
-
-            // 获取目标父目录ID
-            Long targetParentId = 0L;
-            if (StrUtil.isNotEmpty(targetParentPath)) {
-                var targetParentFile = userFileService.getParentFolderByPath(userId, 0L, targetParentPath);
-                if (targetParentFile == null) {
-                    return false;
-                }
-                targetParentId = targetParentFile.getId();
-            }
-
-            // 构建源文件树
-            var sourceTreeList = new ArrayList<UserFileTreeDTO>();
-            var sourceTree = new UserFileTreeDTO();
-            sourceTree.setId(sourceFileDTO.getId());
-            sourceTree.setItemType(sourceFileDTO.getItemType());
-            sourceTree.setName(sourceFileDTO.getName());
-            sourceTree.setParentId(sourceFileDTO.getParentId());
-            sourceTreeList.add(sourceTree);
-
-            // 如果是文件夹，获取完整子树
-            if (UserFileItemTypeEnum.isFolder(sourceFileDTO.getItemType())) {
-                userFileService.getSubUserFileTree(userId, sourceTreeList);
-            }
-
-            // 计算总大小
-            Long totalSize = userFileService.getUserFileTreeSpaceUsage(sourceTreeList);
-
-            // 执行复制
-            userFileService.copy(targetParentId, userId, sourceTreeList, totalSize);
-            
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV copy error: {}", e.getMessage(), e);
-            return false;
-        }
+        return fileOperationsFacade.copyByPath(reqPath, descPath, userId);
     }
 
     @Override
     public boolean move(String reqPath, String descPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath) || StrUtil.isEmpty(descPath)) {
-                return false;
-            }
-
-            // 获取源文件
-            var sourceFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-            if (sourceFileDTO == null) {
-                return false;
-            }
-
-            // 解析目标路径
-            int lastSlashIndex = descPath.lastIndexOf("/");
-            String targetParentPath = "";
-            String targetName = descPath;
-            
-            if (lastSlashIndex > 0) {
-                targetParentPath = descPath.substring(0, lastSlashIndex);
-                targetName = descPath.substring(lastSlashIndex + 1);
-            } else if (lastSlashIndex == 0) {
-                targetName = descPath.substring(1);
-            }
-
-            // 获取目标父目录ID
-            Long targetParentId = 0L;
-            if (StrUtil.isNotEmpty(targetParentPath)) {
-                var targetParentFile = userFileService.getParentFolderByPath(userId, 0L, targetParentPath);
-                if (targetParentFile == null) {
-                    return false;
-                }
-                targetParentId = targetParentFile.getId();
-            }
-
-            // 如果名称不同，需要重命名
-            boolean needRename = !sourceFileDTO.getName().equals(targetName);
-
-            // 移动文件（更新parentId）
-            var sourceIds = new ArrayList<Long>();
-            sourceIds.add(sourceFileDTO.getId());
-            userFileService.updateParentIdByIds(sourceIds, targetParentId, userId, NORMAL);
-
-            // 如果需要重命名
-            if (needRename) {
-                userFileService.updateFileNameById(sourceFileDTO.getId(), userId, targetName, NORMAL);
-            }
-
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV move error: {}", e.getMessage(), e);
-            return false;
-        }
+        return fileOperationsFacade.moveByPath(reqPath, descPath, userId);
     }
 
     @Override
     public boolean mkdir(String reqPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath)) {
-                return false;
-            }
-
-            // 解析路径，获取父目录和文件夹名
-            int lastSlashIndex = reqPath.lastIndexOf("/");
-            String parentPath = "";
-            String folderName = reqPath;
-            
-            if (lastSlashIndex > 0) {
-                parentPath = reqPath.substring(0, lastSlashIndex);
-                folderName = reqPath.substring(lastSlashIndex + 1);
-            } else if (lastSlashIndex == 0) {
-                folderName = reqPath.substring(1);
-            }
-
-            // 获取父目录ID
-            Long parentId = 0L;
-            if (StrUtil.isNotEmpty(parentPath)) {
-                var parentUserFile = userFileService.getParentFolderByPath(userId, 0L, parentPath);
-                if (parentUserFile == null) {
-                    return false;
-                }
-                parentId = parentUserFile.getId();
-            }
-
-            // 检查文件夹是否已存在
-            var existingFolder = userFileService.getUserFileByName(folderName, userId, parentId, NORMAL);
-            if (existingFolder != null) {
-                // 文件夹已存在
-                return false;
-            }
-
-            // 创建文件夹
-            userFileService.newFolder(folderName, parentId, userId);
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV mkdir error: {}", e.getMessage(), e);
-            return false;
-        }
+        return fileOperationsFacade.mkdirByPath(reqPath, userId);
     }
 
     @Override

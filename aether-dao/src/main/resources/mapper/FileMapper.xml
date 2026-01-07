@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaobai1226.aether.dao.mapper.FileMapper">
+    
+    <!-- 查找无引用的File记录ID列表 -->
+    <select id="findOrphanFileIds" resultType="Long">
+        SELECT f.id
+        FROM file f
+        LEFT JOIN user_file uf ON f.id = uf.file_id
+        WHERE uf.id IS NULL
+    </select>
+</mapper>

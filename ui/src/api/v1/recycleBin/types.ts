@@ -76,7 +76,7 @@ export interface RecycleBinFileInfo extends UserFileInfo {
  */
 export interface DeleteOrRestoreRequest {
   /**
-   * 回收ID集合用逗号分割的字符串
+   * 回收ID集合
    */
-  recycleIds: string;
+  recycleIds: string[];
 }

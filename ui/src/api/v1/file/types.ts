@@ -156,6 +156,11 @@ export interface UserFileInfo {
    * md5唯一标识
    */
   identifier?: string;
+
+  /**
+   * 存储源ID
+   */
+  storageSourceId?: number;
 }
 
 /**
@@ -264,9 +269,9 @@ export interface UploadFileResponse {
  */
 export interface MoveRequest {
   /**
-   * 主键ID集合用逗号分割的字符串
+   * 主键ID集合
    */
-  sourceIds: string;
+  sourceIds: number[];
 
   /**
    * 目标文件夹路径
@@ -279,9 +284,9 @@ export interface MoveRequest {
  */
 export interface CopyRequest {
   /**
-   * 主键ID集合用逗号分割的字符串
+   * 主键ID集合
    */
-  sourceIds: string;
+  sourceIds: number[];
 
   /**
    * 目标文件夹路径
@@ -294,7 +299,7 @@ export interface CopyRequest {
  */
 export interface DeleteRequest {
   /**
-   * 主键ID集合用逗号分割的字符串
+   * 主键ID集合
    */
-  ids: string;
+  ids: number[];
 }

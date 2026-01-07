@@ -45,14 +45,9 @@ public class FileDO {
     private String suffix;
 
     /**
-     * 文件状态 0 转码中 1 转码成功 2 转码失败
+     * 文件类型 0 其他 1 视频 2 音频 3 图片 4 pdf 5 doc 6 excel 7 txt 8 code 9 zip
      */
-//    private Integer fileStatus;
-
-    /**
-     * 文件类型ID
-     */
-//    private Integer fileType;
+    private Integer fileType;
 
     /**
      * md5唯一标识
@@ -60,9 +55,9 @@ public class FileDO {
     private String identifier;
 
     /**
-     * 存储源ID 1 本地存储
+     * 存储源ID
      */
-//    private Integer storageSourceId;
+    private Long storageSourceId;
 
     /**
      * 创建时间

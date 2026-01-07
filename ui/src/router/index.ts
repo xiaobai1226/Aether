@@ -8,6 +8,8 @@ import AdminLayout from '@/views/admin/layout/index.vue'
 import UserList from '@/views/admin/components/UserList/index.vue'
 import AdminFileList from '@/views/admin/components/FileList/index.vue'
 import Dashboard from '@/views/admin/components/Dashboard/index.vue'
+import Settings from '@/views/settings/index.vue'
+import StorageSourceManagement from '@/views/settings/components/StorageSourceManagement/index.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,6 +47,19 @@ const router = createRouter({
             //     name: "分享记录",
             //     component: ShareList,
             // }
+          ]
+        },
+        {
+          path: 'settings',
+          name: '设置',
+          component: Settings,
+          redirect: '/settings/storage',
+          children: [
+            {
+              path: 'storage',
+              name: '存储源管理',
+              component: StorageSourceManagement
+            }
           ]
         }
       ]
@@ -88,6 +103,26 @@ const router = createRouter({
     //     component: ShareContent
     // }
   ]
+})
+
+// 路由守卫：检查用户是否有存储源
+router.beforeEach((to, from, next) => {
+  // 动态导入，避免循环依赖
+  import('@/stores/account').then(({ useAccountStore }) => {
+    const accountStore = useAccountStore()
+    
+    // 如果已登录且不是登录页面
+    if (accountStore.accountInfo.token && to.path !== '/login') {
+      // 如果没有存储源且不是前往设置页面
+      if (accountStore.accountInfo.hasStorageSource === false && !to.path.startsWith('/settings')) {
+        // 强制跳转到存储源管理页面
+        next('/settings/storage')
+        return
+      }
+    }
+    
+    next()
+  })
 })
 
 export default router

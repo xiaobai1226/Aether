@@ -11,7 +11,7 @@ project:
 solon:
   app:
     name: Aether
-    version: @appVersion@
+    # version: @appVersion@
 
 server:
   # 监听端口

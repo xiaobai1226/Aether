@@ -92,25 +92,9 @@
         </where>
     </select>
 
-
-    <!--    查询用户文件列表 TODO 确认这个是否有必要存在，可以用getUserFileDTOByIdsAndUserId代替，自己通过逻辑实现-->
-    <select id="getUserFileTreeDTOByIdsAndUserId" resultType="com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO">
-        SELECT user_file.*, file.size, file.thumbnail, file.identifier
-        FROM user_file AS user_file
-        LEFT JOIN file AS file ON user_file.file_id = file.id
-        <where>
-            user_file.user_id = #{userFileDO.userId}
-            AND user_file.file_status = #{userFileDO.fileStatus}
-            AND user_file.id IN
-            <foreach item="item" index="index" collection="ids" open="(" separator="," close=")">
-                #{item}
-            </foreach>
-        </where>
-    </select>
-
     <!--    查询用户文件列表-->
     <select id="getUserFileDTOByParentIdAndUserId" resultType="com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO">
-        SELECT user_file.*, file.size, file.thumbnail, file.identifier
+        SELECT user_file.*, file.size, file.thumbnail, file.identifier, file.path
         FROM user_file AS user_file
         LEFT JOIN file AS file ON user_file.file_id = file.id
         <where>

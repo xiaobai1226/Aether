@@ -62,6 +62,21 @@ public class UserFileDO {
 //    private Integer category;
 
     /**
+     * 存储源ID
+     */
+    private Long storageSourceId;
+
+    /**
+     * 存储源类型 1 继承父目录 2 显式指定
+     */
+    private Integer storageSourceType;
+
+    /**
+     * 待迁移标记 0=否 1=是
+     */
+    private Integer migrationPending;
+
+    /**
      * 创建时间
      */
     private String createTime;
