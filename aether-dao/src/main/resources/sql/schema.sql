@@ -45,7 +45,7 @@ CREATE TABLE file (
     size bigint unsigned NOT NULL COMMENT '文件大小',
     thumbnail varchar(100) NULL COMMENT '缩略图 只有视频与图片存在',
     suffix varchar(300) DEFAULT NULL NULL COMMENT '文件名后缀',
-    file_type int unsigned DEFAULT 0 NULL COMMENT '文件类型 0 其他 1 视频 2音频 3 图片 4 pdf 5 doc 6 excel 7 txt 8 code 9 zip',
+    -- file_type int unsigned DEFAULT 0 NULL COMMENT '文件类型 0 其他 1 视频 2音频 3 图片 4 pdf 5 doc 6 excel 7 txt 8 code 9 zip',
     identifier varchar(50) NOT NULL COMMENT 'md5唯一标识',
     storage_source_id bigint unsigned NULL COMMENT '存储源ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
@@ -65,10 +65,10 @@ CREATE TABLE user_file (
     file_status tinyint(1) DEFAULT 1 NOT NULL COMMENT '文件状态 1 正常 0 回收站',
     name varchar(300) NOT NULL COMMENT '文件夹或文件名称',
     suffix varchar(300) DEFAULT NULL NULL COMMENT '文件名后缀',
-    category int unsigned DEFAULT NULL NULL COMMENT '文件分类 0 其他 1 视频 2音频 3 图片 4 文档 文件夹为null',
-    storage_source_id bigint unsigned NULL COMMENT '存储源ID',
+    -- category int unsigned DEFAULT NULL NULL COMMENT '文件分类 0 其他 1 视频 2音频 3 图片 4 文档 文件夹为null',
+    storage_source_id bigint unsigned NOT NULL COMMENT '存储源ID',
     storage_source_type tinyint(1) unsigned DEFAULT 1 NOT NULL COMMENT '存储源类型 1 继承父目录 2 显式指定',
-    migration_pending tinyint(1) unsigned DEFAULT 0 COMMENT '待迁移标记 0=否 1=是'
+    migration_pending tinyint(1) unsigned DEFAULT 0 NOT NULL COMMENT '待迁移标记 0=否 1=是'
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间'
 ) COMMENT '用户文件表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
