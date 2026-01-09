@@ -1,4 +1,4 @@
-val appVersion by extra("0.9.0")
+val appVersion by extra("0.9.1")
 //
 //group = "com.xiaobai1226"
 // version = appVersion
