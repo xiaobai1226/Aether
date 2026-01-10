@@ -47,7 +47,7 @@ CREATE TABLE file (
     suffix varchar(300) DEFAULT NULL NULL COMMENT '文件名后缀',
     -- file_type int unsigned DEFAULT 0 NULL COMMENT '文件类型 0 其他 1 视频 2音频 3 图片 4 pdf 5 doc 6 excel 7 txt 8 code 9 zip',
     identifier varchar(50) NOT NULL COMMENT 'md5唯一标识',
-    storage_source_id bigint unsigned NULL COMMENT '存储源ID',
+    storage_source_id bigint unsigned NOT NULL COMMENT '存储源ID',
     create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间'
 ) COMMENT '文件表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
