@@ -1,18 +1,13 @@
-val appVersion by extra("0.9.2")
-//
-//group = "com.xiaobai1226"
-// version = appVersion
-
 dependencies {
-    implementation("org.noear:solon-web")
-    implementation("org.noear:solon-boot-jetty")
-    implementation("org.noear:solon-view-thymeleaf")
-    implementation("org.noear:solon-web-webdav:${DependenciesVersion.solonVersion}")
-    implementation("org.noear:solon-logging-logback")
-    implementation("org.noear:sa-token-solon-plugin")
-    implementation("org.noear:solon-scheduling-simple")
+    implementation(libs.solon.web)
+    implementation(libs.solon.boot.jetty)
+    implementation(libs.solon.view.thymeleaf)
+    implementation(libs.solon.web.webdav)
+    implementation(libs.solon.logging.logback)
+    implementation(libs.solon.satoken.plugin)
+    implementation(libs.solon.scheduling.simple)
     // Caffeine缓存
-    implementation("com.github.ben-manes.caffeine:caffeine:${DependenciesVersion.caffeineVersion}")    
+    implementation(libs.caffeine)
 
     // 内部模块
     implementation(project(":aether-common"))
@@ -69,8 +64,8 @@ tasks.withType<ProcessResources> {
 /**
  * 打印版本号
  */
-// tasks.register("printVersion") {
-//     doLast {
-//         println("$version")
-//     }
-// }
+tasks.register("printVersion") {
+    doLast {
+        println("$version")
+    }
+}

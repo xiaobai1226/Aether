@@ -1,8 +1,8 @@
 dependencies {
-    api("com.baomidou:mybatis-plus-solon-plugin")
-    implementation("com.baomidou:mybatis-plus-jsqlparser")
-    implementation("com.zaxxer:HikariCP:${DependenciesVersion.hikariCPVersion}")
-    implementation("com.mysql:mysql-connector-j:${DependenciesVersion.mysqlConnectorJVersion}")
+    api(libs.mybatis.plus.solon.plugin)
+    implementation(libs.mybatis.plus.jsqlparser)
+    implementation(libs.hikaricp)
+    implementation(libs.mysql.connector)
 
     // 内部模块
     implementation(project(":aether-domain"))

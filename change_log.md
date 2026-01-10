@@ -1,4 +1,7 @@
 # 修改记录
+## 0.10.0
+1. 使用Version Catalog替代buildSrc管理Gradle依赖版本
+2. 
 
 ## 0.9.0
 

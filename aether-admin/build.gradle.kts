@@ -1,6 +1,6 @@
 dependencies {
-    implementation("org.noear:solon-web")
-    implementation("org.noear:sa-token-solon-plugin")
+    implementation(libs.solon.web)
+    implementation(libs.solon.satoken.plugin)
 
     // 内部模块
     implementation(project(":aether-common"))
