@@ -1,7 +1,8 @@
 # 修改记录
 ## 0.10.0
 1. 使用Version Catalog替代buildSrc管理Gradle依赖版本
-2. 
+2. 移除org.noear:solon-view-thymeleaf依赖，使用默认
+3. 移除jetty依赖，使用默认
 
 ## 0.9.0
 

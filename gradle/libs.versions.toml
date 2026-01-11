@@ -20,8 +20,6 @@ mysql-connector = "9.5.0"
 # Solon 框架相关
 solon-parent = { module = "org.noear:solon-parent", version.ref = "solon" }
 solon-web = { module = "org.noear:solon-web" }
-solon-boot-jetty = { module = "org.noear:solon-boot-jetty" }
-solon-view-thymeleaf = { module = "org.noear:solon-view-thymeleaf" }
 solon-web-webdav = { module = "org.noear:solon-web-webdav", version.ref = "solon" }
 solon-logging-logback = { module = "org.noear:solon-logging-logback" }
 solon-satoken-plugin = { module = "org.noear:sa-token-solon-plugin" }

@@ -1,7 +1,5 @@
 dependencies {
     implementation(libs.solon.web)
-    implementation(libs.solon.boot.jetty)
-    implementation(libs.solon.view.thymeleaf)
     implementation(libs.solon.web.webdav)
     implementation(libs.solon.logging.logback)
     implementation(libs.solon.satoken.plugin)

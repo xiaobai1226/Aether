@@ -40,3 +40,6 @@ out/
 /logs
 
 .DS_Store
+
+**/src/main/**/static/
+**/src/test/**/static/
