@@ -4,10 +4,11 @@ import cn.hutool.core.codec.Base64;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
 import com.xiaobai1226.aether.core.service.intf.WebDavService;
-import com.xiaobai1226.aether.core.webdav.intf.FileSystem;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.web.webdav.FileSystem;
+import org.noear.solon.web.webdav.WebdavAbstractHandler;
 
 /**
  * webdav抽象拦截器
@@ -23,16 +24,12 @@ public class NetdiskWebdavHandler extends WebdavAbstractHandler {
     @Inject
     private FileSystem fileSystem;
 
-//    public NetdiskWebdavHandler() {
-//
-//    }
-//
-//    public NetdiskWebdavHandler(boolean range) {
-//        super(range);
-//    }
+    public NetdiskWebdavHandler() {
+        super(true); // 启用 range 支持，用于 HTTP Range 请求
+    }
 
     @Override
-    public Long user(Context ctx) {
+    public String user(Context ctx) {
         String authHeader = ctx.header("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Basic ")) {
@@ -52,8 +49,16 @@ public class NetdiskWebdavHandler extends WebdavAbstractHandler {
             return null;
         }
 
-        // 你现在可以使用username和password做进一步的处理
-        return webDavService.checkUsernameAndPassword(username, password);
+        // 验证用户名和密码，并获取用户ID
+        String userIdStr = webDavService.checkUsernameAndPassword(username, password);
+
+        if (userIdStr != null) {
+            // 将userId存入ThreadLocal供FileSystem使用
+            Long userId = Long.parseLong(userIdStr);
+            UserContext.setUserId(userId);
+        }
+
+        return userIdStr;
     }
 
     @Override

@@ -7,15 +7,16 @@ import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.application.FileOperationsFacade;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
+import com.xiaobai1226.aether.core.webdav.UserContext;
 import com.xiaobai1226.aether.common.util.FileUtils;
-import com.xiaobai1226.aether.core.webdav.intf.FileInfo;
-import com.xiaobai1226.aether.core.webdav.intf.FileSystem;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.Utils;
+import org.noear.solon.web.webdav.FileInfo;
+import org.noear.solon.web.webdav.FileSystem;
 import org.noear.solon.web.webdav.impl.ShardingInputStream;
 
 import java.io.InputStream;
@@ -41,7 +42,9 @@ public class NetdiskFileSystem implements FileSystem {
     private FileOperationsFacade fileOperationsFacade;
 
     @Override
-    public FileInfo fileInfo(String reqPath, Long userId) {
+    public FileInfo fileInfo(String reqPath) {
+        Long userId = UserContext.getUserId();
+
         if (Objects.equals(reqPath, "")) {
             return new FileInfo() {
                 @Override
@@ -59,10 +62,10 @@ public class NetdiskFileSystem implements FileSystem {
                     return 0;
                 }
 
-                @Override
-                public String path() {
-                    return "";
-                }
+                // @Override
+                // public String path() {
+                // return "";
+                // }
 
                 @Override
                 public String update() {
@@ -86,7 +89,8 @@ public class NetdiskFileSystem implements FileSystem {
     }
 
     @Override
-    public List<FileInfo> fileList(String reqPath, Long userId) {
+    public List<FileInfo> fileList(String reqPath) {
+        Long userId = UserContext.getUserId();
 
         Long parentId = 0L;
         if (StrUtil.isNotEmpty(reqPath)) {
@@ -119,7 +123,9 @@ public class NetdiskFileSystem implements FileSystem {
     }
 
     @Override
-    public InputStream fileInputStream(String reqPath, long start, long length, Long userId) {
+    public InputStream fileInputStream(String reqPath, long start, long length) {
+        Long userId = UserContext.getUserId();
+
         var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
         var fileFullPath = FileUtils.generatePath(rootPath, userFileDTO.getPath());
         InputStream in = FileUtil.getInputStream(fileFullPath);
@@ -131,27 +137,32 @@ public class NetdiskFileSystem implements FileSystem {
     }
 
     @Override
-    public boolean putFile(String reqPath, InputStream in, Long userId) {
+    public boolean putFile(String reqPath, InputStream in) {
+        Long userId = UserContext.getUserId();
         return fileOperationsFacade.putFileByPath(reqPath, in, userId);
     }
 
     @Override
-    public boolean del(String reqPath, Long userId) {
+    public boolean del(String reqPath) {
+        Long userId = UserContext.getUserId();
         return fileOperationsFacade.deleteByPath(reqPath, userId);
     }
 
     @Override
-    public boolean copy(String reqPath, String descPath, Long userId) {
+    public boolean copy(String reqPath, String descPath) {
+        Long userId = UserContext.getUserId();
         return fileOperationsFacade.copyByPath(reqPath, descPath, userId);
     }
 
     @Override
-    public boolean move(String reqPath, String descPath, Long userId) {
+    public boolean move(String reqPath, String descPath) {
+        Long userId = UserContext.getUserId();
         return fileOperationsFacade.moveByPath(reqPath, descPath, userId);
     }
 
     @Override
-    public boolean mkdir(String reqPath, Long userId) {
+    public boolean mkdir(String reqPath) {
+        Long userId = UserContext.getUserId();
         return fileOperationsFacade.mkdirByPath(reqPath, userId);
     }
 
@@ -180,10 +191,10 @@ public class NetdiskFileSystem implements FileSystem {
                 return UserFileItemTypeEnum.isFolder(userFileDTO.getItemType()) ? 0 : userFileDTO.getSize();
             }
 
-            @Override
-            public String path() {
-                return "";
-            }
+            // @Override
+            // public String path() {
+            // return "";
+            // }
 
             @Override
             public String update() {
