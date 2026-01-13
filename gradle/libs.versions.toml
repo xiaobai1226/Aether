@@ -3,7 +3,7 @@
 
 [versions]
 # 框架版本
-solon = "3.8.1-M5"
+solon = "3.8.2"
 mybatis-plus = "3.5.14"
 
 # 工具库版本

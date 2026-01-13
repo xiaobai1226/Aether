@@ -7,7 +7,7 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.Filter;
 import org.noear.solon.core.handle.FilterChain;
 
-@Component(index = -1)
+@Component(index = -10000)
 public class WebdavFilter implements Filter {
 
     @Inject
@@ -16,8 +16,9 @@ public class WebdavFilter implements Filter {
     @Override
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {
         if (ctx.path().startsWith("/webdav")) {
-            //自己实现处理
+            // 自己实现处理
             handler.handle(ctx);
+            ctx.setHandled(true);
         } else {
             chain.doFilter(ctx);
         }
