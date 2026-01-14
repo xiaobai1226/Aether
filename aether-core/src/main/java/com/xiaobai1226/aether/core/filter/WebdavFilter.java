@@ -1,6 +1,7 @@
 package com.xiaobai1226.aether.core.filter;
 
 import com.xiaobai1226.aether.core.webdav.NetdiskWebdavHandler;
+import com.xiaobai1226.aether.core.webdav.UserContext;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.handle.Context;
@@ -16,9 +17,14 @@ public class WebdavFilter implements Filter {
     @Override
     public void doFilter(Context ctx, FilterChain chain) throws Throwable {
         if (ctx.path().startsWith("/webdav")) {
-            // 自己实现处理
-            handler.handle(ctx);
-            ctx.setHandled(true);
+            try {
+                // 自己实现处理
+                handler.handle(ctx);
+                ctx.setHandled(true);
+            } finally {
+                // 清理 ThreadLocal，防止内存泄漏
+                UserContext.clear();
+            }
         } else {
             chain.doFilter(ctx);
         }

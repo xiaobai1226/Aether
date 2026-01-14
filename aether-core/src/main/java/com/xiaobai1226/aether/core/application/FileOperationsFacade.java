@@ -477,188 +477,12 @@ public class FileOperationsFacade {
     }
 
     /**
-     * WebDAV：按路径删除（进入回收站）
-     */
-    public boolean deleteByPath(String reqPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath)) {
-                return false;
-            }
-            var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-            if (userFileDTO == null) {
-                return false;
-            }
-
-            var fileTreeList = new ArrayList<UserFileTreeDTO>();
-            var fileTree = new UserFileTreeDTO();
-            fileTree.setId(userFileDTO.getId());
-            fileTree.setItemType(userFileDTO.getItemType());
-            fileTreeList.add(fileTree);
-
-            if (UserFileItemTypeEnum.isFolder(userFileDTO.getItemType())) {
-                userFileService.getSubUserFileTree(userId, fileTreeList);
-            }
-
-            userFileService.delete(fileTreeList, userId);
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV按路径删除失败: reqPath={}", reqPath, e);
-            return false;
-        }
-    }
-
-    /**
-     * WebDAV：按路径复制
-     */
-    public boolean copyByPath(String reqPath, String descPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath) || StrUtil.isEmpty(descPath)) {
-                return false;
-            }
-
-            var sourceFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-            if (sourceFileDTO == null) {
-                return false;
-            }
-
-            int lastSlashIndex = descPath.lastIndexOf("/");
-            String targetParentPath = "";
-            if (lastSlashIndex > 0) {
-                targetParentPath = descPath.substring(0, lastSlashIndex);
-            }
-
-            Long targetParentId = 0L;
-            UserFolderDTO targetParentFolder = null;
-            if (StrUtil.isNotEmpty(targetParentPath)) {
-                // 使用 getFolderDTO 获取目标父文件夹（包含存储源信息）
-                targetParentFolder = userFileService.getFolderDTO(userId, targetParentPath);
-                if (targetParentFolder == null) {
-                    return false;
-                }
-                targetParentId = targetParentFolder.getId();
-            }
-
-            var sourceTreeList = new ArrayList<UserFileTreeDTO>();
-            var sourceTree = new UserFileTreeDTO();
-            sourceTree.setId(sourceFileDTO.getId());
-            sourceTree.setItemType(sourceFileDTO.getItemType());
-            sourceTree.setName(sourceFileDTO.getName());
-            sourceTree.setParentId(sourceFileDTO.getParentId());
-            sourceTreeList.add(sourceTree);
-
-            if (UserFileItemTypeEnum.isFolder(sourceFileDTO.getItemType())) {
-                userFileService.getSubUserFileTree(userId, sourceTreeList);
-            }
-
-            Long totalSize = userFileService.getUserFileTreeSpaceUsage(sourceTreeList);
-            userFileService.copy(targetParentFolder, userId, sourceTreeList, totalSize);
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV按路径复制失败: reqPath={}, descPath={}", reqPath, descPath, e);
-            return false;
-        }
-    }
-
-    /**
-     * WebDAV：按路径移动（只更新UserFile结构；如需迁移存储源，后续统一走 move 用例）
-     */
-    public boolean moveByPath(String reqPath, String descPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath) || StrUtil.isEmpty(descPath)) {
-                return false;
-            }
-
-            var sourceFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-            if (sourceFileDTO == null) {
-                return false;
-            }
-
-            int lastSlashIndex = descPath.lastIndexOf("/");
-            String targetParentPath = "";
-            String targetName = descPath;
-            if (lastSlashIndex > 0) {
-                targetParentPath = descPath.substring(0, lastSlashIndex);
-                targetName = descPath.substring(lastSlashIndex + 1);
-            } else if (lastSlashIndex == 0) {
-                targetName = descPath.substring(1);
-            }
-
-            Long targetParentId = 0L;
-            if (StrUtil.isNotEmpty(targetParentPath)) {
-                // 使用 getFolderDTO 获取目标父文件夹（包含存储源信息）
-                var targetParentFolder = userFileService.getFolderDTO(userId, targetParentPath);
-                if (targetParentFolder == null) {
-                    return false;
-                }
-                targetParentId = targetParentFolder.getId();
-            }
-
-            boolean needRename = !sourceFileDTO.getName().equals(targetName);
-            var sourceIds = new ArrayList<Long>();
-            sourceIds.add(sourceFileDTO.getId());
-            userFileService.updateParentIdByIds(sourceIds, targetParentId, userId, NORMAL);
-            if (needRename) {
-                userFileService.updateFileNameById(sourceFileDTO.getId(), userId, targetName, NORMAL);
-            }
-
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV按路径移动失败: reqPath={}, descPath={}", reqPath, descPath, e);
-            return false;
-        }
-    }
-
-    /**
-     * WebDAV：按路径创建目录
-     */
-    public boolean mkdirByPath(String reqPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath)) {
-                return false;
-            }
-
-            int lastSlashIndex = reqPath.lastIndexOf("/");
-            String parentPath = "";
-            String folderName = reqPath;
-            if (lastSlashIndex > 0) {
-                parentPath = reqPath.substring(0, lastSlashIndex);
-                folderName = reqPath.substring(lastSlashIndex + 1);
-            } else if (lastSlashIndex == 0) {
-                folderName = reqPath.substring(1);
-            }
-
-            // 使用 UserFolderDTO 保持存储源信息，避免向下转型丢失信息
-            UserFolderDTO parentFolder = null;
-            Long parentId = 0L;
-            if (StrUtil.isNotEmpty(parentPath)) {
-                // 使用 getFolderDTO 获取父文件夹（包含存储源信息）
-                parentFolder = userFileService.getFolderDTO(userId, parentPath);
-                if (parentFolder == null) {
-                    return false;
-                }
-                parentId = parentFolder.getId();
-            }
-
-            var existingFolder = userFileService.getUserFileByName(folderName, userId, parentId, NORMAL);
-            if (existingFolder != null) {
-                return false;
-            }
-
-            // 复用已有 newFolder 逻辑（保持一致的存储源继承策略）
-            userFileService.newFolder(folderName, parentFolder, userId);
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV按路径创建目录失败: reqPath={}", reqPath, e);
-            return false;
-        }
-    }
-
-    /**
      * WebDAV：写入文件（覆盖语义）
      *
      * 说明：WebDAV 并不是 Multipart 上传，因此这里通过写临时文件 + 计算 MD5 的方式复用主上传逻辑。
      */
     public boolean putFileByPath(String reqPath, InputStream in, Long userId) {
+        File tempFile = null;
         try {
             if (StrUtil.isEmpty(reqPath) || in == null) {
                 return false;
@@ -704,7 +528,7 @@ public class FileOperationsFacade {
             String tempFileName = "webdav_" + RandomUtil.randomString(12);
             String tempFolder = FileUtils.generatePath(rootPath, "temp", "webdav", userId.toString());
             FileUtil.mkdir(tempFolder);
-            File tempFile = FileUtil.file(tempFolder, tempFileName);
+            tempFile = FileUtil.file(tempFolder, tempFileName);
 
             var md5 = MessageDigest.getInstance("MD5");
             try (OutputStream out = Files.newOutputStream(tempFile.toPath())) {
@@ -722,6 +546,16 @@ public class FileOperationsFacade {
         } catch (Exception e) {
             log.error("WebDAV putFile 失败: reqPath={}", reqPath, e);
             return false;
+        } finally {
+            // 清理临时文件，防止磁盘空间泄漏
+            if (tempFile != null && tempFile.exists()) {
+                try {
+                    FileUtil.del(tempFile);
+                    log.debug("WebDAV 临时文件已清理: {}", tempFile.getPath());
+                } catch (Exception e) {
+                    log.warn("WebDAV 临时文件清理失败: {}", tempFile.getPath(), e);
+                }
+            }
         }
     }
 

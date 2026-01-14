@@ -2,12 +2,15 @@ package com.xiaobai1226.aether.core.webdav.impl;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 
-import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.application.FileOperationsFacade;
+import com.xiaobai1226.aether.core.domain.vo.NewFolderVO;
+import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
+import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.webdav.UserContext;
+import com.xiaobai1226.aether.core.webdav.WebDavPathAdapter;
+import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 
@@ -27,6 +30,9 @@ import java.util.Objects;
 
 /**
  * 网盘文件系统
+ * 
+ * 重构说明：使用 WebDavPathAdapter 适配器统一调用标准业务逻辑，
+ * 复用完整的 UseCase（业务校验、存储源迁移等），避免代码重复和功能漂移
  */
 @Component
 @Slf4j
@@ -39,8 +45,31 @@ public class NetdiskFileSystem implements FileSystem {
     private UserFileService userFileService;
 
     @Inject
+    private WebDavPathAdapter pathAdapter;
+
+    @Inject
     private FileOperationsFacade fileOperationsFacade;
 
+    /**
+     * 获取文件/文件夹信息
+     * 
+     * 对应的 WebDAV HTTP 方法：PROPFIND
+     * 
+     * 作用：根据请求路径获取文件或文件夹的详细信息，包括名称、大小、修改时间、创建时间等。
+     * 
+     * 调用场景：
+     * 客户端查看文件属性（名称、大小、修改时间）
+     * 检查文件是否存在
+     * Windows 资源管理器显示文件详情
+     * macOS Finder 显示文件信息
+     * 
+     * 特殊处理：
+     * 当 reqPath 为空字符串时，返回根目录的 FileInfo（isDir=true）
+     * 其他情况通过 userFileService 查询用户文件信息
+     * 
+     * @param reqPath 请求路径，相对于 WebDAV 根目录（例如："/文件夹/文件.txt" 或 "" 表示根目录）
+     * @return FileInfo 对象，包含文件/文件夹的详细信息；如果文件不存在返回 null
+     */
     @Override
     public FileInfo fileInfo(String reqPath) {
         Long userId = UserContext.getUserId();
@@ -62,11 +91,6 @@ public class NetdiskFileSystem implements FileSystem {
                     return 0;
                 }
 
-                // @Override
-                // public String path() {
-                // return "";
-                // }
-
                 @Override
                 public String update() {
                     return new Date().toString();
@@ -83,45 +107,140 @@ public class NetdiskFileSystem implements FileSystem {
         return this.userFileDTO2Info(userFileDTO);
     }
 
+    /**
+     * 获取文件 MIME 类型
+     * 
+     * 对应的 WebDAV HTTP 方法：PROPFIND（返回 getcontenttype 属性）
+     * 
+     * 作用：返回文件或文件夹的 MIME 类型，用于客户端正确显示文件图标或选择打开方式。
+     * 
+     * 调用场景：
+     * 客户端需要知道文件类型以正确显示图标
+     * 确定文件的打开方式
+     * 在文件列表中显示文件类型标识
+     * 
+     * 返回值说明：
+     * 文件夹：返回 "httpd/unix-directory"
+     * 文件：返回 "text/plain"（当前实现，可根据实际需求扩展为真实的 MIME 类型）
+     * 
+     * @param fi FileInfo 对象，包含文件/文件夹的基本信息
+     * @return MIME 类型字符串
+     */
     @Override
     public String fileMime(FileInfo fi) {
         return fi.isDir() ? "httpd/unix-directory" : "text/plain";
     }
 
+    /**
+     * 列出目录内容
+     * 
+     * 对应的 WebDAV HTTP 方法：PROPFIND（depth=1）
+     * 
+     * 作用：列出指定目录下的所有文件和子文件夹。
+     * 
+     * 调用场景：
+     * 打开文件夹，显示里面的文件列表
+     * macOS Finder 浏览 WebDAV 目录
+     * Windows 资源管理器打开文件夹
+     * WebDAV 客户端刷新目录内容
+     * 
+     * 处理逻辑：
+     * 通过 FileOperationsFacade 复用 getFileListByPage() 方法
+     * 内部包含 path → parentId 转换逻辑，避免代码重复
+     * 将查询结果转换为 FileInfo 列表返回
+     * 
+     * @param reqPath 请求路径，相对于 WebDAV 根目录（例如："/文件夹" 或 "" 表示根目录）
+     * @return FileInfo 列表，包含目录下所有文件和子文件夹的信息；如果目录不存在或为空返回 null
+     */
     @Override
     public List<FileInfo> fileList(String reqPath) {
         Long userId = UserContext.getUserId();
 
-        Long parentId = 0L;
-        if (StrUtil.isNotEmpty(reqPath)) {
-            // 使用 getFolderDTO 简化 path 到 parentId 的转换
-            var folder = userFileService.getFolderDTO(userId, reqPath);
-            if (folder == null) {
+        try {
+            // 构造 UserFileVO，设置路径
+            var userFileVO = new UserFileVO();
+            userFileVO.setPath(reqPath);
+            userFileVO.setPageNum(1);
+            userFileVO.setPageSize(-1);
+
+            // 复用 Facade 的 getFileListByPage()，内部已包含 path → parentId 转换逻辑
+            var pageResult = fileOperationsFacade.getFileListByPage(userFileVO, userId);
+
+            if (pageResult == null || CollUtil.isEmpty(pageResult.getList())) {
                 return null;
             }
-            parentId = folder.getId();
-        }
 
-        var userFileDTOListPage = userFileService.getFileList(userId, parentId, null);
-        if (userFileDTOListPage == null || CollUtil.isEmpty(userFileDTOListPage.getList())) {
+            // 转换为 FileInfo 列表
+            List<FileInfo> list = new ArrayList<>();
+            for (var userFileDTO : pageResult.getList()) {
+                FileInfo fi = this.userFileDTO2Info(userFileDTO);
+                if (fi != null) {
+                    list.add(fi);
+                }
+            }
+            return list;
+        } catch (FailResultException e) {
+            // WebDAV 的错误处理：返回 null 而不是抛出异常
+            log.warn("fileList 失败: reqPath={}, userId={}, error={}", reqPath, userId, e.getMessage());
             return null;
         }
-
-        List<FileInfo> list = new ArrayList<>();
-        for (var userFileDTO : userFileDTOListPage.getList()) {
-            FileInfo fi = this.userFileDTO2Info(userFileDTO);
-            if (fi != null) {
-                list.add(fi);
-            }
-        }
-        return list;
     }
 
+    /**
+     * 生成文件的 ETag（实体标签）
+     * 
+     * 对应的 WebDAV HTTP 方法：PROPFIND（返回 getetag 属性）
+     * 
+     * 作用：为文件生成唯一的 ETag 标识符，用于缓存控制和版本检测。
+     * 
+     * 调用场景：
+     * 客户端使用 ETag 判断文件是否被修改
+     * 避免重复下载未改动的文件（缓存优化）
+     * 支持条件请求（If-None-Match、If-Match）
+     * 
+     * ETag 格式：
+     * 格式：W/"MD5值"（W 表示弱验证器）
+     * 基于文件的修改时间和路径生成 MD5 值
+     * 文件内容或修改时间变化时，ETag 会改变
+     * 
+     * @param reqPath 请求路径
+     * @param fi      FileInfo 对象，包含文件的修改时间等信息
+     * @return ETag 字符串，格式为 W/"MD5值"
+     */
     @Override
     public String findEtag(String reqPath, FileInfo fi) {
         return "W/\"" + Utils.md5(fi.update() + reqPath) + "\"";
     }
 
+    /**
+     * 读取文件内容（支持断点续传）
+     * 
+     * 对应的 WebDAV HTTP 方法：GET
+     * 
+     * 作用：读取文件的内容流，支持指定读取的起始位置和长度，用于文件下载和断点续传。
+     * 
+     * 调用场景：
+     * 下载文件（完整下载）
+     * 断点续传（使用 start 和 length 参数指定范围）
+     * 在线预览文件（部分读取）
+     * 视频/音频文件的流式播放
+     * 
+     * 参数说明：
+     * start：读取的起始字节位置（从 0 开始）
+     * length：要读取的字节长度
+     * length=0：表示读取从 start 位置到文件末尾的所有内容
+     * 
+     * 处理逻辑：
+     * 根据路径获取用户文件信息
+     * 生成文件的完整物理路径
+     * 如果 length=0，返回完整输入流
+     * 如果 length>0，使用 ShardingInputStream 包装，只读取指定范围
+     * 
+     * @param reqPath 请求路径，相对于 WebDAV 根目录
+     * @param start   读取的起始字节位置
+     * @param length  要读取的字节长度，0 表示读取到文件末尾
+     * @return InputStream 输入流，包含文件内容或指定范围的内容
+     */
     @Override
     public InputStream fileInputStream(String reqPath, long start, long length) {
         Long userId = UserContext.getUserId();
@@ -136,36 +255,194 @@ public class NetdiskFileSystem implements FileSystem {
         }
     }
 
+    /**
+     * 上传文件（覆盖已存在的文件）
+     * 
+     * 对应的 WebDAV HTTP 方法：PUT
+     * 
+     * 作用：将文件内容写入到指定路径，如果文件已存在则覆盖。
+     * 
+     * 调用场景：
+     * 上传新文件到 WebDAV 服务器
+     * 覆盖已存在的文件（编辑保存）
+     * 拖拽文件到 WebDAV 文件夹
+     * 复制文件到 WebDAV 服务器
+     * 
+     * 实现说明：
+     * 通过 WebDavPathAdapter 适配器调用，复用完整的业务逻辑
+     * 包含业务校验、存储源迁移、配额检查等功能
+     * 确保与标准文件上传接口的行为一致
+     * 
+     * @param reqPath 请求路径，相对于 WebDAV 根目录（例如："/文件夹/新文件.txt"）
+     * @param in      文件内容的输入流
+     * @return true 表示上传成功，false 表示失败
+     */
     @Override
     public boolean putFile(String reqPath, InputStream in) {
         Long userId = UserContext.getUserId();
-        return fileOperationsFacade.putFileByPath(reqPath, in, userId);
+        // 通过适配器调用，复用业务逻辑
+        return pathAdapter.adaptPutFile(reqPath, in, userId);
     }
 
+    /**
+     * 删除文件或文件夹
+     * 
+     * 对应的 WebDAV HTTP 方法：DELETE
+     * 
+     * 作用：删除指定路径的文件或文件夹（包括非空文件夹）。
+     * 
+     * 调用场景：
+     * 删除文件（右键删除或按 Delete 键）
+     * 删除空文件夹
+     * 递归删除非空文件夹及其所有内容
+     * 
+     * 实现说明：
+     * 通过 WebDavPathAdapter 适配器调用，复用 DeleteFileUseCase 的完整业务逻辑
+     * 包含权限校验、回收站处理等业务规则
+     * 确保与标准文件删除接口的行为一致
+     * 
+     * @param reqPath 请求路径，相对于 WebDAV 根目录
+     * @return true 表示删除成功，false 表示失败
+     */
     @Override
     public boolean del(String reqPath) {
         Long userId = UserContext.getUserId();
-        return fileOperationsFacade.deleteByPath(reqPath, userId);
+        // 通过适配器调用，复用 DeleteFileUseCase 的完整业务逻辑
+        return pathAdapter.adaptDelete(reqPath, userId);
     }
 
+    /**
+     * 复制文件或文件夹
+     * 
+     * 对应的 WebDAV HTTP 方法：COPY
+     * 
+     * 作用：将文件或文件夹复制到目标路径，原文件保持不变。
+     * 
+     * 调用场景：
+     * 复制文件到另一个位置（Ctrl+C、Ctrl+V）
+     * 复制文件夹及其所有内容
+     * 创建文件的副本
+     * 
+     * 实现说明：
+     * 通过 WebDavPathAdapter 适配器调用，复用 CopyFileUseCase 的完整业务逻辑
+     * 包含路径校验、配额检查、权限验证等功能
+     * 确保与标准文件复制接口的行为一致
+     * 
+     * @param reqPath  源文件/文件夹路径，相对于 WebDAV 根目录
+     * @param descPath 目标路径，相对于 WebDAV 根目录
+     * @return true 表示复制成功，false 表示失败
+     */
     @Override
     public boolean copy(String reqPath, String descPath) {
         Long userId = UserContext.getUserId();
-        return fileOperationsFacade.copyByPath(reqPath, descPath, userId);
+        // 通过适配器调用，复用 CopyFileUseCase 的完整业务逻辑（包含校验、配额检查等）
+        return pathAdapter.adaptCopy(reqPath, descPath, userId);
     }
 
+    /**
+     * 移动文件或文件夹（也可用于重命名）
+     * 
+     * 对应的 WebDAV HTTP 方法：MOVE
+     * 
+     * 作用：将文件或文件夹移动到目标路径，原位置的文件会被删除。如果源路径和目标路径在同一目录，则实现重命名功能。
+     * 
+     * 调用场景：
+     * 移动文件到另一个文件夹（拖拽操作）
+     * 重命名文件（移动到相同目录但不同文件名）
+     * 移动文件夹及其所有内容
+     * 
+     * 实现说明：
+     * 通过 WebDavPathAdapter 适配器调用，复用 MoveFileUseCase 的完整业务逻辑
+     * 包含存储源迁移、路径校验、权限验证等功能
+     * 确保与标准文件移动接口的行为一致
+     * 
+     * @param reqPath  源文件/文件夹路径，相对于 WebDAV 根目录
+     * @param descPath 目标路径，相对于 WebDAV 根目录
+     * @return true 表示移动成功，false 表示失败
+     */
     @Override
     public boolean move(String reqPath, String descPath) {
         Long userId = UserContext.getUserId();
-        return fileOperationsFacade.moveByPath(reqPath, descPath, userId);
+        // 通过适配器调用，复用 MoveFileUseCase 的完整业务逻辑（包含存储源迁移、校验等）
+        return pathAdapter.adaptMove(reqPath, descPath, userId);
     }
 
+    /**
+     * 创建文件夹
+     * 
+     * 对应的 WebDAV HTTP 方法：MKCOL（Make Collection）
+     * 
+     * 作用：在指定路径创建新的文件夹（目录）。
+     * 
+     * 调用场景：
+     * 新建文件夹（右键 → 新建文件夹）
+     * 创建多级目录结构
+     * 客户端需要创建目录时
+     * 
+     * 实现说明：
+     * 解析 WebDAV 完整路径为 folderName 和 parentPath，
+     * 直接调用 FileOperationsFacade.newFolder，复用 CreateFolderUseCase 的完整业务逻辑
+     * 包含路径校验、权限验证、重名检查等功能
+     * 确保与标准文件夹创建接口的行为一致
+     * 
+     * @param reqPath 要创建的文件夹路径，相对于 WebDAV 根目录（例如："/工作/项目/新文件夹"）
+     * @return true 表示创建成功，false 表示失败
+     */
     @Override
     public boolean mkdir(String reqPath) {
-        Long userId = UserContext.getUserId();
-        return fileOperationsFacade.mkdirByPath(reqPath, userId);
+        try {
+            if (Utils.isEmpty(reqPath)) {
+                return false;
+            }
+
+            Long userId = UserContext.getUserId();
+
+            // 解析路径：提取父路径和新文件夹名称
+            // 例如："/工作/项目/新文件夹" -> parentPath="/工作/项目", folderName="新文件夹"
+            int lastSlashIndex = reqPath.lastIndexOf("/");
+            String parentPath = "";
+            String folderName = reqPath;
+
+            if (lastSlashIndex > 0) {
+                // 中间路径，如 "/工作/项目/新文件夹"
+                parentPath = reqPath.substring(0, lastSlashIndex);
+                folderName = reqPath.substring(lastSlashIndex + 1);
+            } else if (lastSlashIndex == 0) {
+                // 根目录下，如 "/新文件夹"
+                parentPath = "";
+                folderName = reqPath.substring(1);
+            }
+
+            // 构建 NewFolderVO 并调用标准业务方法
+            NewFolderVO newFolderVO = new NewFolderVO();
+            newFolderVO.setFolderName(folderName);
+            newFolderVO.setPath(parentPath);
+
+            // 直接调用 Facade 方法，复用 CreateFolderUseCase 业务逻辑
+            fileOperationsFacade.newFolder(newFolderVO, userId);
+            return true;
+        } catch (Exception e) {
+            log.error("WebDAV 创建文件夹失败: reqPath={}", reqPath, e);
+            return false;
+        }
     }
 
+    /**
+     * 获取文件的直接访问 URL
+     * 
+     * 作用：返回文件的直接访问 URL，用于某些特殊场景下的文件访问。
+     * 
+     * 调用场景：
+     * 某些 WebDAV 客户端可能需要文件的直接下载链接
+     * 用于生成文件的分享链接（如果支持）
+     * 
+     * 当前实现：
+     * 返回 null，表示不支持直接 URL 访问
+     * 文件访问统一通过 WebDAV 协议进行
+     * 
+     * @param reqPath 请求路径，相对于 WebDAV 根目录
+     * @return 文件的直接访问 URL，如果不支持则返回 null
+     */
     @Override
     public String fileUrl(String reqPath) {
         return null;
@@ -190,11 +467,6 @@ public class NetdiskFileSystem implements FileSystem {
             public long size() {
                 return UserFileItemTypeEnum.isFolder(userFileDTO.getItemType()) ? 0 : userFileDTO.getSize();
             }
-
-            // @Override
-            // public String path() {
-            // return "";
-            // }
 
             @Override
             public String update() {
