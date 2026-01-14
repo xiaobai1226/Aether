@@ -36,40 +36,6 @@ public class WebDavPathAdapter {
     private FileOperationsFacade facade;
 
     /**
-     * 适配 WebDAV DELETE 操作
-     * 
-     * @param reqPath 要删除的文件路径
-     * @param userId  用户ID
-     * @return 是否成功
-     */
-    public boolean adaptDelete(String reqPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath)) {
-                return false;
-            }
-
-            // 1. 路径 → 文件信息
-            UserFileDTO userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-            if (userFileDTO == null) {
-                return false;
-            }
-
-            // 2. 构建 DeleteVO
-            DeleteVO deleteVO = new DeleteVO();
-            List<Long> ids = new ArrayList<>();
-            ids.add(userFileDTO.getId());
-            deleteVO.setIds(ids);
-
-            // 3. 调用标准 delete 方法（复用 UseCase 业务逻辑）
-            facade.deleteToRecycle(deleteVO, userId);
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV adaptDelete 失败: reqPath={}", reqPath, e);
-            return false;
-        }
-    }
-
-    /**
      * 适配 WebDAV COPY 操作
      * 
      * @param reqPath  源文件路径

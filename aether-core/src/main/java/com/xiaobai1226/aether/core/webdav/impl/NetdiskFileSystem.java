@@ -1,9 +1,11 @@
 package com.xiaobai1226.aether.core.webdav.impl;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
 
 import com.xiaobai1226.aether.core.application.FileOperationsFacade;
+import com.xiaobai1226.aether.core.domain.vo.DeleteVO;
 import com.xiaobai1226.aether.core.domain.vo.NewFolderVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
@@ -307,8 +309,23 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public boolean del(String reqPath) {
         Long userId = UserContext.getUserId();
-        // 通过适配器调用，复用 DeleteFileUseCase 的完整业务逻辑
-        return pathAdapter.adaptDelete(reqPath, userId);
+        if (StrUtil.isEmpty(reqPath)) {
+            return false;
+        }
+
+        // 1. 路径 → 文件信息
+        UserFileDTO userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
+        if (userFileDTO == null) {
+            return false;
+        }
+
+        // 2. 构建 DeleteVO
+        DeleteVO deleteVO = new DeleteVO();
+        deleteVO.setIds(List.of(userFileDTO.getId()));
+
+        // 3. 调用标准 delete 方法（复用 UseCase 业务逻辑）
+        fileOperationsFacade.deleteToRecycle(deleteVO, userId);
+        return true;
     }
 
     /**
