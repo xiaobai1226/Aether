@@ -18,9 +18,9 @@ server:
   port: 2333
   request:
     # 设定最大的请求包大小（或表单项的值大小）kb,mb 默认: 2m
-    maxBodySize: 10MB
+    maxBodySize: 1024mb
     # 设定最大的上传文件大小 kb,mb (默认使用 maxBodySize 配置值)
-    maxFileSize: 10MB
+    maxFileSize: 1024mb
     # 设定最大的请求头大小 kb,mb 默认: 8k
     maxHeaderSize: 8KB
 
