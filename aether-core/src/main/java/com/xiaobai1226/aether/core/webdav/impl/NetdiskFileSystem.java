@@ -288,20 +288,20 @@ public class NetdiskFileSystem implements FileSystem {
             }
 
             // 2. 获取文件实体信息
-            var fileDO = fileService.getFileById(userFileDTO.getFileId());
-            if (fileDO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
+            // var fileDO = fileService.getFileById(userFileDTO.getFileId());
+            // if (fileDO == null) {
+            //     throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            // }
 
             // 3. 获取文件对应的存储源
-            var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
+            var storageSource = storageSourceService.getStorageSourceById(userFileDTO.getStorageSourceId(), userId);
             if (storageSource == null) {
                 throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
             }
 
             // 4. 使用 StorageBackend 打开文件流
             var backend = storageBackendFactory.getByType(storageSource.getType());
-            InputStream in = backend.openStream(storageSource.getPath(), fileDO.getPath());
+            InputStream in = backend.openStream(storageSource.getPath(), userFileDTO.getPath());
 
             // 5. 根据需要包装为范围读取流
             if (length == 0) {
