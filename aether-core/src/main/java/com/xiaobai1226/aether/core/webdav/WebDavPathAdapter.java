@@ -36,62 +36,6 @@ public class WebDavPathAdapter {
     private FileOperationsFacade facade;
 
     /**
-     * 适配 WebDAV COPY 操作
-     * 
-     * @param reqPath  源文件路径
-     * @param descPath 目标路径
-     * @param userId   用户ID
-     * @return 是否成功
-     */
-    public boolean adaptCopy(String reqPath, String descPath, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath) || StrUtil.isEmpty(descPath)) {
-                return false;
-            }
-
-            // 1. 源路径 → 文件ID
-            UserFileDTO sourceFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-            if (sourceFileDTO == null) {
-                return false;
-            }
-
-            // 2. 解析目标路径
-            PathInfo pathInfo = parsePath(descPath);
-
-            // 3. 构建 CopyVO
-            CopyVO copyVO = new CopyVO();
-            List<Long> sourceIds = new ArrayList<>();
-            sourceIds.add(sourceFileDTO.getId());
-            copyVO.setSourceIds(sourceIds);
-            copyVO.setTargetPath(pathInfo.getParentPath());
-
-            // 4. 调用标准 copy 方法（复用 UseCase 业务逻辑）
-            facade.copy(copyVO, userId);
-
-            // 5. 如果目标文件名与源文件名不同，需要重命名
-            if (!sourceFileDTO.getName().equals(pathInfo.getFileName())) {
-                // 查找刚复制的文件（在目标目录下，名称与源文件相同）
-                UserFolderDTO targetFolder = userFileService.getFolderDTO(userId, pathInfo.getParentPath());
-                if (targetFolder != null) {
-                    var copiedFile = userFileService.getUserFileByName(
-                            sourceFileDTO.getName(), userId, targetFolder.getId(), NORMAL);
-                    if (copiedFile != null) {
-                        FileRenameVO renameVO = new FileRenameVO();
-                        renameVO.setId(copiedFile.getId());
-                        renameVO.setNewName(pathInfo.getFileName());
-                        facade.rename(renameVO, userId);
-                    }
-                }
-            }
-
-            return true;
-        } catch (Exception e) {
-            log.error("WebDAV adaptCopy 失败: reqPath={}, descPath={}", reqPath, descPath, e);
-            return false;
-        }
-    }
-
-    /**
      * 适配 WebDAV MOVE 操作
      * 
      * @param reqPath  源文件路径
@@ -240,7 +184,7 @@ public class WebDavPathAdapter {
      * @param path 完整路径
      * @return 父路径
      */
-    private String getParentPath(String path) {
+    public String getParentPath(String path) {
         if (StrUtil.isEmpty(path)) {
             return "";
         }

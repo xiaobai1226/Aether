@@ -5,16 +5,25 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
 
 import com.xiaobai1226.aether.core.application.FileOperationsFacade;
+import com.xiaobai1226.aether.core.domain.vo.CopyAndRenameVO;
+import com.xiaobai1226.aether.core.domain.vo.CopyVO;
 import com.xiaobai1226.aether.core.domain.vo.DeleteVO;
 import com.xiaobai1226.aether.core.domain.vo.NewFolderVO;
 import com.xiaobai1226.aether.core.domain.vo.UserFileVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
+import com.xiaobai1226.aether.core.infrastructure.storage.StorageBackendFactory;
+import com.xiaobai1226.aether.core.service.intf.FileService;
+import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.core.webdav.UserContext;
 import com.xiaobai1226.aether.core.webdav.WebDavPathAdapter;
 import com.xiaobai1226.aether.common.exception.FailResultException;
-import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
+
+import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.PARAM_IS_INVALID;
+import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
 
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
@@ -40,9 +49,6 @@ import java.util.Objects;
 @Slf4j
 public class NetdiskFileSystem implements FileSystem {
 
-    @Inject("${project.path.root}")
-    private String rootPath;
-
     @Inject
     private UserFileService userFileService;
 
@@ -51,6 +57,15 @@ public class NetdiskFileSystem implements FileSystem {
 
     @Inject
     private FileOperationsFacade fileOperationsFacade;
+
+    @Inject
+    private StorageSourceService storageSourceService;
+
+    @Inject
+    private StorageBackendFactory storageBackendFactory;
+
+    @Inject
+    private FileService fileService;
 
     /**
      * 获取文件/文件夹信息
@@ -123,14 +138,31 @@ public class NetdiskFileSystem implements FileSystem {
      * 
      * 返回值说明：
      * 文件夹：返回 "httpd/unix-directory"
-     * 文件：返回 "text/plain"（当前实现，可根据实际需求扩展为真实的 MIME 类型）
+     * 文件：根据文件扩展名返回对应的 MIME 类型（如 image/png、application/pdf 等）
+     * 未知类型：返回 "application/octet-stream"（二进制流）
      * 
      * @param fi FileInfo 对象，包含文件/文件夹的基本信息
      * @return MIME 类型字符串
      */
     @Override
     public String fileMime(FileInfo fi) {
-        return fi.isDir() ? "httpd/unix-directory" : "text/plain";
+        // 文件夹返回标准的目录类型
+        if (fi.isDir()) {
+            return "httpd/unix-directory";
+        }
+
+        // 根据文件名获取 MIME 类型
+        String fileName = fi.name();
+        if (StrUtil.isNotEmpty(fileName)) {
+            String mimeType = FileUtil.getMimeType(fileName);
+            // 如果识别到 MIME 类型则返回，否则返回默认的二进制流类型
+            if (StrUtil.isNotEmpty(mimeType)) {
+                return mimeType;
+            }
+        }
+
+        // 默认返回二进制流类型（而不是 text/plain，避免浏览器错误解析二进制文件）
+        return "application/octet-stream";
     }
 
     /**
@@ -233,10 +265,11 @@ public class NetdiskFileSystem implements FileSystem {
      * length=0：表示读取从 start 位置到文件末尾的所有内容
      * 
      * 处理逻辑：
-     * 根据路径获取用户文件信息
-     * 生成文件的完整物理路径
-     * 如果 length=0，返回完整输入流
-     * 如果 length>0，使用 ShardingInputStream 包装，只读取指定范围
+     * 1. 根据路径获取用户文件信息
+     * 2. 获取文件实体信息（包含存储源ID）
+     * 3. 根据存储源ID获取对应的存储源配置
+     * 4. 使用 StorageBackend 打开文件流（支持多存储源）
+     * 5. 如果需要范围读取，使用 ShardingInputStream 包装
      * 
      * @param reqPath 请求路径，相对于 WebDAV 根目录
      * @param start   读取的起始字节位置
@@ -245,15 +278,40 @@ public class NetdiskFileSystem implements FileSystem {
      */
     @Override
     public InputStream fileInputStream(String reqPath, long start, long length) {
-        Long userId = UserContext.getUserId();
+        try {
+            Long userId = UserContext.getUserId();
 
-        var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
-        var fileFullPath = FileUtils.generatePath(rootPath, userFileDTO.getPath());
-        InputStream in = FileUtil.getInputStream(fileFullPath);
-        if (length == 0) {
-            return in;
-        } else {
-            return new ShardingInputStream(in, start, length);
+            // 1. 获取用户文件信息
+            var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
+            if (userFileDTO == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+
+            // 2. 获取文件实体信息
+            var fileDO = fileService.getFileById(userFileDTO.getFileId());
+            if (fileDO == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+
+            // 3. 获取文件对应的存储源
+            var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
+            if (storageSource == null) {
+                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
+            }
+
+            // 4. 使用 StorageBackend 打开文件流
+            var backend = storageBackendFactory.getByType(storageSource.getType());
+            InputStream in = backend.openStream(storageSource.getPath(), fileDO.getPath());
+
+            // 5. 根据需要包装为范围读取流
+            if (length == 0) {
+                return in;
+            } else {
+                return new ShardingInputStream(in, start, length);
+            }
+        } catch (Exception e) {
+            log.error("WebDAV fileInputStream 失败: reqPath={}", reqPath, e);
+            throw new FailResultException(SYSTEM_ERROR);
         }
     }
 
@@ -341,9 +399,13 @@ public class NetdiskFileSystem implements FileSystem {
      * 创建文件的副本
      * 
      * 实现说明：
-     * 通过 WebDavPathAdapter 适配器调用，复用 CopyFileUseCase 的完整业务逻辑
+     * 直接复用 CopyFileUseCase 的完整业务逻辑（包含校验、配额检查等）
      * 包含路径校验、配额检查、权限验证等功能
      * 确保与标准文件复制接口的行为一致
+     * 
+     * 功能限制：
+     * 仅支持跨目录复制（保持文件名不变），不支持复制并重命名
+     * 如果目标文件名与源文件名不同，操作将失败
      * 
      * @param reqPath  源文件/文件夹路径，相对于 WebDAV 根目录
      * @param descPath 目标路径，相对于 WebDAV 根目录
@@ -352,8 +414,51 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public boolean copy(String reqPath, String descPath) {
         Long userId = UserContext.getUserId();
-        // 通过适配器调用，复用 CopyFileUseCase 的完整业务逻辑（包含校验、配额检查等）
-        return pathAdapter.adaptCopy(reqPath, descPath, userId);
+        if (StrUtil.isEmpty(reqPath) || StrUtil.isEmpty(descPath)) {
+            return false;
+        }
+
+        try {
+            // 1. 源路径 → 文件信息
+            UserFileDTO sourceFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
+            if (sourceFileDTO == null) {
+                return false;
+            }
+
+            // 2. 解析目标路径（提取父路径和文件名）
+            int lastSlashIndex = descPath.lastIndexOf("/");
+            String parentPath = "";
+            String fileName = descPath;
+
+            if (lastSlashIndex > 0) {
+                parentPath = descPath.substring(0, lastSlashIndex);
+                fileName = descPath.substring(lastSlashIndex + 1);
+            } else if (lastSlashIndex == 0) {
+                parentPath = "";
+                fileName = descPath.substring(1);
+            }
+
+            // 3. 判断是否需要重命名
+            if (!sourceFileDTO.getName().equals(fileName)) {
+                // 需要重命名：调用 copyAndRename
+                CopyAndRenameVO copyAndRenameVO = new CopyAndRenameVO();
+                copyAndRenameVO.setSourceId(sourceFileDTO.getId());
+                copyAndRenameVO.setTargetPath(parentPath);
+                copyAndRenameVO.setNewName(fileName);
+                fileOperationsFacade.copyAndRename(copyAndRenameVO, userId);
+            } else {
+                // 不需要重命名：调用普通 copy
+                CopyVO copyVO = new CopyVO();
+                copyVO.setSourceIds(List.of(sourceFileDTO.getId()));
+                copyVO.setTargetPath(parentPath);
+                fileOperationsFacade.copy(copyVO, userId);
+            }
+
+            return true;
+        } catch (Exception e) {
+            log.error("WebDAV copy 失败: reqPath={}, descPath={}", reqPath, descPath, e);
+            return false;
+        }
     }
 
     /**
@@ -380,6 +485,7 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public boolean move(String reqPath, String descPath) {
         Long userId = UserContext.getUserId();
+
         // 通过适配器调用，复用 MoveFileUseCase 的完整业务逻辑（包含存储源迁移、校验等）
         return pathAdapter.adaptMove(reqPath, descPath, userId);
     }

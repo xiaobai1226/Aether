@@ -84,6 +84,9 @@ public class FileOperationsFacade {
     private CopyFileUseCase copyFileUseCase;
 
     @Inject
+    private CopyAndRenameUseCase copyAndRenameUseCase;
+
+    @Inject
     private DeleteFileUseCase deleteFileUseCase;
 
     @Inject
@@ -269,6 +272,27 @@ public class FileOperationsFacade {
 
         // 调用UseCase执行业务逻辑，传递 targetFolder 避免重复查询
         copyFileUseCase.execute(copyVO.getSourceIds(), targetFolder, userId);
+    }
+
+    /**
+     * 复制并重命名文件/文件夹
+     * 
+     * @param copyAndRenameVO 复制并重命名VO
+     * @param userId          用户ID
+     */
+    public void copyAndRename(CopyAndRenameVO copyAndRenameVO, Long userId) {
+        var targetFolder = userFileService.getFolderDTO(userId, copyAndRenameVO.getTargetPath());
+        if (targetFolder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_TARGET_FOLDER_NO_EXIST);
+        }
+
+        // 调用 UseCase 执行业务逻辑
+        copyAndRenameUseCase.execute(
+            copyAndRenameVO.getSourceId(), 
+            targetFolder, 
+            copyAndRenameVO.getNewName(), 
+            userId
+        );
     }
 
     /**

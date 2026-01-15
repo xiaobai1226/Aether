@@ -475,6 +475,31 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
 
     @Tran
     @Override
+    public void copyWithNewName(UserFolderDTO targetFolder, Long userId,
+            UserFileTreeDTO sourceFileTree, String newName, Long totalSize) {
+        // TODO 存储空间
+        if (totalSize > 0) {
+            // 预占上传空间（整个文件大小）
+            // quotaService.reserveUploading(userId, totalSize);
+        }
+
+        // 修改源文件树的名称为新名称（只修改根节点）
+        sourceFileTree.setName(newName);
+
+        // 复用现有的 insertUserFileTree 方法
+        insertUserFileTree(List.of(sourceFileTree), userId, targetFolder);
+
+        // TODO 更新用户所使用的空间
+        // if (totalSize > 0) {
+        // // 更新用户已使用存储空间
+        // quotaService.increaseUsed(userId, totalSize);
+        // // 释放上传预占（整个文件大小）
+        // quotaService.releaseUploading(userId, totalSize);
+        // }
+    }
+
+    @Tran
+    @Override
     public void delete(List<UserFileTreeDTO> delUserFileTreeList, final Long userId) {
         var delIds = new ArrayList<Long>();
         var recycleBinDOList = new ArrayList<RecycleBinDO>();

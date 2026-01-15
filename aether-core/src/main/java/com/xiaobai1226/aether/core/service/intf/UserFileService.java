@@ -257,6 +257,17 @@ public interface UserFileService extends IService<UserFileDO> {
         void copy(UserFolderDTO targetFolder, final Long userId, List<UserFileTreeDTO> sourceUserFileTreeDTOList, Long totalSize);
 
         /**
+         * 复制文件/文件夹并使用新名称
+         * 
+         * @param targetFolder   目标文件夹DTO
+         * @param userId         用户ID
+         * @param sourceFileTree 源文件树（单个）
+         * @param newName        新文件名
+         * @param totalSize      总大小
+         */
+        void copyWithNewName(UserFolderDTO targetFolder, Long userId, UserFileTreeDTO sourceFileTree, String newName, Long totalSize);
+
+        /**
          * 删除文件或文件夹
          *
          * @param delUserFileTreeList 要删除的文件或文件夹ID集合
