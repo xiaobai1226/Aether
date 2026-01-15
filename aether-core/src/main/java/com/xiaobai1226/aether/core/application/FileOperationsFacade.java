@@ -5,6 +5,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.common.enums.CategoryEnum;
 import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
@@ -15,7 +16,6 @@ import com.xiaobai1226.aether.core.domain.dto.UploadFileCacheDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadResultDTO;
 import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.domain.vo.*;
-import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.core.service.intf.QuotaService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
@@ -26,7 +26,6 @@ import com.xiaobai1226.aether.core.usecase.file.*;
 import com.xiaobai1226.aether.core.usecase.storage.SetFolderStorageSourceUseCase;
 import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
-import com.xiaobai1226.aether.dao.domain.dto.UserFileTreeDTO;
 import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
@@ -288,11 +287,10 @@ public class FileOperationsFacade {
 
         // 调用 UseCase 执行业务逻辑
         copyAndRenameUseCase.execute(
-            copyAndRenameVO.getSourceId(), 
-            targetFolder, 
-            copyAndRenameVO.getNewName(), 
-            userId
-        );
+                copyAndRenameVO.getSourceId(),
+                targetFolder,
+                copyAndRenameVO.getNewName(),
+                userId);
     }
 
     /**
@@ -525,32 +523,18 @@ public class FileOperationsFacade {
 
             // 获取父目录（使用 UserFolderDTO 保持存储源信息）
             UserFolderDTO parentFolder = null;
-            Long parentId = 0L;
             if (StrUtil.isNotEmpty(parentPath)) {
                 // 使用 getFolderDTO 获取父文件夹（包含存储源信息）
                 parentFolder = userFileService.getFolderDTO(userId, parentPath);
                 if (parentFolder == null) {
                     return false;
                 }
-                parentId = parentFolder.getId();
             }
 
-            // 覆盖：若同名存在，先删除到回收站（保持与现有删除语义一致）
-            var existing = userFileService.getUserFileByName(fileName, userId, parentId, NORMAL);
-            if (existing != null) {
-                if (UserFileItemTypeEnum.isFolder(existing.getItemType())) {
-                    // 同名目录无法覆盖
-                    return false;
-                }
-                var tree = new UserFileTreeDTO();
-                tree.setId(existing.getId());
-                tree.setItemType(existing.getItemType());
-                userFileService.delete(new ArrayList<>(List.of(tree)), userId);
-            }
-
-            // 写临时文件并计算 MD5
+            // 写临时文件并计算 MD5（使用与 HTTP 上传相同的临时目录结构）
             String tempFileName = "webdav_" + RandomUtil.randomString(12);
-            String tempFolder = FileUtils.generatePath(rootPath, "temp", "webdav", userId.toString());
+            String tempFolder = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_TEMP_FILE_FULL, "webdav",
+                    userId.toString());
             FileUtil.mkdir(tempFolder);
             tempFile = FileUtil.file(tempFolder, tempFileName);
 
@@ -565,6 +549,7 @@ public class FileOperationsFacade {
             }
 
             String identifier = bytesToHex(md5.digest());
+            // 调用 uploadWholeFile，内部会自动处理同名文件覆盖逻辑
             uploadFileUseCase.uploadWholeFile(tempFile, userId, parentFolder, fileName, identifier);
             return true;
         } catch (Exception e) {

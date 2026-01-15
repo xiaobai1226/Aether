@@ -290,7 +290,7 @@ public class NetdiskFileSystem implements FileSystem {
             // 2. 获取文件实体信息
             // var fileDO = fileService.getFileById(userFileDTO.getFileId());
             // if (fileDO == null) {
-            //     throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            // throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             // }
 
             // 3. 获取文件对应的存储源
@@ -340,8 +340,18 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public boolean putFile(String reqPath, InputStream in) {
         Long userId = UserContext.getUserId();
-        // 通过适配器调用，复用业务逻辑
-        return pathAdapter.adaptPutFile(reqPath, in, userId);
+        try {
+            if (StrUtil.isEmpty(reqPath) || in == null) {
+                return false;
+            }
+
+            // 直接调用 Facade 的 putFileByPath 方法处理上传
+            // putFileByPath 内部已处理：路径解析、同名文件检查、覆盖逻辑（原子性删除+创建）
+            return fileOperationsFacade.putFileByPath(reqPath, in, userId);
+        } catch (Exception e) {
+            log.error("WebDAV adaptPutFile 失败: reqPath={}", reqPath, e);
+            return false;
+        }
     }
 
     /**

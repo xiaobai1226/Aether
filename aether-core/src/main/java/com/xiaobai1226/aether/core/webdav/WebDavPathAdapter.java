@@ -2,20 +2,15 @@ package com.xiaobai1226.aether.core.webdav;
 
 import cn.hutool.core.util.StrUtil;
 import com.xiaobai1226.aether.core.application.FileOperationsFacade;
-import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.domain.vo.*;
-import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
 import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 
 /**
  * WebDAV 路径适配器
@@ -94,59 +89,6 @@ public class WebDavPathAdapter {
             return true;
         } catch (Exception e) {
             log.error("WebDAV adaptMove 失败: reqPath={}, descPath={}", reqPath, descPath, e);
-            return false;
-        }
-    }
-
-    /**
-     * 适配 WebDAV PUT（上传文件）操作
-     * 
-     * @param reqPath 文件路径
-     * @param in      输入流
-     * @param userId  用户ID
-     * @return 是否成功
-     */
-    public boolean adaptPutFile(String reqPath, InputStream in, Long userId) {
-        try {
-            if (StrUtil.isEmpty(reqPath) || in == null) {
-                return false;
-            }
-
-            // 1. 解析路径
-            PathInfo pathInfo = parsePath(reqPath);
-
-            // 2. 获取父文件夹
-            UserFolderDTO parentFolder = null;
-            if (StrUtil.isNotEmpty(pathInfo.getParentPath())) {
-                parentFolder = userFileService.getFolderDTO(userId, pathInfo.getParentPath());
-                if (parentFolder == null) {
-                    return false;
-                }
-            }
-
-            // 3. 检查是否存在同名文件（WebDAV PUT 需要覆盖）
-            Long parentId = parentFolder != null ? parentFolder.getId() : 0L;
-            var existing = userFileService.getUserFileByName(
-                    pathInfo.getFileName(), userId, parentId, NORMAL);
-            if (existing != null) {
-                if (UserFileItemTypeEnum.isFolder(existing.getItemType())) {
-                    // 同名目录无法覆盖
-                    return false;
-                }
-                // 删除同名文件到回收站
-                DeleteVO deleteVO = new DeleteVO();
-                List<Long> ids = new ArrayList<>();
-                ids.add(existing.getId());
-                deleteVO.setIds(ids);
-                facade.deleteToRecycle(deleteVO, userId);
-            }
-
-            // 4. 调用 Facade 的 putFileByPath 方法处理上传
-            // 注意：这里暂时保留使用 putFileByPath，因为需要处理 InputStream
-            // 后续如果增强 UploadFileUseCase 支持 InputStream，可以改为调用标准方法
-            return facade.putFileByPath(reqPath, in, userId);
-        } catch (Exception e) {
-            log.error("WebDAV adaptPutFile 失败: reqPath={}", reqPath, e);
             return false;
         }
     }

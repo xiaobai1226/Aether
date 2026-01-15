@@ -307,24 +307,11 @@ public class UploadFileUseCase {
     }
 
     /**
-     * 上传整文件（优化版本：接收 UserFolderDTO，避免重复查询存储源）
-     *
-     * @param localFile    本地临时文件
-     * @param userId       用户ID
-     * @param parentFolder 父文件夹DTO（包含存储源信息，可为 null 表示根目录）
-     * @param fileName     用户侧展示名称
-     * @param identifier   内容标识（例如 MD5）
-     */
-    public UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFolderDTO parentFolder,
-            String fileName, String identifier) throws IOException {
-        return uploadWholeFile(localFile, userId, (UserFileDO) parentFolder, fileName, identifier);
-    }
-
-    /**
      * 上传整文件（用于 WebDAV 等非 Multipart 场景）
      *
      * <p>
      * 说明：该方法会复用现有的存储源选择、缩略图生成、FileDO/UserFile 记录落库与空间统计规则。
+     * WebDAV 场景下会自动覆盖同名文件。
      * </p>
      *
      * @param localFile      本地临时文件
@@ -334,7 +321,7 @@ public class UploadFileUseCase {
      * @param identifier     内容标识（例如 MD5）
      */
     @Tran
-    public UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFileDO parentUserFile,
+    public UploadResultDTO uploadWholeFile(File localFile, final Long userId, UserFolderDTO parentUserFile,
             String fileName, String identifier) throws IOException {
         if (localFile == null || !localFile.exists() || localFile.isDirectory()) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
@@ -347,13 +334,13 @@ public class UploadFileUseCase {
         }
 
         long fileSize = localFile.length();
-        // 预占上传空间
-        quotaService.reserveUploading(userId, fileSize);
+        // TODO 预占上传空间
+        // quotaService.reserveUploading(userId, fileSize);
 
         // 选择存储源（优化：如果 parentUserFile 是 UserFolderDTO，直接使用其存储源信息）
         var storageSource = getStorageSourceByParent(parentUserFile, userId);
         if (storageSource == null) {
-            quotaService.releaseUploading(userId, fileSize);
+            // quotaService.releaseUploading(userId, fileSize);
             throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
         }
         Long storageSourceId = storageSource.getId();
@@ -385,14 +372,41 @@ public class UploadFileUseCase {
             }
 
             long parentId = parentUserFile != null ? parentUserFile.getId() : 0L;
+
+            // 检查是否存在同名文件（WebDAV 场景需要覆盖）
+            var existing = userFileService.getUserFileByName(fileName, userId, parentId, NORMAL);
+            if (existing != null) {
+                if (UserFileItemTypeEnum.isFolder(existing.getItemType())) {
+                    // 同名目录无法覆盖
+                    throw new FailResultException(BAD_REQUEST_ERROR, ERROR_FILE_NO_EXIST);
+                }
+                // WebDAV PUT 只会覆盖单个文件，在事务中先删除旧文件记录
+                // 查询旧文件详细信息以获取文件大小
+                // var oldUserFileDTOList =
+                // userFileService.getUserFileDTOListByIds(List.of(existing.getId()), userId,
+                // NORMAL);
+                // if (!oldUserFileDTOList.isEmpty()) {
+                // var oldUserFileDTO = oldUserFileDTOList.get(0);
+                // 直接删除旧文件记录
+                userFileService.removeById(existing.getId());
+                // 减少已用空间
+                // quotaService.decreaseUsed(userId, oldUserFileDTO.getSize());
+                log.info("WebDAV覆盖上传：删除旧文件记录 userFileId={}", existing.getId());
+                // }
+            }
+
+            // 创建新文件记录（使用原有的 addUserFile 方法，不修改其逻辑）
+            // 由于旧文件已删除，addUserFile 检测不到重名，会直接使用原文件名
             addUserFile(userId, fileDO.getId(), parentId, fileName, FILE, NORMAL, fileSize, storageSourceId);
 
             // 释放上传预占（已用空间由 addUserFile 内统一增加）
-            quotaService.releaseUploading(userId, fileSize);
+            // quotaService.releaseUploading(userId, fileSize);
             return new UploadResultDTO(taskId, UPLOAD_FINISH.id());
-        } catch (Exception e) {
+        } catch (
+
+        Exception e) {
             // 清理：释放预占 + 删除已落盘文件（尽量）
-            quotaService.releaseUploading(userId, fileSize);
+            // quotaService.releaseUploading(userId, fileSize);
             try {
                 backend.delete(storageSource.getPath(), relativePath);
             } catch (Exception ignore) {
