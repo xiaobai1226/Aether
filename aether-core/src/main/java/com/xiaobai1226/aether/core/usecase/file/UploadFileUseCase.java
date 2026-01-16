@@ -12,6 +12,7 @@ import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.core.cache.FileCache;
 import com.xiaobai1226.aether.core.domain.dto.*;
+import com.xiaobai1226.aether.core.domain.vo.DeleteVO;
 import com.xiaobai1226.aether.core.domain.vo.UploadFileVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
@@ -86,6 +87,9 @@ public class UploadFileUseCase {
     @Inject
     private ThumbnailService thumbnailService;
 
+    @Inject
+    private DeleteFileUseCase deleteFileUseCase;
+
     /**
      * 秒传文件（当文件已存在时使用）
      *
@@ -154,7 +158,7 @@ public class UploadFileUseCase {
             // }
             // }
 
-            return null;
+            return storageFileDO;
         }
 
         // 情况3：有文件但没有同存储源的，直接使用已存在的文件，异步迁移存储源
@@ -360,8 +364,8 @@ public class UploadFileUseCase {
             String thumbnailToStore = null;
             String absPath = backend.tryResolveAbsolutePath(storageSource.getPath(), relativePath);
             if (absPath != null) {
-                var thumbnailResult = thumbnailService.generateThumbnail(absPath, storedFileName, fileSize);
-                thumbnailToStore = thumbnailResult.isSuccess() ? thumbnailResult.getThumbnailFileName() : null;
+                // var thumbnailResult = thumbnailService.generateThumbnail(absPath, storedFileName, fileSize);
+                // thumbnailToStore = thumbnailResult.isSuccess() ? thumbnailResult.getThumbnailFileName() : null;
             }
 
             // FileDO
@@ -380,19 +384,11 @@ public class UploadFileUseCase {
                     // 同名目录无法覆盖
                     throw new FailResultException(BAD_REQUEST_ERROR, ERROR_FILE_NO_EXIST);
                 }
-                // WebDAV PUT 只会覆盖单个文件，在事务中先删除旧文件记录
-                // 查询旧文件详细信息以获取文件大小
-                // var oldUserFileDTOList =
-                // userFileService.getUserFileDTOListByIds(List.of(existing.getId()), userId,
-                // NORMAL);
-                // if (!oldUserFileDTOList.isEmpty()) {
-                // var oldUserFileDTO = oldUserFileDTOList.get(0);
-                // 直接删除旧文件记录
-                userFileService.removeById(existing.getId());
-                // 减少已用空间
-                // quotaService.decreaseUsed(userId, oldUserFileDTO.getSize());
-                log.info("WebDAV覆盖上传：删除旧文件记录 userFileId={}", existing.getId());
-                // }
+                // WebDAV PUT 覆盖：旧文件进入回收站（与 DELETE 操作保持一致，用户可恢复）
+                DeleteVO deleteVO = new DeleteVO();
+                deleteVO.setIds(List.of(existing.getId()));
+                deleteFileUseCase.execute(deleteVO.getIds(), userId);
+                log.info("WebDAV 覆盖上传：旧文件已移入回收站 userFileId={}", existing.getId());
             }
 
             // 创建新文件记录（使用原有的 addUserFile 方法，不修改其逻辑）

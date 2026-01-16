@@ -16,6 +16,7 @@ import com.xiaobai1226.aether.core.domain.dto.UploadFileCacheDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadResultDTO;
 import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.domain.vo.*;
+import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.service.intf.FileService;
 import com.xiaobai1226.aether.core.service.intf.QuotaService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
@@ -505,10 +506,14 @@ public class FileOperationsFacade {
      */
     public boolean putFileByPath(String reqPath, InputStream in, Long userId) {
         File tempFile = null;
+        long startTime = System.currentTimeMillis();
         try {
             if (StrUtil.isEmpty(reqPath) || in == null) {
+                log.warn("putFileByPath 参数无效: reqPath={}, userId={}", reqPath, userId);
                 return false;
             }
+
+            log.info("putFileByPath 开始: reqPath={}, userId={}", reqPath, userId);
 
             // 解析路径，获取父目录和文件名
             int lastSlashIndex = reqPath.lastIndexOf("/");
@@ -521,14 +526,14 @@ public class FileOperationsFacade {
                 fileName = reqPath.substring(1);
             }
 
+            log.debug("路径解析: parentPath={}, fileName={}", parentPath, fileName);
+
             // 获取父目录（使用 UserFolderDTO 保持存储源信息）
-            UserFolderDTO parentFolder = null;
-            if (StrUtil.isNotEmpty(parentPath)) {
-                // 使用 getFolderDTO 获取父文件夹（包含存储源信息）
-                parentFolder = userFileService.getFolderDTO(userId, parentPath);
-                if (parentFolder == null) {
-                    return false;
-                }
+            // 注意：parentPath 为空代表根目录，也需要获取 UserFolderDTO（包含默认存储源）
+            UserFolderDTO parentFolder = userFileService.getFolderDTO(userId, parentPath);
+            if (parentFolder == null) {
+                log.warn("父文件夹不存在: parentPath={}, userId={}", parentPath, userId);
+                return false;
             }
 
             // 写临时文件并计算 MD5（使用与 HTTP 上传相同的临时目录结构）
@@ -538,6 +543,8 @@ public class FileOperationsFacade {
             FileUtil.mkdir(tempFolder);
             tempFile = FileUtil.file(tempFolder, tempFileName);
 
+            log.debug("开始写入临时文件: {}", tempFile.getPath());
+            long fileSize = 0;
             var md5 = MessageDigest.getInstance("MD5");
             try (OutputStream out = Files.newOutputStream(tempFile.toPath())) {
                 byte[] buffer = new byte[8192];
@@ -545,15 +552,60 @@ public class FileOperationsFacade {
                 while ((len = in.read(buffer)) != -1) {
                     md5.update(buffer, 0, len);
                     out.write(buffer, 0, len);
+                    fileSize += len;
                 }
             }
 
             String identifier = bytesToHex(md5.digest());
-            // 调用 uploadWholeFile，内部会自动处理同名文件覆盖逻辑
+            log.debug("临时文件写入完成: size={} bytes, md5={}", fileSize, identifier);
+            
+            // 尝试秒传（复用已存在的相同内容文件，节省存储空间和数据库记录）
+            // 构造 UploadFileVO 用于秒传检查
+            var uploadFileVO = new UploadFileVO();
+            uploadFileVO.setFileName(fileName);
+            uploadFileVO.setFileSize(fileSize);
+            uploadFileVO.setIdentifier(identifier);
+            uploadFileVO.setTaskId("webdav_" + System.currentTimeMillis());
+            
+            var existingFileDO = uploadFileUseCase.trySecondUpload(userId, parentFolder, uploadFileVO);
+            if (existingFileDO != null) {
+                log.info("WebDAV 上传触发秒传: reqPath={}, identifier={}, userId={}", reqPath, identifier, userId);
+                
+                // 检查是否存在同名文件（WebDAV PUT 语义需要覆盖）
+                var existing = userFileService.getUserFileByName(fileName, userId, parentFolder.getId(), NORMAL);
+                if (existing != null) {
+                    if (UserFileItemTypeEnum.isFolder(existing.getItemType())) {
+                        log.warn("WebDAV 秒传失败：同名目录已存在 fileName={}, userId={}", fileName, userId);
+                        return false;
+                    }
+                    // 旧文件进入回收站（与 DELETE 操作保持一致，用户可恢复）
+                    DeleteVO deleteVO = new DeleteVO();
+                    deleteVO.setIds(List.of(existing.getId()));
+                    deleteFileUseCase.execute(deleteVO.getIds(), userId);
+                    log.info("WebDAV 秒传覆盖：旧文件已移入回收站 userFileId={}", existing.getId());
+                }
+                
+                // 执行秒传（创建新的 UserFileDO 记录，引用已存在的物理文件）
+                uploadFileUseCase.secondUploadFile(userId, parentFolder, uploadFileVO, existingFileDO);
+                
+                long duration = System.currentTimeMillis() - startTime;
+                log.info("WebDAV 秒传成功: reqPath={}, size={} bytes, duration={}ms, userId={}", 
+                        reqPath, fileSize, duration, userId);
+                return true;
+            }
+            
+            log.debug("WebDAV 无法秒传，继续正常上传流程: identifier={}", identifier);
+            
+            // 无法秒传，调用 uploadWholeFile 正常上传（内部会自动处理同名文件覆盖逻辑）
             uploadFileUseCase.uploadWholeFile(tempFile, userId, parentFolder, fileName, identifier);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("putFileByPath 成功: reqPath={}, size={} bytes, duration={}ms, userId={}", 
+                    reqPath, fileSize, duration, userId);
             return true;
         } catch (Exception e) {
-            log.error("WebDAV putFile 失败: reqPath={}", reqPath, e);
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("putFileByPath 失败: reqPath={}, duration={}ms, userId={}", reqPath, duration, userId, e);
             return false;
         } finally {
             // 清理临时文件，防止磁盘空间泄漏

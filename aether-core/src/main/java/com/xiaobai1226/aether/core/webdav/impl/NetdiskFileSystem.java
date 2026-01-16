@@ -342,14 +342,18 @@ public class NetdiskFileSystem implements FileSystem {
         Long userId = UserContext.getUserId();
         try {
             if (StrUtil.isEmpty(reqPath) || in == null) {
+                log.warn("WebDAV putFile 参数无效: reqPath={}, in={}, userId={}", reqPath, (in == null ? "null" : "exists"), userId);
                 return false;
             }
 
+            log.info("WebDAV putFile 开始: reqPath={}, userId={}", reqPath, userId);
             // 直接调用 Facade 的 putFileByPath 方法处理上传
             // putFileByPath 内部已处理：路径解析、同名文件检查、覆盖逻辑（原子性删除+创建）
-            return fileOperationsFacade.putFileByPath(reqPath, in, userId);
+            boolean result = fileOperationsFacade.putFileByPath(reqPath, in, userId);
+            log.info("WebDAV putFile 完成: reqPath={}, userId={}, result={}", reqPath, userId, result);
+            return result;
         } catch (Exception e) {
-            log.error("WebDAV adaptPutFile 失败: reqPath={}", reqPath, e);
+            log.error("WebDAV putFile 失败: reqPath={}, userId={}", reqPath, userId, e);
             return false;
         }
     }
@@ -425,13 +429,17 @@ public class NetdiskFileSystem implements FileSystem {
     public boolean copy(String reqPath, String descPath) {
         Long userId = UserContext.getUserId();
         if (StrUtil.isEmpty(reqPath) || StrUtil.isEmpty(descPath)) {
+            log.warn("WebDAV copy 参数无效: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
             return false;
         }
 
         try {
+            log.info("WebDAV copy 开始: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
+            
             // 1. 源路径 → 文件信息
             UserFileDTO sourceFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
             if (sourceFileDTO == null) {
+                log.warn("WebDAV copy 源文件不存在: reqPath={}, userId={}", reqPath, userId);
                 return false;
             }
 
@@ -448,9 +456,14 @@ public class NetdiskFileSystem implements FileSystem {
                 fileName = descPath.substring(1);
             }
 
+            log.debug("WebDAV copy 路径解析: parentPath={}, fileName={}, sourceFileName={}", 
+                     parentPath, fileName, sourceFileDTO.getName());
+
             // 3. 判断是否需要重命名
             if (!sourceFileDTO.getName().equals(fileName)) {
                 // 需要重命名：调用 copyAndRename
+                log.info("WebDAV copy 执行重命名复制: sourceId={}, targetPath={}, newName={}", 
+                        sourceFileDTO.getId(), parentPath, fileName);
                 CopyAndRenameVO copyAndRenameVO = new CopyAndRenameVO();
                 copyAndRenameVO.setSourceId(sourceFileDTO.getId());
                 copyAndRenameVO.setTargetPath(parentPath);
@@ -458,15 +471,18 @@ public class NetdiskFileSystem implements FileSystem {
                 fileOperationsFacade.copyAndRename(copyAndRenameVO, userId);
             } else {
                 // 不需要重命名：调用普通 copy
+                log.info("WebDAV copy 执行普通复制: sourceId={}, targetPath={}", 
+                        sourceFileDTO.getId(), parentPath);
                 CopyVO copyVO = new CopyVO();
                 copyVO.setSourceIds(List.of(sourceFileDTO.getId()));
                 copyVO.setTargetPath(parentPath);
                 fileOperationsFacade.copy(copyVO, userId);
             }
 
+            log.info("WebDAV copy 成功: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
             return true;
         } catch (Exception e) {
-            log.error("WebDAV copy 失败: reqPath={}, descPath={}", reqPath, descPath, e);
+            log.error("WebDAV copy 失败: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId, e);
             return false;
         }
     }

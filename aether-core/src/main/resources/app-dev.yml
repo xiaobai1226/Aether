@@ -1,13 +1,19 @@
 project:
- path:
-   #    root: D:\programme\test\aether
-   root: /Users/a58/programme/project/aether/data
+  path:
+    #    root: D:\programme\test\aether
+    root: /Users/a58/programme/project/aether/data
 
 solon:
-  logging.appender:
-    console:
-      level: DEBUG
-      pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %magenta(${PID:-}) --- %-15([%15.15thread]) %-56(%cyan(%-40.40logger{39}%L)) : %msg%n"
+  logging:
+    appender:
+      console:
+        level: DEBUG
+        pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %magenta(${PID:-}) --- %-15([%15.15thread]) %-56(%cyan(%-40.40logger{39}%L)) : %msg%n"
+    logger:
+      "com.zaxxer.hikari":
+        level: INFO
+      "org.smartboot.http":
+        level: INFO
   dataSources:
     db1!:
       class: com.zaxxer.hikari.HikariDataSource
@@ -15,3 +21,10 @@ solon:
       driverClassName: com.mysql.cj.jdbc.Driver
       username: root
       password: 123456
+      # HikariCP 连接池配置 - 优化 WebDAV 并发复制性能
+      # maximumPoolSize: 20 # 最大连接数（默认 10，增加到 20 以支持更多并发）
+      # minimumIdle: 5 # 最小空闲连接数
+      # connectionTimeout: 30000 # 连接超时 30 秒（毫秒）
+      # idleTimeout: 600000 # 空闲连接超时 10 分钟（毫秒）
+      # maxLifetime: 1800000 # 连接最大生命周期 30 分钟（毫秒）
+      # leakDetectionThreshold: 60000 # 连接泄漏检测阈值 60 秒（毫秒）
