@@ -90,7 +90,8 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public FileInfo fileInfo(String reqPath) {
         Long userId = UserContext.getUserId();
-
+        log.info("WebDAV fileInfo 开始: reqPath={}, userId={}", reqPath, userId);
+        long startTime = System.currentTimeMillis();
         if (Objects.equals(reqPath, "")) {
             return new FileInfo() {
                 @Override
@@ -121,6 +122,8 @@ public class NetdiskFileSystem implements FileSystem {
         }
         var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
 
+        log.info("WebDAV fileInfo 结束: 耗时={}ms, reqPath={}, userFileDTO={}", System.currentTimeMillis() - startTime,
+                reqPath, userFileDTO);
         return this.userFileDTO2Info(userFileDTO);
     }
 
@@ -146,6 +149,8 @@ public class NetdiskFileSystem implements FileSystem {
      */
     @Override
     public String fileMime(FileInfo fi) {
+        log.info("WebDAV fileMime 开始: fi={}", fi);
+        long startTime = System.currentTimeMillis();
         // 文件夹返回标准的目录类型
         if (fi.isDir()) {
             return "httpd/unix-directory";
@@ -157,9 +162,11 @@ public class NetdiskFileSystem implements FileSystem {
             String mimeType = FileUtil.getMimeType(fileName);
             // 如果识别到 MIME 类型则返回，否则返回默认的二进制流类型
             if (StrUtil.isNotEmpty(mimeType)) {
+                log.info("WebDAV fileMime 结束: 耗时={}ms, fi={}", System.currentTimeMillis() - startTime, fi);
                 return mimeType;
             }
         }
+        log.info("WebDAV fileMime 结束: 耗时={}ms, fi={}", System.currentTimeMillis() - startTime, fi);
 
         // 默认返回二进制流类型（而不是 text/plain，避免浏览器错误解析二进制文件）
         return "application/octet-stream";
@@ -189,7 +196,8 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public List<FileInfo> fileList(String reqPath) {
         Long userId = UserContext.getUserId();
-
+        log.info("WebDAV fileList 开始: reqPath={}, userId={}", reqPath, userId);
+        long startTime = System.currentTimeMillis();
         try {
             // 构造 UserFileVO，设置路径
             var userFileVO = new UserFileVO();
@@ -201,6 +209,8 @@ public class NetdiskFileSystem implements FileSystem {
             var pageResult = fileOperationsFacade.getFileListByPage(userFileVO, userId);
 
             if (pageResult == null || CollUtil.isEmpty(pageResult.getList())) {
+                log.info("WebDAV fileList 结束: 耗时={}ms, reqPath={}, userId={}", System.currentTimeMillis() - startTime,
+                        reqPath, userId);
                 return null;
             }
 
@@ -212,10 +222,13 @@ public class NetdiskFileSystem implements FileSystem {
                     list.add(fi);
                 }
             }
+            log.info("WebDAV fileList 结束: 耗时={}ms, reqPath={}, userId={}", System.currentTimeMillis() - startTime,
+                    reqPath, userId);
             return list;
         } catch (FailResultException e) {
             // WebDAV 的错误处理：返回 null 而不是抛出异常
-            log.warn("fileList 失败: reqPath={}, userId={}, error={}", reqPath, userId, e.getMessage());
+            log.warn("fileList 失败: 耗时={}ms, reqPath={}, userId={}, error={}", System.currentTimeMillis() - startTime,
+                    reqPath, userId, e.getMessage());
             return null;
         }
     }
@@ -243,7 +256,12 @@ public class NetdiskFileSystem implements FileSystem {
      */
     @Override
     public String findEtag(String reqPath, FileInfo fi) {
-        return "W/\"" + Utils.md5(fi.update() + reqPath) + "\"";
+        log.info("WebDAV findEtag 开始: reqPath={}, fi={}", reqPath, fi);
+        long startTime = System.currentTimeMillis();
+        String etag = "W/\"" + Utils.md5(fi.update() + reqPath) + "\"";
+        log.info("WebDAV findEtag 结束: 耗时={}ms, reqPath={}, fi={}, etag={}", System.currentTimeMillis() - startTime,
+                reqPath, fi, etag);
+        return etag;
     }
 
     /**
@@ -278,6 +296,7 @@ public class NetdiskFileSystem implements FileSystem {
      */
     @Override
     public InputStream fileInputStream(String reqPath, long start, long length) {
+        log.info("WebDAV fileInputStream 开始: reqPath={}, start={}, length={}", reqPath, start, length);
         try {
             Long userId = UserContext.getUserId();
 
@@ -340,9 +359,11 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public boolean putFile(String reqPath, InputStream in) {
         Long userId = UserContext.getUserId();
+        log.info("WebDAV putFile 开始: reqPath={}, userId={}", reqPath, userId);
         try {
             if (StrUtil.isEmpty(reqPath) || in == null) {
-                log.warn("WebDAV putFile 参数无效: reqPath={}, in={}, userId={}", reqPath, (in == null ? "null" : "exists"), userId);
+                log.warn("WebDAV putFile 参数无效: reqPath={}, in={}, userId={}", reqPath, (in == null ? "null" : "exists"),
+                        userId);
                 return false;
             }
 
@@ -381,6 +402,7 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public boolean del(String reqPath) {
         Long userId = UserContext.getUserId();
+        log.info("WebDAV del 开始: reqPath={}, userId={}", reqPath, userId);
         if (StrUtil.isEmpty(reqPath)) {
             return false;
         }
@@ -428,6 +450,7 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public boolean copy(String reqPath, String descPath) {
         Long userId = UserContext.getUserId();
+        log.info("WebDAV copy 开始: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
         if (StrUtil.isEmpty(reqPath) || StrUtil.isEmpty(descPath)) {
             log.warn("WebDAV copy 参数无效: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
             return false;
@@ -435,7 +458,7 @@ public class NetdiskFileSystem implements FileSystem {
 
         try {
             log.info("WebDAV copy 开始: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
-            
+
             // 1. 源路径 → 文件信息
             UserFileDTO sourceFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
             if (sourceFileDTO == null) {
@@ -456,13 +479,13 @@ public class NetdiskFileSystem implements FileSystem {
                 fileName = descPath.substring(1);
             }
 
-            log.debug("WebDAV copy 路径解析: parentPath={}, fileName={}, sourceFileName={}", 
-                     parentPath, fileName, sourceFileDTO.getName());
+            log.debug("WebDAV copy 路径解析: parentPath={}, fileName={}, sourceFileName={}",
+                    parentPath, fileName, sourceFileDTO.getName());
 
             // 3. 判断是否需要重命名
             if (!sourceFileDTO.getName().equals(fileName)) {
                 // 需要重命名：调用 copyAndRename
-                log.info("WebDAV copy 执行重命名复制: sourceId={}, targetPath={}, newName={}", 
+                log.info("WebDAV copy 执行重命名复制: sourceId={}, targetPath={}, newName={}",
                         sourceFileDTO.getId(), parentPath, fileName);
                 CopyAndRenameVO copyAndRenameVO = new CopyAndRenameVO();
                 copyAndRenameVO.setSourceId(sourceFileDTO.getId());
@@ -471,7 +494,7 @@ public class NetdiskFileSystem implements FileSystem {
                 fileOperationsFacade.copyAndRename(copyAndRenameVO, userId);
             } else {
                 // 不需要重命名：调用普通 copy
-                log.info("WebDAV copy 执行普通复制: sourceId={}, targetPath={}", 
+                log.info("WebDAV copy 执行普通复制: sourceId={}, targetPath={}",
                         sourceFileDTO.getId(), parentPath);
                 CopyVO copyVO = new CopyVO();
                 copyVO.setSourceIds(List.of(sourceFileDTO.getId()));
@@ -511,7 +534,7 @@ public class NetdiskFileSystem implements FileSystem {
     @Override
     public boolean move(String reqPath, String descPath) {
         Long userId = UserContext.getUserId();
-
+        log.info("WebDAV move 开始: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
         // 通过适配器调用，复用 MoveFileUseCase 的完整业务逻辑（包含存储源迁移、校验等）
         return pathAdapter.adaptMove(reqPath, descPath, userId);
     }
@@ -539,12 +562,12 @@ public class NetdiskFileSystem implements FileSystem {
      */
     @Override
     public boolean mkdir(String reqPath) {
+        Long userId = UserContext.getUserId();
+        log.info("WebDAV mkdir 开始: reqPath={}, userId={}", reqPath, userId);
         try {
             if (Utils.isEmpty(reqPath)) {
                 return false;
             }
-
-            Long userId = UserContext.getUserId();
 
             // 解析路径：提取父路径和新文件夹名称
             // 例如："/工作/项目/新文件夹" -> parentPath="/工作/项目", folderName="新文件夹"
@@ -594,6 +617,7 @@ public class NetdiskFileSystem implements FileSystem {
      */
     @Override
     public String fileUrl(String reqPath) {
+        log.info("WebDAV fileUrl 开始: reqPath={}", reqPath);
         return null;
     }
 
