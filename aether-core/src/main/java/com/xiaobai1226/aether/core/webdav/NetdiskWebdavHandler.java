@@ -1,14 +1,21 @@
 package com.xiaobai1226.aether.core.webdav;
 
 import cn.hutool.core.codec.Base64;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
 import com.xiaobai1226.aether.core.service.intf.WebDavService;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.web.webdav.FileInfo;
 import org.noear.solon.web.webdav.FileSystem;
 import org.noear.solon.web.webdav.WebdavAbstractHandler;
+
+import java.util.List;
 
 /**
  * WebDAV 抽象处理器实现
@@ -16,10 +23,15 @@ import org.noear.solon.web.webdav.WebdavAbstractHandler;
  * 这是 WebDAV 请求的入口处理器，负责处理 HTTP 请求并协调整个 WebDAV 流程。
  * 每次 WebDAV 请求到来时，首先会调用 user() 方法进行用户认证，然后通过 fileSystem()
  * 获取文件系统实现来执行具体的文件操作。
+ * 
+ * 重写 handle() 方法以修复 macOS Finder 兼容性问题：
+ * - 为 href 添加前导斜杠（绝对路径）
+ * - 为目录的 href 添加尾部斜杠
  *
  * @author 高压锅里的小白
  */
 @Component
+@Slf4j
 public class NetdiskWebdavHandler extends WebdavAbstractHandler {
 
     @Inject
@@ -120,5 +132,217 @@ public class NetdiskWebdavHandler extends WebdavAbstractHandler {
     @Override
     public String prefix() {
         return "webdav";
+    }
+
+    /**
+     * 重写 handle 方法以修复 PROPFIND 响应中的 href 格式
+     * 
+     * macOS Finder 对 WebDAV 协议实现严格，要求：
+     * 1. href 必须使用绝对路径（以 / 开头）
+     * 2. 目录的 href 必须以 / 结尾
+     * 
+     * 原始框架生成的 href 格式不符合要求，导致 Finder 将当前目录识别为子项
+     * 
+     * 策略：对于 PROPFIND 请求，完全重写处理逻辑，生成修复后的 XML
+     * 
+     * @param ctx HTTP 请求上下文
+     */
+    @Override
+    public void handle(Context ctx) {
+        // 对于 PROPFIND 请求，自己实现逻辑以修复 href 格式
+        if ("PROPFIND".equals(ctx.method())) {
+            try {
+                // 设置通用的 WebDAV 响应头（与父类保持一致）
+                ctx.contentType("text/xml; charset=UTF-8");
+                ctx.headerSet("Pragma", "no-cache");
+                ctx.headerSet("Cache-Control", "no-cache");
+                ctx.headerSet("X-DAV-BY", "webos");
+                ctx.headerSet("Access-Control-Allow-Origin", "*");
+                ctx.headerSet("Access-Control-Allow-Methods",
+                        "GET, POST, OPTIONS, DELETE, HEAD, MOVE, COPY, PUT, MKCOL, PROPFIND, PROPPATCH, LOCK, UNLOCK");
+                ctx.headerSet("Access-Control-Allow-Headers",
+                        "ETag, Content-Type, Content-Length, Accept-Encoding, X-Requested-with, Origin, Authorization");
+                ctx.headerSet("Access-Control-Allow-Credentials", "true");
+                ctx.headerSet("Access-Control-Max-Age", "3600");
+
+                // 用户认证
+                if (StrUtil.isBlank(this.user(ctx))) {
+                    ctx.headerSet("WWW-Authenticate", "Basic realm=\"webos\"");
+                    ctx.status(401);
+                    return;
+                }
+
+                // 处理 PROPFIND 请求
+                int status = handlePropfindFixed(ctx);
+                ctx.status(status);
+
+            } catch (Exception e) {
+                log.error("处理 PROPFIND 请求失败", e);
+                ctx.status(500);
+            }
+        } else {
+            // 其他请求调用父类处理
+            super.handle(ctx);
+        }
+    }
+
+    /**
+     * 处理 PROPFIND 请求（修复后的版本）
+     * 
+     * 复制父类逻辑，但生成修复后的 href（绝对路径 + 目录尾部斜杠）
+     * 
+     * @param ctx HTTP 请求上下文
+     * @return HTTP 状态码
+     */
+    private int handlePropfindFixed(Context ctx) throws Exception {
+        String reqPath = this.stripPrefix(ctx.path());
+        FileInfo fi = this.fileSystem().fileInfo(reqPath);
+        if (fi == null) {
+            return 404;
+        }
+
+        // 解析 Depth 头
+        int depth = -1;
+        String hdr = ctx.header("Depth");
+        if (StrUtil.isNotBlank(hdr)) {
+            depth = parseDepth(hdr);
+            if (depth == -2) {
+                return 400;
+            }
+        }
+        if (depth == -1) {
+            depth = 1;
+        }
+
+        // 生成修复后的响应
+        String itemResponse = toItemResponseFixed(reqPath, fi);
+        if (!fi.isDir() || depth == 0) {
+            ctx.output(toItemListResponse(itemResponse));
+            return 207;
+        }
+
+        // 列出子文件/文件夹
+        List<FileInfo> childs = this.fileSystem().fileList(reqPath);
+        List<String> list = CollUtil.newArrayList(itemResponse);
+        if (CollUtil.isNotEmpty(childs)) {
+            for (FileInfo info : childs) {
+                String tmp = StrUtil.isBlank(reqPath) ? info.name() : reqPath + "/" + info.name();
+                list.add(toItemResponseFixed(tmp, info));
+            }
+        }
+        String out = toItemListResponse(ArrayUtil.toArray(list, String.class));
+        ctx.output(out);
+        return 207;
+    }
+
+    /**
+     * 生成单个文件/文件夹的响应（修复后的版本）
+     * 
+     * 与父类不同之处：
+     * 1. href 使用绝对路径（添加前导 /）
+     * 2. 目录的 href 添加尾部 /
+     * 
+     * @param reqPath 请求路径
+     * @param fi      文件信息
+     * @return XML 响应片段
+     */
+    private String toItemResponseFixed(String reqPath, FileInfo fi) {
+        String template = "<D:response>\n" +
+                "<D:href>{}</D:href>\n" +
+                "<D:propstat>\n" +
+                "\t<D:prop>\n" +
+                "\t\t<D:getlastmodified>{}</D:getlastmodified>\n" +
+                "\t\t<D:creationdate>{}</D:creationdate>\n" +
+                "\t\t<D:getcontentlength>{}</D:getcontentlength>\n" +
+                "\t\t<D:resourcetype>{}</D:resourcetype><D:getcontenttype>{}</D:getcontenttype>\n" +
+                "\t</D:prop>\n" +
+                "\t<D:status>HTTP/1.1 200 OK</D:status>\n" +
+                "</D:propstat>\n" +
+                "\t</D:response>";
+
+        // 生成 href：添加前导 / 和尾部 / （如果是目录）
+        String href;
+        if (StrUtil.isBlank(reqPath)) {
+            // 根目录
+            href = "/" + this.prefix() + "/";
+        } else {
+            // 子路径
+            href = "/" + this.prefix() + "/" + reqPath;
+            // 如果是目录，添加尾部 /
+            if (fi.isDir() && !href.endsWith("/")) {
+                href = href + "/";
+            }
+        }
+
+        // URL 编码
+        href = URLUtil.encode(href);
+
+        return StrUtil.format(template,
+                href,
+                DateUtil.parse(fi.update()).toJdkDate().toString(),
+                DateUtil.parse(fi.create()).toString("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+                fi.size(),
+                fi.isDir() ? "<D:collection/>" : "",
+                this.fileSystem().fileMime(fi));
+    }
+
+    /**
+     * 包装多个响应项为完整的 XML
+     * 
+     * @param itemResponses 响应项数组
+     * @return 完整的 XML 响应
+     */
+    private String toItemListResponse(String... itemResponses) {
+        String template = "<D:multistatus xmlns:D=\"DAV:\"> \n" +
+                "\t{}\n" +
+                "</D:multistatus>";
+        StringBuilder sb = new StringBuilder();
+        for (String tmp : itemResponses) {
+            sb.append(tmp);
+        }
+        return StrUtil.format(template, sb.toString());
+    }
+
+    /**
+     * 解析 Depth 头
+     * 
+     * @param s Depth 头的值
+     * @return 深度值：0, 1, -1(infinity), -2(invalid)
+     */
+    private int parseDepth(String s) {
+        switch (s) {
+            case "0":
+                return 0;
+            case "1":
+                return 1;
+            case "infinity":
+                return -1;
+        }
+        return -2;
+    }
+
+    /**
+     * 去除路径前缀
+     * 
+     * @param p 完整路径
+     * @return 去除前缀后的路径
+     */
+    private String stripPrefix(String p) {
+        p = URLUtil.decode(p);
+        int index = p.indexOf(this.prefix());
+        if (index == -1) {
+            return "";
+        }
+        String r = p.substring(index + this.prefix().length());
+        if (r.length() < p.length()) {
+            if (r.endsWith("/")) {
+                r = r.substring(0, r.length() - 1);
+            }
+            if (r.startsWith("/")) {
+                r = r.substring(1);
+            }
+            return r;
+        }
+        return "";
     }
 }

@@ -11,6 +11,13 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.Filter;
 import org.noear.solon.core.handle.FilterChain;
 
+/**
+ * WebDAV 过滤器
+ * 
+ * 负责拦截所有 /webdav 路径的请求，交由 NetdiskWebdavHandler 处理
+ * 
+ * @author 高压锅里的小白
+ */
 @Component(index = -10000)
 @Slf4j
 public class WebdavFilter implements Filter {
@@ -25,9 +32,11 @@ public class WebdavFilter implements Filter {
             try {
                 log.info("WebDAV 请求开始: method={}, path={}, authorization={}", ctx.method(), ctx.path(),
                         ctx.header("Authorization"));
-                // 自己实现处理
+                
+                // 交由 handler 处理（NetdiskWebdavHandler 已经重写了 PROPFIND 逻辑）
                 handler.handle(ctx);
                 ctx.setHandled(true);
+                
             } finally {
                 // 清理 ThreadLocal，防止内存泄漏
                 UserContext.clear();

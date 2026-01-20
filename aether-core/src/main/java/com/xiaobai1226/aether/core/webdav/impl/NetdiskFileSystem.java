@@ -222,8 +222,8 @@ public class NetdiskFileSystem implements FileSystem {
                     list.add(fi);
                 }
             }
-            log.info("WebDAV fileList 结束: 耗时={}ms, reqPath={}, userId={}", System.currentTimeMillis() - startTime,
-                    reqPath, userId);
+            log.info("WebDAV fileList 结束: 耗时={}ms, reqPath={}, userId={}, 文件数量={}", System.currentTimeMillis() - startTime,
+                    reqPath, userId, list.size());
             return list;
         } catch (FailResultException e) {
             // WebDAV 的错误处理：返回 null 而不是抛出异常
