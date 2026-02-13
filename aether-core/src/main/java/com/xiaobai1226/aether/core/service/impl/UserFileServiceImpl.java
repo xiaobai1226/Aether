@@ -151,6 +151,9 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         if (StrUtil.isEmpty(path)) {
             return null;
         }
+        if (parentFolder == null) {
+            return null;
+        }
 
         if (path.startsWith("/")) {
             path = path.substring(1);
@@ -163,13 +166,14 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         }
 
         LambdaQueryChainWrapper<UserFileDO> lambdaQuery;
-        UserFileDO userFileDO = parentFolder;
+        UserFileDO currentFolder = parentFolder;
 
         // 是否新建
         var isCreate = false;
         var lockKey = "";
         for (int i = 0; i < dirs.length; i++) {
-            lockKey = userFileDO.getId() + ":" + dirs[i];
+            UserFileDO userFileDO;
+            lockKey = currentFolder.getId() + ":" + dirs[i];
 
             // 上锁
             LockManager.lock(lockKey);
@@ -178,25 +182,26 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
                 if (!isCreate) {
                     lambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
                     userFileDO = lambdaQuery.eq(UserFileDO::getUserId, userId)
-                            .eq(UserFileDO::getParentId, userFileDO.getId())
+                            .eq(UserFileDO::getParentId, currentFolder.getId())
                             .eq(UserFileDO::getName, dirs[i]).eq(UserFileDO::getFileStatus, NORMAL.flag())
                             .eq(UserFileDO::getItemType, UserFileItemTypeEnum.FOLDER.flag()).one();
 
                     if (userFileDO == null) {
-                        var userFolderDTO = BeanUtil.copyProperties(userFileDO, UserFolderDTO.class);
+                        var userFolderDTO = BeanUtil.copyProperties(currentFolder, UserFolderDTO.class);
                         userFileDO = newFolder(dirs[i], userFolderDTO, userId);
                         isCreate = true;
                     }
                 } else {
-                    var userFolderDTO = BeanUtil.copyProperties(userFileDO, UserFolderDTO.class);
+                    var userFolderDTO = BeanUtil.copyProperties(currentFolder, UserFolderDTO.class);
                     userFileDO = newFolder(dirs[i], userFolderDTO, userId);
                 }
+                currentFolder = userFileDO;
             } finally {
                 LockManager.unlock(lockKey);
             }
 
             if (i == dirs.length - 1) {
-                return userFileDO;
+                return currentFolder;
             }
         }
 
