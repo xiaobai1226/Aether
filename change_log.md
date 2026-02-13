@@ -3,6 +3,8 @@
 1. 使用Version Catalog替代buildSrc管理Gradle依赖版本
 2. 移除org.noear:solon-view-thymeleaf依赖，使用默认
 3. 移除jetty依赖，使用默认
+4. 完善webdav
+5. 优化分片上传流程
 
 ## 0.9.0
 
