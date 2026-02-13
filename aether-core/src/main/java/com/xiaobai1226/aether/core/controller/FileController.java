@@ -74,31 +74,49 @@ public class FileController {
     }
 
     /**
-     * 上传文件
-     *
-     * @param uploadFileVO 上传文件参数
-     * @param file         上传的文件
-     * @return 上传结果
-     * @author bai
+     * 初始化上传任务
      */
     @Post
-    @Mapping(path = "/uploadFile")
-    public UploadResultDTO uploadFile(@Validated UploadFileVO uploadFileVO, @Param("file") UploadedFile file,
-            @CurrentUserId Long userId) {
-        return fileOperationsFacade.uploadFile(uploadFileVO, file, userId);
+    @Mapping(path = "/uploadInit")
+    public UploadTaskInitDTO uploadInit(@Validated UploadInitVO uploadInitVO, @CurrentUserId Long userId) {
+        return fileOperationsFacade.uploadInit(uploadInitVO, userId);
     }
 
     /**
-     * 取消上传文件
-     *
-     * @param taskId 上传任务ID
-     * @author bai
+     * 上传单个切片
      */
     @Post
-    @Mapping(path = "/cancelUploadFile")
-    public void cancelUploadFile(@Validated @NotNull(message = ERROR_TASK_ID_EMPTY) String taskId,
+    @Mapping(path = "/uploadChunk")
+    public UploadChunkResultDTO uploadChunk(@Validated UploadChunkVO uploadChunkVO, @Param("file") UploadedFile file,
             @CurrentUserId Long userId) {
-        fileOperationsFacade.cancelUploadFile(taskId, userId);
+        return fileOperationsFacade.uploadChunk(uploadChunkVO, file, userId);
+    }
+
+    /**
+     * 查询上传任务状态
+     */
+    @Get
+    @Mapping(path = "/uploadStatus")
+    public UploadTaskStatusDTO uploadStatus(@Validated UploadStatusVO uploadStatusVO, @CurrentUserId Long userId) {
+        return fileOperationsFacade.uploadStatus(uploadStatusVO, userId);
+    }
+
+    /**
+     * 完成上传任务
+     */
+    @Post
+    @Mapping(path = "/uploadComplete")
+    public UploadResultDTO uploadComplete(@Validated UploadCompleteVO uploadCompleteVO, @CurrentUserId Long userId) {
+        return fileOperationsFacade.uploadComplete(uploadCompleteVO, userId);
+    }
+
+    /**
+     * 取消上传任务
+     */
+    @Post
+    @Mapping(path = "/uploadCancel")
+    public void uploadCancel(@Validated UploadCancelVO uploadCancelVO, @CurrentUserId Long userId) {
+        fileOperationsFacade.uploadCancel(uploadCancelVO, userId);
     }
 
     /**

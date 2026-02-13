@@ -203,65 +203,70 @@ export interface FileRenameRequest {
   // itemType: number;
 }
 
-/**
- * 上传文件请求信息
- */
-export interface UploadFileRequest {
-  /**
-   * 任务ID
-   */
-  taskId: string;
-
-  /**
-   * 所属文件夹路径
-   */
+export interface UploadInitRequest {
+  taskId?: string;
   path?: string;
-
-  /**
-   * 上传文件夹，文件所属文件夹路径
-   */
   relativePath?: string;
-
-  /**
-   * 文件名称
-   */
   fileName: string;
-
-  /**
-   * 文件大小
-   */
   fileSize: number;
-
-  /**
-   * md5码
-   */
   identifier: string;
-
-  /**
-   * 切片索引
-   */
-  chunkIndex: number;
-
-  /**
-   * 总切片数
-   */
   totalChunks: number;
 }
 
-/**
- * 上传文件响应信息
- */
-export interface UploadFileResponse {
-
-  /**
-   * 任务ID
-   */
+export interface UploadInitResponse {
   taskId: string;
-
-  /**
-   * 上传状态
-   */
   status: number;
+  chunkSize: number;
+  totalChunks: number;
+  uploadedChunks: number[];
+  uploadedSize: number;
+}
+
+export interface UploadChunkRequest {
+  taskId: string;
+  fileName: string;
+  fileSize: number;
+  identifier: string;
+  chunkIndex: number;
+  totalChunks: number;
+}
+
+export interface UploadChunkResponse {
+  taskId: string;
+  status: number;
+  chunkIndex: number;
+  uploadedSize: number;
+  receivedChunks: number;
+}
+
+export interface UploadStatusRequest {
+  taskId: string;
+}
+
+export interface UploadStatusResponse {
+  taskId: string;
+  status: number;
+  totalChunks: number;
+  uploadedChunks: number[];
+  uploadedSize: number;
+}
+
+export interface UploadCompleteRequest {
+  taskId: string;
+  path?: string;
+  fileName: string;
+  fileSize: number;
+  identifier: string;
+  totalChunks: number;
+}
+
+export interface UploadCompleteResponse {
+  taskId: string;
+  status: number;
+}
+
+export interface UploadCancelRequest {
+  taskId: string;
 }
 
 /**

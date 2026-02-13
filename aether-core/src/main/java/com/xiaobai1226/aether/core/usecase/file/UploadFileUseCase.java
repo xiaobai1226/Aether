@@ -1,6 +1,5 @@
 package com.xiaobai1226.aether.core.usecase.file;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
@@ -13,7 +12,10 @@ import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.core.cache.FileCache;
 import com.xiaobai1226.aether.core.domain.dto.*;
 import com.xiaobai1226.aether.core.domain.vo.DeleteVO;
+import com.xiaobai1226.aether.core.domain.vo.UploadChunkVO;
+import com.xiaobai1226.aether.core.domain.vo.UploadCompleteVO;
 import com.xiaobai1226.aether.core.domain.vo.UploadFileVO;
+import com.xiaobai1226.aether.core.domain.vo.UploadInitVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
 import com.xiaobai1226.aether.core.infrastructure.storage.StorageBackendFactory;
@@ -35,6 +37,7 @@ import org.noear.solon.data.annotation.Tran;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -59,6 +62,7 @@ import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 @Component
 @Slf4j
 public class UploadFileUseCase {
+    private static final long DEFAULT_CHUNK_SIZE = 5L * 1024 * 1024;
 
     @Inject("${project.path.root}")
     private String rootPath;
@@ -176,138 +180,191 @@ public class UploadFileUseCase {
     }
 
     /**
-     * 分片上传文件
-     *
-     * @param file               上传的文件
-     * @param userId             用户ID
-     * @param parentFolder       父文件夹对象
-     * @param uploadFileVO       上传文件相关信息
-     * @param uploadFileCacheDTO 上传文件缓存相关信息
-     * @return 上传结果
+     * 初始化上传任务
+     */
+    public UploadTaskInitDTO initUploadTask(final Long userId, UserFolderDTO parentFolder, UploadInitVO uploadInitVO) {
+        if (parentFolder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+
+        // 已有任务：校验参数并直接返回当前进度
+        if (StrUtil.isNotBlank(uploadInitVO.getTaskId())) {
+            var existedTask = fileCache.getUploadTempFileInfo(userId, uploadInitVO.getTaskId());
+            if (existedTask != null) {
+                validateTaskConflict(existedTask, uploadInitVO.getFileName(), uploadInitVO.getFileSize(),
+                        uploadInitVO.getIdentifier(), uploadInitVO.getTotalChunks());
+                return buildInitResult(userId, existedTask, uploadInitVO.getTaskId());
+            }
+        }
+
+        // 新任务先尝试秒传
+        var uploadFileVO = new UploadFileVO();
+        uploadFileVO.setTaskId(IdUtil.simpleUUID());
+        uploadFileVO.setPath(uploadInitVO.getPath());
+        uploadFileVO.setRelativePath(uploadInitVO.getRelativePath());
+        uploadFileVO.setFileName(uploadInitVO.getFileName());
+        uploadFileVO.setFileSize(uploadInitVO.getFileSize());
+        uploadFileVO.setIdentifier(uploadInitVO.getIdentifier());
+        uploadFileVO.setChunkIndex(0);
+        uploadFileVO.setTotalChunks(uploadInitVO.getTotalChunks());
+
+        var storageFileDO = trySecondUpload(userId, parentFolder, uploadFileVO);
+        if (storageFileDO != null) {
+            secondUploadFile(userId, parentFolder, uploadFileVO, storageFileDO);
+            var dto = new UploadTaskInitDTO();
+            dto.setTaskId(uploadFileVO.getTaskId());
+            dto.setStatus(UPLOAD_SECOND.id());
+            dto.setChunkSize(DEFAULT_CHUNK_SIZE);
+            dto.setTotalChunks(uploadInitVO.getTotalChunks());
+            dto.setUploadedSize(uploadInitVO.getFileSize());
+            dto.setUploadedChunks(buildFullChunkList(uploadInitVO.getTotalChunks()));
+            return dto;
+        }
+
+        var taskId = StrUtil.isBlank(uploadInitVO.getTaskId()) ? IdUtil.simpleUUID() : uploadInitVO.getTaskId();
+        var tempFolder = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_TEMP_FILE_FULL, userId.toString(), taskId);
+        FileUtil.mkdir(tempFolder);
+
+        var uploadFileTempDTO = new UploadFileTempDTO();
+        uploadFileTempDTO.setTaskId(taskId);
+        uploadFileTempDTO.setParentId(parentFolder.getId());
+        uploadFileTempDTO.setFileName(uploadInitVO.getFileName());
+        uploadFileTempDTO.setFileSize(uploadInitVO.getFileSize());
+        uploadFileTempDTO.setIdentifier(uploadInitVO.getIdentifier());
+        uploadFileTempDTO.setUploadedSize(0L);
+        uploadFileTempDTO.setTotalChunks(uploadInitVO.getTotalChunks());
+        uploadFileTempDTO.setTempFolder(tempFolder);
+        uploadFileTempDTO.setReceivedChunkIndexes("");
+        fileCache.putUploadTempFileInfo(userId, taskId, uploadFileTempDTO);
+
+        return buildInitResult(userId, uploadFileTempDTO, taskId);
+    }
+
+    /**
+     * 上传单个切片（幂等）
+     */
+    public UploadChunkResultDTO uploadChunk(UploadedFile file, final Long userId, UploadChunkVO uploadChunkVO)
+            throws IOException {
+        var uploadTempFileInfo = fileCache.getUploadTempFileInfo(userId, uploadChunkVO.getTaskId());
+        if (uploadTempFileInfo == null) {
+            throw new FailResultException(UPLOAD_TASK_EXPIRED, ERROR_UPLOAD_TASK_EXPIRED);
+        }
+
+        validateTaskConflict(uploadTempFileInfo, uploadChunkVO.getFileName(), uploadChunkVO.getFileSize(),
+                uploadChunkVO.getIdentifier(), uploadChunkVO.getTotalChunks());
+
+        if (uploadChunkVO.getChunkIndex() < 0 || uploadChunkVO.getChunkIndex() >= uploadChunkVO.getTotalChunks()) {
+            throw new FailResultException(UPLOAD_CHUNK_RANGE_INVALID, ERROR_UPLOAD_CHUNK_RANGE_INVALID);
+        }
+
+        if (file.getContentSize() > uploadChunkVO.getFileSize()) {
+            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_FILE_SIZE_OVERFLOW);
+        }
+
+        var tempDir = FileUtil.file(uploadTempFileInfo.getTempFolder());
+        FileUtil.mkdir(tempDir);
+        var tempFile = FileUtil.file(tempDir, uploadChunkVO.getChunkIndex().toString());
+        if (!FileUtil.exist(tempFile)) {
+            file.transferTo(tempFile);
+        }
+
+        var latestTaskInfo = fileCache.updateUploadedChunk(userId, uploadChunkVO.getTaskId(), uploadChunkVO.getChunkIndex(),
+                file.getContentSize());
+        if (latestTaskInfo == null) {
+            throw new FailResultException(UPLOAD_TASK_EXPIRED, ERROR_UPLOAD_TASK_EXPIRED);
+        }
+
+        var uploadedChunks = fileCache.getUploadedChunkIndexes(userId, uploadChunkVO.getTaskId());
+        var chunkResult = new UploadChunkResultDTO();
+        chunkResult.setTaskId(uploadChunkVO.getTaskId());
+        chunkResult.setStatus(UPLOADING.id());
+        chunkResult.setChunkIndex(uploadChunkVO.getChunkIndex());
+        chunkResult.setUploadedSize(latestTaskInfo.getUploadedSize());
+        chunkResult.setReceivedChunks(uploadedChunks.size());
+        return chunkResult;
+    }
+
+    /**
+     * 查询上传任务状态
+     */
+    public UploadTaskStatusDTO getUploadTaskStatus(final Long userId, String taskId) {
+        var uploadTempFileInfo = fileCache.getUploadTempFileInfo(userId, taskId);
+        if (uploadTempFileInfo == null) {
+            throw new FailResultException(UPLOAD_TASK_EXPIRED, ERROR_UPLOAD_TASK_EXPIRED);
+        }
+
+        var dto = new UploadTaskStatusDTO();
+        dto.setTaskId(taskId);
+        dto.setStatus(UPLOADING.id());
+        dto.setTotalChunks(uploadTempFileInfo.getTotalChunks());
+        dto.setUploadedSize(uploadTempFileInfo.getUploadedSize() == null ? 0L : uploadTempFileInfo.getUploadedSize());
+        dto.setUploadedChunks(fileCache.getUploadedChunkIndexes(userId, taskId));
+        return dto;
+    }
+
+    /**
+     * 完成上传任务，执行合并与落库
      */
     @Tran
-    public UploadResultDTO splitUploadFile(UploadedFile file, final Long userId, UserFolderDTO parentFolder,
-            UploadFileVO uploadFileVO, UploadFileCacheDTO uploadFileCacheDTO) throws IOException {
-        UploadFileTempDTO uploadTempFileDTO;
+    public UploadResultDTO completeUploadTask(final Long userId, UserFolderDTO parentFolder, UploadCompleteVO uploadCompleteVO) {
+        var uploadTempFileInfo = fileCache.getUploadTempFileInfo(userId, uploadCompleteVO.getTaskId());
+        if (uploadTempFileInfo == null) {
+            throw new FailResultException(UPLOAD_TASK_EXPIRED, ERROR_UPLOAD_TASK_EXPIRED);
+        }
+        if (parentFolder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
 
-        // 设置暂存临时目录（使用配置的rootPath）
-        var tempFolder = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_TEMP_FILE_FULL, userId.toString(),
-                uploadFileVO.getTaskId());
-        var tempDir = FileUtil.file(tempFolder);
+        validateTaskConflict(uploadTempFileInfo, uploadCompleteVO.getFileName(), uploadCompleteVO.getFileSize(),
+                uploadCompleteVO.getIdentifier(), uploadCompleteVO.getTotalChunks());
+
+        var uploadedChunks = fileCache.getUploadedChunkIndexes(userId, uploadCompleteVO.getTaskId());
+        if (uploadedChunks.size() != uploadCompleteVO.getTotalChunks()) {
+            throw new FailResultException(UPLOAD_CHUNKS_INCOMPLETE, ERROR_UPLOAD_CHUNKS_INCOMPLETE);
+        }
+
+        var tempDir = FileUtil.file(uploadTempFileInfo.getTempFolder());
+        for (int i = 0; i < uploadCompleteVO.getTotalChunks(); i++) {
+            if (!FileUtil.exist(FileUtil.file(tempDir, String.valueOf(i)))) {
+                throw new FailResultException(UPLOAD_CHUNKS_INCOMPLETE, ERROR_UPLOAD_CHUNKS_INCOMPLETE);
+            }
+        }
+
+        var uploadFileCacheDTO = new UploadFileCacheDTO();
         uploadFileCacheDTO.setTempDir(tempDir);
+        try {
+            var finalFilePath = fileService.mergeFile(uploadTempFileInfo.getFileName(), uploadCompleteVO.getTaskId(),
+                    uploadTempFileInfo.getTempFolder(), parentFolder.getStorageSource().getPath());
+            var finalFullFilePath = FileUtils.generatePath(parentFolder.getStorageSource().getPath(), finalFilePath);
+            uploadFileCacheDTO.setFinalFilePath(finalFullFilePath);
 
-        // long parentId = parentUserFile != null ? parentUserFile.getId() : 0L;
+            var finalFile = FileUtil.file(finalFullFilePath);
+            var finalFileSize = FileUtil.size(finalFile);
+            var finalFileName = finalFile.getName();
 
-        // 如果是第一片
-        if (uploadFileVO.getChunkIndex() == 0) {
-            if (file.getContentSize() > uploadFileVO.getFileSize()) {
-                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_FILE_SIZE_OVERFLOW);
+            var thumbnailResult = thumbnailService.generateThumbnail(finalFullFilePath, finalFileName, finalFileSize);
+            String thumbnailFileName = thumbnailResult.isSuccess() ? thumbnailResult.getThumbnailFileName() : null;
+            uploadFileCacheDTO.setThumbnailFilePath(thumbnailResult.getThumbnailFilePath());
+
+            var fileDO = fileService.addFile(finalFileName, finalFilePath, finalFileSize, uploadTempFileInfo.getIdentifier(),
+                    thumbnailFileName, parentFolder.getStorageSourceId());
+            if (fileDO == null) {
+                throw new FailResultException(SYSTEM_ERROR);
             }
 
-            // TODO 预占上传空间（整个文件大小）
-            // quotaService.reserveUploading(userId, uploadFileVO.getFileSize());
+            addUserFile(userId, fileDO.getId(), parentFolder.getId(), uploadCompleteVO.getFileName(), FILE, NORMAL,
+                    finalFileSize, parentFolder.getStorageSourceId());
 
-            // 切片是0，则表示redis中还没有数据，要新增
-            var uploadFileTempDTO = BeanUtil.toBean(uploadFileVO, UploadFileTempDTO.class);
-            uploadFileTempDTO.setUploadedSize(0L);
-            uploadFileTempDTO.setTempFolder(tempFolder);
-            uploadFileTempDTO.setParentId(parentFolder.getId());
-            fileCache.putUploadTempFileInfo(userId, uploadFileVO.getTaskId(), uploadFileTempDTO);
-
-            // 如果文件夹不存在则创建目录
-            if (!FileUtil.isDirectory(tempDir)) {
-                if (!FileUtil.exist(tempDir)) {
-                    FileUtil.mkdir(tempDir);
-                }
-            }
-        } else {
-            // 获取缓存中数据
-            // var uploadTempFileDTO = fileCache.getUploadTempFileInfo(userId,
-            // uploadFileVO.getTaskId());
-            //
-            // // 如果缓存中没有数据，则返回上传失败
-            // if (uploadTempFileDTO == null) {
-            // // 删除缓存数据
-            // fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-            // userCache.decrementUploadingFileSize(userId, uploadFileVO.getFileSize());
-            // FileUtil.del(tempDir);
-            //
-            // return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FAIL.id());
-            // }
-            //
-            // // 如果缓存中有数据，但是实际上传文件大小已超过初始文件大小
-            // if (uploadTempFileDTO.getFileSize() < (uploadTempFileDTO.getUploadedSize() +
-            // file.getSize())) {
-            // // 删除缓存数据
-            // fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-            // userCache.decrementUploadingFileSize(userId, uploadFileVO.getFileSize());
-            // FileUtil.del(tempDir);
-            //
-            // return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FAIL.id());
-            // }
-
-            // 不是第一片，增加uploadedSize
-            fileCache.updateUploadedSize(userId, uploadFileVO.getTaskId(), file.getContentSize());
-        }
-
-        // 将文件写入临时目录
-        File tempFile = FileUtil.file(tempDir, uploadFileVO.getChunkIndex().toString());
-        file.transferTo(tempFile);
-
-        // 如果不是最后一片，直接返回上传中
-        if (uploadFileVO.getChunkIndex() < uploadFileVO.getTotalChunks() - 1) {
-            return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOADING.id());
-        }
-
-        // 获取缓存中数据
-        uploadTempFileDTO = fileCache.getUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-
-        // 如果是最后一片，执行合并分片操作（文件存储到存储源）
-        var finalFilePath = fileService.mergeFile(uploadTempFileDTO.getFileName(), uploadFileVO.getTaskId(), tempFolder,
-                parentFolder.getStorageSource().getPath());
-        var finalFullFilePath = FileUtils.generatePath(parentFolder.getStorageSource().getPath(), finalFilePath);
-        uploadFileCacheDTO.setFinalFilePath(finalFilePath);
-
-        // 获取最终文件
-        var finalFile = FileUtil.file(finalFullFilePath);
-        // 获取最终文件大小
-        var finalFileSize = FileUtil.size(finalFile);
-        var finalFileName = finalFile.getName();
-
-        // TODO 如果最终文件大小，大于初始文件大小
-        // if (finalFileSize > uploadTempFileDTO.getFileSize()) {
-        // // 重新检测文件大小是否足够
-        // var userSpaceUsage = userService.getUserSpaceUsage(userId);
-        // // 如果空间不足则返回上传失败
-        // if (userSpaceUsage.getRealRemainStorage() < (finalFileSize -
-        // uploadTempFileDTO.getFileSize())) {
-        // throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-        // }
-        // }
-
-        // 生成缩略图
-        var thumbnailResult = thumbnailService.generateThumbnail(finalFullFilePath, finalFileName, finalFileSize);
-        String thumbnailFileName = thumbnailResult.isSuccess() ? thumbnailResult.getThumbnailFileName() : null;
-        uploadFileCacheDTO.setThumbnailFilePath(thumbnailResult.getThumbnailFilePath());
-
-        // 写入File库，获取文件ID（storageSourceId已在前面获取）
-        var fileDO = fileService.addFile(finalFileName, finalFilePath, finalFileSize, uploadTempFileDTO.getIdentifier(),
-                thumbnailFileName, parentFolder.getStorageSourceId());
-
-        if (fileDO == null) {
+            fileCache.delUploadTempFileInfo(userId, uploadCompleteVO.getTaskId());
+            FileUtil.del(tempDir);
+            return new UploadResultDTO(uploadCompleteVO.getTaskId(), UPLOAD_FINISH.id());
+        } catch (FailResultException e) {
+            clearUploadFileCache(userId, uploadCompleteVO.getTaskId(), uploadCompleteVO.getFileSize(), uploadFileCacheDTO);
+            throw e;
+        } catch (Exception e) {
+            clearUploadFileCache(userId, uploadCompleteVO.getTaskId(), uploadCompleteVO.getFileSize(), uploadFileCacheDTO);
             throw new FailResultException(SYSTEM_ERROR);
         }
-
-        // 插入数据库
-        addUserFile(userId, fileDO.getId(), parentFolder.getId(), uploadFileVO.getFileName(), FILE, NORMAL,
-                finalFileSize, parentFolder.getStorageSourceId());
-        // 删除缓存数据
-        fileCache.delUploadTempFileInfo(userId, uploadFileVO.getTaskId());
-        // TODO 释放上传预占空间
-        // quotaService.releaseUploading(userId, uploadTempFileDTO.getFileSize());
-        FileUtil.del(tempDir);
-
-        return new UploadResultDTO(uploadFileVO.getTaskId(), UPLOAD_FINISH.id());
     }
 
     /**
@@ -421,21 +478,14 @@ public class UploadFileUseCase {
     }
 
     /**
-     * 取消上传
-     *
-     * @param userId 用户ID
-     * @param taskId 任务ID
+     * 取消上传任务
      */
-    public void cancelUploadFile(final Long userId, String taskId) {
-
+    public void cancelUploadTask(final Long userId, String taskId) {
         var uploadTempFileInfo = fileCache.getUploadTempFileInfo(userId, taskId);
-
         if (uploadTempFileInfo == null) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_CANCEL_UPLOAD);
+            throw new FailResultException(UPLOAD_TASK_EXPIRED, ERROR_UPLOAD_TASK_EXPIRED);
         }
-        // 删除缓存数据
         fileCache.delUploadTempFileInfo(userId, taskId);
-        quotaService.releaseUploading(userId, uploadTempFileInfo.getFileSize());
         var tempFolder = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_TEMP_FILE_FULL, userId, taskId);
         var tempDir = FileUtil.file(tempFolder);
         FileUtil.del(tempDir);
@@ -453,10 +503,17 @@ public class UploadFileUseCase {
             UploadFileCacheDTO uploadFileCacheDTO) {
         // 删除缓存数据
         fileCache.delUploadTempFileInfo(userId, taskId);
-        quotaService.releaseUploading(userId, fileSize);
-        FileUtil.del(uploadFileCacheDTO.getTempDir());
-        FileUtil.del(uploadFileCacheDTO.getFinalFilePath());
-        FileUtil.del(uploadFileCacheDTO.getThumbnailFilePath());
+        if (uploadFileCacheDTO != null) {
+            if (uploadFileCacheDTO.getTempDir() != null) {
+                FileUtil.del(uploadFileCacheDTO.getTempDir());
+            }
+            if (StrUtil.isNotBlank(uploadFileCacheDTO.getFinalFilePath())) {
+                FileUtil.del(uploadFileCacheDTO.getFinalFilePath());
+            }
+            if (StrUtil.isNotBlank(uploadFileCacheDTO.getThumbnailFilePath())) {
+                FileUtil.del(uploadFileCacheDTO.getThumbnailFilePath());
+            }
+        }
     }
 
     /**
@@ -540,5 +597,38 @@ public class UploadFileUseCase {
         }
 
         return storageSourceService.getStorageSourceById(storageSourceId, userId);
+    }
+
+    private UploadTaskInitDTO buildInitResult(Long userId, UploadFileTempDTO uploadFileTempDTO, String taskId) {
+        var uploadedChunks = fileCache.getUploadedChunkIndexes(userId, taskId);
+        var dto = new UploadTaskInitDTO();
+        dto.setTaskId(taskId);
+        dto.setStatus(UPLOADING.id());
+        dto.setChunkSize(DEFAULT_CHUNK_SIZE);
+        dto.setTotalChunks(uploadFileTempDTO.getTotalChunks());
+        dto.setUploadedChunks(uploadedChunks);
+        dto.setUploadedSize(uploadFileTempDTO.getUploadedSize() == null ? 0L : uploadFileTempDTO.getUploadedSize());
+        return dto;
+    }
+
+    private void validateTaskConflict(UploadFileTempDTO uploadFileTempDTO, String fileName, Long fileSize, String identifier,
+            Integer totalChunks) {
+        if (!Objects.equals(uploadFileTempDTO.getFileName(), fileName)
+                || !Objects.equals(uploadFileTempDTO.getFileSize(), fileSize)
+                || !Objects.equals(uploadFileTempDTO.getIdentifier(), identifier)
+                || !Objects.equals(uploadFileTempDTO.getTotalChunks(), totalChunks)) {
+            throw new FailResultException(UPLOAD_TASK_CONFLICT, ERROR_UPLOAD_TASK_CONFLICT);
+        }
+    }
+
+    private List<Integer> buildFullChunkList(Integer totalChunks) {
+        var result = new ArrayList<Integer>();
+        if (totalChunks == null || totalChunks <= 0) {
+            return result;
+        }
+        for (int i = 0; i < totalChunks; i++) {
+            result.add(i);
+        }
+        return result;
     }
 }

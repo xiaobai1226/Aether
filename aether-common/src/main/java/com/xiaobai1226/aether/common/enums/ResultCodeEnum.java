@@ -33,6 +33,10 @@ public enum ResultCodeEnum {
      */
     PARAM_IS_INVALID(1001, "参数输入非法"),
     PARAM_IS_BLANK(1002, "参数为空"),
+    UPLOAD_TASK_EXPIRED(2101, "上传任务不存在或已过期"),
+    UPLOAD_CHUNK_RANGE_INVALID(2102, "分片索引不合法"),
+    UPLOAD_CHUNKS_INCOMPLETE(2103, "分片尚未上传完整"),
+    UPLOAD_TASK_CONFLICT(2104, "上传任务参数冲突"),
 
 
     PARAM_TYPE_BIND_ERROR(401, "参数类型错误"),

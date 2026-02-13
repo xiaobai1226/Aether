@@ -11,6 +11,11 @@ import lombok.Data;
 public class UploadFileTempDTO {
 
     /**
+     * 任务ID
+     */
+    private String taskId;
+
+    /**
      * 父文件夹ID
      */
     private Long parentId;
@@ -39,6 +44,11 @@ public class UploadFileTempDTO {
      * 总切片数
      */
     private Integer totalChunks;
+
+    /**
+     * 已接收切片索引，逗号分隔
+     */
+    private String receivedChunkIndexes;
 
     /**
      * 获取临时文件目录

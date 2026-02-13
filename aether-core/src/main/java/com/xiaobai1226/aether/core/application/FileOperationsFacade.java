@@ -1,7 +1,6 @@
 package com.xiaobai1226.aether.core.application;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -12,8 +11,10 @@ import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.core.cache.DownloadCache;
-import com.xiaobai1226.aether.core.domain.dto.UploadFileCacheDTO;
+import com.xiaobai1226.aether.core.domain.dto.UploadChunkResultDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadResultDTO;
+import com.xiaobai1226.aether.core.domain.dto.UploadTaskInitDTO;
+import com.xiaobai1226.aether.core.domain.dto.UploadTaskStatusDTO;
 import com.xiaobai1226.aether.core.domain.dto.UserFolderDTO;
 import com.xiaobai1226.aether.core.domain.vo.*;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
@@ -148,23 +149,18 @@ public class FileOperationsFacade {
     }
 
     /**
-     * 上传文件
-     * 
-     * @param uploadFileVO 上传文件VO
-     * @param file         上传文件
-     * @param userId       用户ID
-     * @return 上传结果
+     * 初始化上传任务
      */
-    public UploadResultDTO uploadFile(UploadFileVO uploadFileVO, UploadedFile file, Long userId) {
+    public UploadTaskInitDTO uploadInit(UploadInitVO uploadInitVO, Long userId) {
         // 获取父文件夹对象（包含存储源信息）
-        UserFolderDTO parentFolder = userFileService.getFolderDTO(userId, uploadFileVO.getPath());
+        UserFolderDTO parentFolder = userFileService.getFolderDTO(userId, uploadInitVO.getPath());
         if (parentFolder == null) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
         }
 
         // 如果是上传文件夹，判断文件路径
-        if (StrUtil.isNotEmpty(uploadFileVO.getRelativePath())) {
-            var relativePath = uploadFileVO.getRelativePath();
+        if (StrUtil.isNotEmpty(uploadInitVO.getRelativePath())) {
+            var relativePath = uploadInitVO.getRelativePath();
             int lastIndex = relativePath.lastIndexOf("/");
             if (lastIndex > 0) {
                 relativePath = relativePath.substring(0, lastIndex);
@@ -180,44 +176,47 @@ public class FileOperationsFacade {
             parentFolder = newParentFolder;
         }
 
-        // 如果taskId为空，则生成taskId
-        if (StrUtil.isBlank(uploadFileVO.getTaskId())) {
-            String task = userId + uploadFileVO.getIdentifier() + DateUtil.format(new Date(), "yyyyMMddHHmmssSSS")
-                    + RandomUtil.randomString(6);
-            uploadFileVO.setTaskId(task);
-        }
+        return uploadFileUseCase.initUploadTask(userId, parentFolder, uploadInitVO);
+    }
 
-        // 如果是第一片文件，尝试秒传
-        if (uploadFileVO.getChunkIndex() == 0) {
-            var storageFileDO = uploadFileUseCase.trySecondUpload(userId, parentFolder, uploadFileVO);
-            if (storageFileDO != null) {
-                return uploadFileUseCase.secondUploadFile(userId, parentFolder, uploadFileVO, storageFileDO);
-            }
-        }
-
-        var uploadFileCacheDTO = new UploadFileCacheDTO();
+    /**
+     * 上传单个切片
+     */
+    public UploadChunkResultDTO uploadChunk(UploadChunkVO uploadChunkVO, UploadedFile file,
+            Long userId) {
         try {
-            return uploadFileUseCase.splitUploadFile(file, userId, parentFolder, uploadFileVO, uploadFileCacheDTO);
+            return uploadFileUseCase.uploadChunk(file, userId, uploadChunkVO);
         } catch (FailResultException e) {
-            uploadFileUseCase.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
-                    uploadFileCacheDTO);
             throw e;
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            uploadFileUseCase.clearUploadFileCache(userId, uploadFileVO.getTaskId(), uploadFileVO.getFileSize(),
-                    uploadFileCacheDTO);
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
 
     /**
-     * 取消上传文件
-     * 
-     * @param taskId 任务ID
-     * @param userId 用户ID
+     * 查询上传状态
      */
-    public void cancelUploadFile(String taskId, Long userId) {
-        uploadFileUseCase.cancelUploadFile(userId, taskId);
+    public UploadTaskStatusDTO uploadStatus(UploadStatusVO uploadStatusVO, Long userId) {
+        return uploadFileUseCase.getUploadTaskStatus(userId, uploadStatusVO.getTaskId());
+    }
+
+    /**
+     * 完成上传任务
+     */
+    public UploadResultDTO uploadComplete(UploadCompleteVO uploadCompleteVO, Long userId) {
+        UserFolderDTO parentFolder = userFileService.getFolderDTO(userId, uploadCompleteVO.getPath());
+        if (parentFolder == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+        return uploadFileUseCase.completeUploadTask(userId, parentFolder, uploadCompleteVO);
+    }
+
+    /**
+     * 取消上传任务
+     */
+    public void uploadCancel(UploadCancelVO uploadCancelVO, Long userId) {
+        uploadFileUseCase.cancelUploadTask(userId, uploadCancelVO.getTaskId());
     }
 
     /**

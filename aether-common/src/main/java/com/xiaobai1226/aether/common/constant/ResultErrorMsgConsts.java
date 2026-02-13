@@ -203,11 +203,6 @@ public class ResultErrorMsgConsts {
     public static final String ERROR_RENAME = "重命名失败";
 
     /**
-     * 取消上传失败错误
-     */
-    public static final String ERROR_CANCEL_UPLOAD = "取消上传失败";
-
-    /**
      * 文件(夹)名称格式错误
      */
     public static final String ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<>|*?/";
@@ -246,6 +241,26 @@ public class ResultErrorMsgConsts {
      * 总切片数为空错误
      */
     public static final String ERROR_TOTAL_CHUNKS_EMPTY = "总切片数不能为空";
+
+    /**
+     * 上传任务不存在或已过期
+     */
+    public static final String ERROR_UPLOAD_TASK_EXPIRED = "上传任务不存在或已过期，请重新初始化";
+
+    /**
+     * 分片索引不合法
+     */
+    public static final String ERROR_UPLOAD_CHUNK_RANGE_INVALID = "分片索引不合法";
+
+    /**
+     * 上传任务参数冲突
+     */
+    public static final String ERROR_UPLOAD_TASK_CONFLICT = "上传任务参数冲突，请重新初始化";
+
+    /**
+     * 分片尚未上传完整
+     */
+    public static final String ERROR_UPLOAD_CHUNKS_INCOMPLETE = "分片尚未上传完整，请继续上传后重试";
 
     /**
      * 移动内容为空错误

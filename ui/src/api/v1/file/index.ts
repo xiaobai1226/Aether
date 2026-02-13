@@ -1,4 +1,4 @@
-import httpInstance from '@/utils/http'
+import httpInstance, { uploadHttpInstance } from '@/utils/http'
 import httpArrayBufferInstance from '@/utils/HttpArrayBuffer'
 import type { NetdiskInternalAxiosRequestConfig } from '@/utils/http'
 import type { AxiosPromise, AxiosProgressEvent } from 'axios'
@@ -7,7 +7,7 @@ import type {
   FileRenameRequest,
   GetFileListByPageRequest,
   GetFileListByPageResponse, GetFolderListByPageRequest, MoveRequest,
-  NewFolderRequest, UploadFileRequest, UploadFileResponse
+  NewFolderRequest, UploadCancelRequest, UploadChunkRequest, UploadChunkResponse, UploadCompleteRequest, UploadCompleteResponse, UploadInitRequest, UploadInitResponse, UploadStatusRequest, UploadStatusResponse
 } from '@/api/v1/file/types'
 import { useAccountStore } from '@/stores/account'
 import { ApiVersion } from '@/api/ApiVersion'
@@ -68,23 +68,29 @@ export const rename = (data: FileRenameRequest): AxiosPromise => {
   })
 }
 
-/**
- * 上传文件
- * @param uploadFileRequest 请求参数
- * @param chunkFile 上传文件
- * @param onUploadProgress 上传进度回调
- */
-export const uploadFile = (uploadFileRequest: UploadFileRequest, chunkFile: Blob, onUploadProgress: (progressEvent: AxiosProgressEvent) => void): AxiosPromise<UploadFileResponse> => {
+export const uploadInit = (data: UploadInitRequest): AxiosPromise<UploadInitResponse> => {
+  return httpInstance.post(baseUrl + '/uploadInit', data, {
+    showErrMsg: false,
+    showSuccessMsg: false,
+    showLoading: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+export const uploadChunk = (
+  uploadChunkRequest: UploadChunkRequest,
+  chunkFile: Blob,
+  onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
+  signal?: AbortSignal
+): AxiosPromise<UploadChunkResponse> => {
   const formData = new FormData()
   formData.append('file', chunkFile)
-  Object.entries(uploadFileRequest).forEach(([key, value]) => {
-    formData.append(key, value)
+  Object.entries(uploadChunkRequest).forEach(([key, value]) => {
+    formData.append(key, String(value))
   })
-  // formData.append('uploadFileVO', JSON.stringify(uploadFileRequest));
 
-  const url = baseUrl + '/uploadFile'
-  return httpInstance.post(url, formData, {
-    onUploadProgress: onUploadProgress,
+  return uploadHttpInstance.post(baseUrl + '/uploadChunk', formData, {
+    onUploadProgress,
+    signal,
     headers: {
       'Content-Type': 'multipart/form-data'
     },
@@ -94,14 +100,25 @@ export const uploadFile = (uploadFileRequest: UploadFileRequest, chunkFile: Blob
   } as NetdiskInternalAxiosRequestConfig)
 }
 
-/**
- * 取消文件上传
- * @param taskId 任务ID
- */
-export const cancelUploadFile = (taskId: string): AxiosPromise => {
-  const url = baseUrl + '/cancelUploadFile'
-  const data = { taskId: taskId }
-  return httpInstance.post(url, data, {
+export const uploadStatus = (params: UploadStatusRequest): AxiosPromise<UploadStatusResponse> => {
+  return httpInstance.get(baseUrl + '/uploadStatus', {
+    params,
+    showErrMsg: false,
+    showSuccessMsg: false,
+    showLoading: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+export const uploadComplete = (data: UploadCompleteRequest): AxiosPromise<UploadCompleteResponse> => {
+  return httpInstance.post(baseUrl + '/uploadComplete', data, {
+    showErrMsg: false,
+    showSuccessMsg: false,
+    showLoading: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+export const uploadCancel = (data: UploadCancelRequest): AxiosPromise => {
+  return httpInstance.post(baseUrl + '/uploadCancel', data, {
     showSuccessMsg: false,
     showLoading: false
   } as NetdiskInternalAxiosRequestConfig)
