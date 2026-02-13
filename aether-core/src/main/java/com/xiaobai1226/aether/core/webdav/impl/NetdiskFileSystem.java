@@ -29,11 +29,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.Utils;
+import org.noear.solon.data.cache.CacheService;
 import org.noear.solon.web.webdav.FileInfo;
 import org.noear.solon.web.webdav.FileSystem;
 import org.noear.solon.web.webdav.impl.ShardingInputStream;
 
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -66,6 +68,9 @@ public class NetdiskFileSystem implements FileSystem {
 
     @Inject
     private FileService fileService;
+
+    @Inject
+    private CacheService cacheService;  // Solon 内置缓存服务
 
     /**
      * 获取文件/文件夹信息
@@ -120,6 +125,15 @@ public class NetdiskFileSystem implements FileSystem {
                 }
             };
         }
+        
+        // 优化：过滤 macOS AppleDouble 文件（._filename）
+        // macOS 访达会自动查找这些元数据文件，但服务器通常不存储它们
+        // 提前拦截可以避免无意义的数据库查询
+        if (isAppleDoubleFile(reqPath)) {
+            log.debug("WebDAV fileInfo 拦截 AppleDouble 文件: reqPath={}", reqPath);
+            return null;
+        }
+        
         var userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
 
         log.info("WebDAV fileInfo 结束: 耗时={}ms, reqPath={}, userFileDTO={}", System.currentTimeMillis() - startTime,
@@ -367,10 +381,30 @@ public class NetdiskFileSystem implements FileSystem {
                 return false;
             }
 
+            // 优化：拦截 macOS AppleDouble 文件上传
+            // macOS 会尝试上传 ._filename 元数据文件，但服务器通常不需要存储它们
+            // 拦截可以节省存储空间、数据库资源和缓存失效开销
+            if (isAppleDoubleFile(reqPath)) {
+                log.debug("WebDAV putFile 拦截 AppleDouble 文件上传: reqPath={}", reqPath);
+                // 假装上传成功，让 macOS 客户端继续上传实际文件
+                try {
+                    // 消费输入流，避免客户端等待
+                    in.transferTo(OutputStream.nullOutputStream());
+                } catch (Exception e) {
+                    log.warn("WebDAV putFile 消费 AppleDouble 文件流失败: reqPath={}", reqPath, e);
+                }
+                return true;
+            }
+
             log.info("WebDAV putFile 开始: reqPath={}, userId={}", reqPath, userId);
             // 直接调用 Facade 的 putFileByPath 方法处理上传
             // putFileByPath 内部已处理：路径解析、同名文件检查、覆盖逻辑（原子性删除+创建）
             boolean result = fileOperationsFacade.putFileByPath(reqPath, in, userId);
+            if (result) {
+                // 失效缓存：文件本身 + 父目录
+                invalidateFileCache(userId, reqPath);
+                invalidateParentCache(userId, reqPath);
+            }
             log.info("WebDAV putFile 完成: reqPath={}, userId={}, result={}", reqPath, userId, result);
             return result;
         } catch (Exception e) {
@@ -407,6 +441,13 @@ public class NetdiskFileSystem implements FileSystem {
             return false;
         }
 
+        // 优化：拦截 macOS AppleDouble 文件删除
+        // 如果上传时已拦截，那么删除时也应该拦截（文件本来就不存在）
+        if (isAppleDoubleFile(reqPath)) {
+            log.debug("WebDAV del 拦截 AppleDouble 文件删除: reqPath={}", reqPath);
+            return true; // 假装删除成功
+        }
+
         // 1. 路径 → 文件信息
         UserFileDTO userFileDTO = userFileService.getUserFileDTOByPath(userId, reqPath);
         if (userFileDTO == null) {
@@ -419,6 +460,10 @@ public class NetdiskFileSystem implements FileSystem {
 
         // 3. 调用标准 delete 方法（复用 UseCase 业务逻辑）
         fileOperationsFacade.deleteToRecycle(deleteVO, userId);
+        
+        // 失效缓存：文件本身 + 父目录
+        invalidateFileCache(userId, reqPath);
+        invalidateParentCache(userId, reqPath);
         return true;
     }
 
@@ -502,6 +547,9 @@ public class NetdiskFileSystem implements FileSystem {
                 fileOperationsFacade.copy(copyVO, userId);
             }
 
+            // 失效目标路径 + 目标父目录
+            invalidatePathAndParents(userId, descPath);
+            
             log.info("WebDAV copy 成功: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
             return true;
         } catch (Exception e) {
@@ -536,7 +584,13 @@ public class NetdiskFileSystem implements FileSystem {
         Long userId = UserContext.getUserId();
         log.info("WebDAV move 开始: reqPath={}, descPath={}, userId={}", reqPath, descPath, userId);
         // 通过适配器调用，复用 MoveFileUseCase 的完整业务逻辑（包含存储源迁移、校验等）
-        return pathAdapter.adaptMove(reqPath, descPath, userId);
+        boolean result = pathAdapter.adaptMove(reqPath, descPath, userId);
+        if (result) {
+            // 失效源路径 + 源父目录 + 目标路径 + 目标父目录
+            invalidatePathAndParents(userId, reqPath);
+            invalidatePathAndParents(userId, descPath);
+        }
+        return result;
     }
 
     /**
@@ -592,6 +646,10 @@ public class NetdiskFileSystem implements FileSystem {
 
             // 直接调用 Facade 方法，复用 CreateFolderUseCase 业务逻辑
             fileOperationsFacade.newFolder(newFolderVO, userId);
+            
+            // 失效新目录本身 + 父目录
+            invalidateFileCache(userId, reqPath);
+            invalidateParentCache(userId, reqPath);
             return true;
         } catch (Exception e) {
             log.error("WebDAV 创建文件夹失败: reqPath={}", reqPath, e);
@@ -619,6 +677,73 @@ public class NetdiskFileSystem implements FileSystem {
     public String fileUrl(String reqPath) {
         log.info("WebDAV fileUrl 开始: reqPath={}", reqPath);
         return null;
+    }
+
+    /**
+     * 检查是否为 macOS AppleDouble 文件
+     * macOS 使用 AppleDouble 格式在非 HFS+ 文件系统上存储扩展属性
+     * 
+     * @param reqPath 请求路径
+     * @return true 表示是 AppleDouble 文件，应该拦截
+     */
+    private boolean isAppleDoubleFile(String reqPath) {
+        if (StrUtil.isEmpty(reqPath)) {
+            return false;
+        }
+        
+        // 提取文件名（处理多级路径）
+        String fileName = reqPath;
+        int lastSlashIndex = reqPath.lastIndexOf("/");
+        if (lastSlashIndex >= 0 && lastSlashIndex < reqPath.length() - 1) {
+            fileName = reqPath.substring(lastSlashIndex + 1);
+        }
+        
+        // 检查是否以 ._ 开头（AppleDouble 文件）
+        // 或其他 macOS 特殊文件
+        return fileName.startsWith("._") 
+            || fileName.equals(".DS_Store")      // macOS 文件夹元数据
+            || fileName.equals(".localized")     // 本地化信息
+            || fileName.equals(".hidden");       // 隐藏文件列表
+    }
+
+    /**
+     * 失效文件信息缓存（通用方法，适用于 WebDAV 和 HTTP API）
+     */
+    private void invalidateFileCache(Long userId, String reqPath) {
+        if (StrUtil.isNotEmpty(reqPath)) {
+            String cacheKey = StrUtil.format("userFile:byPath:{}:{}", userId, reqPath);
+            cacheService.remove(cacheKey);
+            log.debug("失效文件缓存: {}", cacheKey);
+        }
+    }
+
+    /**
+     * 失效父目录的文件列表缓存（通过失效父路径的 fileInfo）
+     */
+    private void invalidateParentCache(Long userId, String reqPath) {
+        String parentPath = pathAdapter.getParentPath(reqPath);
+        invalidateFileCache(userId, parentPath);
+    }
+
+    /**
+     * 失效路径及所有父路径缓存
+     */
+    private void invalidatePathAndParents(Long userId, String reqPath) {
+        // 失效自身
+        invalidateFileCache(userId, reqPath);
+        
+        // 失效所有父路径
+        String[] dirs = reqPath.split("/");
+        StringBuilder currentPath = new StringBuilder();
+        for (int i = 0; i < dirs.length - 1; i++) {
+            if (StrUtil.isNotEmpty(dirs[i])) {
+                if (currentPath.length() > 0) {
+                    currentPath.append("/");
+                }
+                currentPath.append(dirs[i]);
+                invalidateFileCache(userId, currentPath.toString());
+            }
+        }
     }
 
     private FileInfo userFileDTO2Info(UserFileDTO userFileDTO) {

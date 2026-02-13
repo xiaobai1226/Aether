@@ -42,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
+import org.noear.solon.data.annotation.Cache;
 
 import java.util.Objects;
 import org.noear.solon.core.handle.DownloadedFile;
@@ -202,6 +203,16 @@ public class UserFileServiceImpl extends ServiceImpl<UserFileMapper, UserFileDO>
         return null;
     }
 
+    /**
+     * 根据路径获取用户文件信息
+     * 使用 Solon 缓存注解，key 包含 userId 和 path 实现用户隔离
+     * 注意：此缓存是通用的，不仅服务于 WebDAV，也能被 HTTP API 复用
+     */
+    @Cache(
+        key = "userFile:byPath:${userId}:${path}", 
+        tags = "userFile:user:${userId}",
+        seconds = 60
+    )
     @Override
     public UserFileDTO getUserFileDTOByPath(final Long userId, String path) {
         if (StrUtil.isEmpty(path)) {
