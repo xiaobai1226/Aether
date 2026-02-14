@@ -11,6 +11,8 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.Filter;
 import org.noear.solon.core.handle.FilterChain;
 
+import java.io.IOException;
+
 /**
  * WebDAV 过滤器
  * 
@@ -45,7 +47,11 @@ public class WebdavFilter implements Filter {
                         ctx.method(), ctx.path(), ctx.status(), ctx.header("Authorization"));
             }
         } else {
-            chain.doFilter(ctx);
+            try {
+                chain.doFilter(ctx);
+            } catch (IOException e) {
+                // 客户端提前断开连接导致的 IOException，不记录日志
+            }
         }
     }
 }

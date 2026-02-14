@@ -2,7 +2,6 @@ package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.toolkit.ChainWrappers;
 import com.xiaobai1226.aether.common.constant.FolderNameConsts;
 import com.xiaobai1226.aether.common.util.FileUtils;
@@ -11,7 +10,6 @@ import com.xiaobai1226.aether.core.service.support.FilePurgeService;
 import com.xiaobai1226.aether.core.service.intf.StorageSourceService;
 import com.xiaobai1226.aether.dao.domain.entity.FileDO;
 import com.xiaobai1226.aether.dao.domain.entity.StorageSourceDO;
-import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.dao.mapper.FileMapper;
 import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +20,7 @@ import org.noear.solon.data.annotation.Tran;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -144,6 +143,7 @@ public class FileCleanupService {
         log.info("开始扫描存储源: id={}, path={}", storageSource.getId(), storageSource.getPath());
 
         int deletedCount = 0;
+        int deletedDirCount = 0;
 
         try {
             var backend = storageBackendFactory.getByType(storageSource.getType());
@@ -182,13 +182,46 @@ public class FileCleanupService {
                 }
             }
 
-            log.info("存储源清理完成: storageSourceId={}, 删除{}个孤立文件",
-                    storageSource.getId(), deletedCount);
+            deletedDirCount = cleanupEmptyUploadDirs(uploadPath);
+
+            log.info("存储源清理完成: storageSourceId={}, 删除{}个孤立文件，删除{}个空目录",
+                    storageSource.getId(), deletedCount, deletedDirCount);
 
         } catch (Exception e) {
             log.error("扫描存储源失败: storageSourceId={}", storageSource.getId(), e);
         }
 
+        return deletedCount;
+    }
+
+    /**
+     * 清理上传目录下的空目录（从深层向上删除，避免父目录提前判断不为空）
+     */
+    private int cleanupEmptyUploadDirs(String uploadPath) {
+        List<File> allDirs = FileUtil.loopFiles(uploadPath, File::isDirectory);
+        if (CollUtil.isEmpty(allDirs)) {
+            return 0;
+        }
+
+        allDirs.sort(Comparator.comparingInt(file -> -file.getAbsolutePath().length()));
+
+        int deletedCount = 0;
+        String normalizedUploadPath = FileUtil.file(uploadPath).getAbsolutePath();
+        for (File dir : allDirs) {
+            try {
+                String absDir = dir.getAbsolutePath();
+                if (absDir.equals(normalizedUploadPath)) {
+                    continue;
+                }
+                File[] children = dir.listFiles();
+                if (children != null && children.length == 0 && FileUtil.del(dir)) {
+                    deletedCount++;
+                    log.debug("删除空目录: {}", absDir);
+                }
+            } catch (Exception e) {
+                log.warn("清理空目录失败: {}", dir.getAbsolutePath(), e);
+            }
+        }
         return deletedCount;
     }
 
