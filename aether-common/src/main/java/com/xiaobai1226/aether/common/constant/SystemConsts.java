@@ -58,7 +58,7 @@ public class SystemConsts {
     /**
      * 下载文件的sign过期时间 单位：分钟
      */
-    public static final int DOWNLOAD_FILE_SIGN_TIMEOUT = 5;
+    public static final int DOWNLOAD_FILE_SIGN_TIMEOUT = 30;
 
     /**
      * 头像后缀

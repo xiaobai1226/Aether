@@ -11,7 +11,11 @@ import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.core.cache.DownloadCache;
+import com.xiaobai1226.aether.core.domain.dto.DownloadCreateResultDTO;
+import com.xiaobai1226.aether.core.domain.dto.DownloadLocalFileDTO;
+import com.xiaobai1226.aether.core.domain.dto.DownloadTaskFileDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadChunkResultDTO;
+import com.xiaobai1226.aether.core.domain.dto.DownloadTaskStatusDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadResultDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadTaskInitDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadTaskStatusDTO;
@@ -101,6 +105,9 @@ public class FileOperationsFacade {
 
     @Inject
     private DownloadFileUseCase downloadFileUseCase;
+
+    @Inject
+    private DownloadTaskUseCase downloadTaskUseCase;
 
     @Inject
     private UploadFileUseCase uploadFileUseCase;
@@ -305,21 +312,63 @@ public class FileOperationsFacade {
     }
 
     /**
-     * 创建下载链接
+     * 创建下载（自动选择直接下载或任务下载）
      * 
      * @param ids    文件ID列表（逗号分隔）
      * @param userId 用户ID
-     * @return 下载签名
+     * @return 下载结果
      */
-    public String createDownloadSign(String ids, Long userId) {
+    public DownloadCreateResultDTO createDownload(String ids, Long userId) {
+        List<Long> idList = parseIds(ids);
+        var userFileDTOList = userFileService.getUserFileDTOListByIds(idList, userId, NORMAL);
+        if (userFileDTOList == null || userFileDTOList.size() != idList.size()) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+
+        DownloadCreateResultDTO result = new DownloadCreateResultDTO();
+        if (idList.size() == 1 && UserFileItemTypeEnum.isFile(userFileDTOList.getFirst().getItemType())) {
+            result.setType("DIRECT");
+            result.setSign(downloadFileUseCase.createDownloadSign(idList, userId));
+            return result;
+        }
+
+        result.setType("TASK");
+        result.setTaskId(downloadTaskUseCase.createDownloadTask(idList, userId));
+        return result;
+    }
+
+    /**
+     * 获取下载任务状态
+     * 
+     * @param taskId 任务ID
+     * @param userId 用户ID
+     * @return 下载任务状态
+     */
+    public DownloadTaskStatusDTO getDownloadTaskStatus(String taskId, Long userId) {
+        return downloadTaskUseCase.getTaskStatus(taskId, userId);
+    }
+
+    /**
+     * 下载任务文件
+     * 
+     * @param taskId 任务ID
+     * @param userId 用户ID
+     * @return 下载文件
+     */
+    public DownloadTaskFileDTO downloadTaskFileBySign(String sign) {
+        return downloadTaskUseCase.downloadTaskFileBySign(sign);
+    }
+
+    public void markDownloadTaskDownloaded(String taskId) {
+        downloadTaskUseCase.markTaskDownloaded(taskId);
+    }
+
+    private List<Long> parseIds(String ids) {
         // 1. 参数转换
-        List<Long> idList = Arrays.stream(ids.split(StrUtil.COMMA))
+        return Arrays.stream(ids.split(StrUtil.COMMA))
                 .mapToLong(Long::parseLong)
                 .boxed()
                 .collect(Collectors.toList());
-
-        // 2. 调用UseCase创建签名
-        return downloadFileUseCase.createDownloadSign(idList, userId);
     }
 
     /**
@@ -336,6 +385,13 @@ public class FileOperationsFacade {
             log.error("下载文件失败", e);
             throw new FailResultException(SYSTEM_ERROR);
         }
+    }
+
+    /**
+     * 解析单文件本地下载信息（用于Range断点续传）
+     */
+    public DownloadLocalFileDTO resolveSingleLocalFileBySign(String sign) {
+        return downloadFileUseCase.resolveSingleLocalFileBySign(sign);
     }
 
     /**

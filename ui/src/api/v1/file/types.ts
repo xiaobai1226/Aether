@@ -308,3 +308,68 @@ export interface DeleteRequest {
    */
   ids: number[];
 }
+
+/**
+ * 下载任务状态响应
+ */
+export interface DownloadTaskStatusResponse {
+  /**
+   * 任务ID
+   */
+  taskId: string;
+
+  /**
+   * 任务状态：0 排队中 1 执行中 2 成功 3 失败 4 过期
+   */
+  status: number;
+
+  /**
+   * 进度（0-100）
+   */
+  progress: number;
+
+  /**
+   * 下载文件名
+   */
+  fileName?: string;
+
+  /**
+   * 任务下载签名
+   */
+  downloadSign?: string;
+
+  /**
+   * 需要打包的文件总数
+   */
+  totalFileCount?: number;
+
+  /**
+   * 已打包文件数
+   */
+  completedFileCount?: number;
+
+  /**
+   * 错误信息
+   */
+  errorMsg?: string;
+}
+
+/**
+ * 创建下载响应
+ */
+export interface DownloadCreateResponse {
+  /**
+   * 下载类型：DIRECT 直接下载，TASK 任务下载
+   */
+  type: 'DIRECT' | 'TASK';
+
+  /**
+   * 直接下载签名
+   */
+  sign?: string;
+
+  /**
+   * 下载任务ID
+   */
+  taskId?: string;
+}

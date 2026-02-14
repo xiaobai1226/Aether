@@ -36,7 +36,9 @@ public class SaTokenFilter implements Filter {
             "/api/v1/share/getShareFileListByShareIdPagination",
 
             // 下载
-            "/api/v1/file/download"};
+            "/api/v1/file/download",
+            "/api/v1/file/downloadTaskFile"
+        };
 
     /**
      * token在URL中校验登录的接口

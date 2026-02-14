@@ -69,9 +69,7 @@ import {
   rename,
   del,
   move,
-  copy,
-  createDownloadSign,
-  getDownloadUrl
+  copy
 } from '@/api/v1/file'
 import type {
   GetFileListByPageRequest,
@@ -92,6 +90,7 @@ import { useUserStore } from '@/stores/user'
 import { RegexEnum } from '@/enums/RegexEnum'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
 import { useSystemStore } from '@/stores/system'
+import { useUploaderStore } from '@/stores/uploader'
 import { List, Thumbnail, Large } from '@/enums/DisplayModeEnum'
 import ListView from '@/views/netdisk/components/FileList/components/ListView.vue'
 import GridView from '@/views/netdisk/components/FileList/components/GridView.vue'
@@ -104,6 +103,7 @@ import { FOLDER, NO_DATA, FILE } from '@/enums/IconEnum'
  * 从pinia获取用户数据
  */
 const userStore = useUserStore()
+const uploaderStore = useUploaderStore()
 
 /**
  * 获取系统配置
@@ -575,15 +575,11 @@ const download = (userFileInfo: UserFileInfo) => {
  */
 const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => {
   if (type === 1) {
-    currentDownloadFileIds.forEach((id => {
-      createDownloadSign(id.toString()).then(({ data }) => {
-        window.open(getDownloadUrl(data))
-      })
-    }))
-  } else if (type === 2) {
-    createDownloadSign(currentDownloadFileIds.join(',')).then(({ data }) => {
-      window.open(getDownloadUrl(data))
+    currentDownloadFileIds.forEach((id) => {
+      uploaderStore.startDownloadByIds([id])
     })
+  } else if (type === 2) {
+    uploaderStore.startDownloadByIds(currentDownloadFileIds)
   }
 }
 

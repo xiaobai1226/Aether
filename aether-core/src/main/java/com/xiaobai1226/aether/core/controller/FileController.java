@@ -15,7 +15,11 @@ import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.*;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
 import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
@@ -245,16 +249,56 @@ public class FileController {
     }
 
     /**
-     * 创建下载链接
+     * 创建下载（自动判断直下或任务）
      *
      * @param ids 要下载的文件ID集合
      * @author bai
      */
     @Post
-    @Mapping("/createDownloadSign")
-    public String createDownloadSign(@Validated @NotBlank(message = ERROR_DOWNLOAD_CONTENT_EMPTY) String ids,
+    @Mapping("/createDownload")
+    public DownloadCreateResultDTO createDownload(@Validated @NotBlank(message = ERROR_DOWNLOAD_CONTENT_EMPTY) String ids,
             @CurrentUserId Long userId) {
-        return fileOperationsFacade.createDownloadSign(ids, userId);
+        return fileOperationsFacade.createDownload(ids, userId);
+    }
+
+    /**
+     * 获取下载任务状态
+     *
+     * @param taskId 任务ID
+     * @author bai
+     */
+    @Get
+    @Mapping("/getDownloadTask")
+    public DownloadTaskStatusDTO getDownloadTask(
+            @Validated @NotBlank(message = ERROR_TASK_ID_EMPTY) @Param("taskId") String taskId,
+            @CurrentUserId Long userId) {
+        return fileOperationsFacade.getDownloadTaskStatus(taskId, userId);
+    }
+
+    /**
+     * 下载任务文件
+     *
+     * @param taskId 任务ID
+     * @author bai
+     */
+    @Get
+    @Mapping("/downloadTaskFile")
+    public void downloadTaskFile(Context ctx,
+            @Validated @NotBlank(message = ERROR_SIGN) @Param("sign") String sign) {
+        DownloadTaskFileDTO taskFileDTO = fileOperationsFacade.downloadTaskFileBySign(sign);
+        try {
+            ctx.contentType("application/zip");
+            ctx.headerSet("Content-Length", String.valueOf(taskFileDTO.getFile().length()));
+            ctx.headerSet("Content-Disposition",
+                    "attachment; filename*=UTF-8''" + URLEncoder.encode(taskFileDTO.getFileName(), StandardCharsets.UTF_8));
+            try (InputStream in = new FileInputStream(taskFileDTO.getFile())) {
+                ctx.output(in);
+            }
+            fileOperationsFacade.markDownloadTaskDownloaded(taskFileDTO.getTaskId());
+        } catch (IOException e) {
+            log.error(e.getMessage());
+            throw new FailResultException(SYSTEM_ERROR);
+        }
     }
 
     /**

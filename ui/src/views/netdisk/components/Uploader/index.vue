@@ -2,8 +2,8 @@
   <div class="uploader-panel">
     <div class="uploader-title">
       <div class="title-left">
-        <span>上传列表</span>
-        <span class="tips">（仅展示本次上传任务）</span>
+        <span>传输列表</span>
+        <span class="tips">（仅展示本次传输任务）</span>
       </div>
       <div class="batch-operations">
         <!-- 上传中的批量操作 -->
@@ -35,6 +35,21 @@
             <span>全部重新开始</span>
           </el-button>
         </template>
+
+        <!-- 下载完成批量操作 -->
+        <template v-if="activeName === 'downloadSuccess' && uploaderStore.downloadSuccessTaskList.length > 0">
+          <el-button class="action-btn clear-btn" size="small" plain @click.stop="handleClearAllDownloadSuccess">
+            <el-icon><Delete /></el-icon>
+            <span>全部清除</span>
+          </el-button>
+        </template>
+        <!-- 下载失败批量操作 -->
+        <template v-if="activeName === 'downloadFail' && uploaderStore.downloadFailTaskList.length > 0">
+          <el-button class="action-btn restart-btn" size="small" plain @click.stop="handleRestartAllFailedDownload">
+            <el-icon><RefreshRight /></el-icon>
+            <span>全部重新开始</span>
+          </el-button>
+        </template>
       </div>
     </div>
     <el-tabs tab-position="left" v-model="activeName">
@@ -47,6 +62,15 @@
       <el-tab-pane :label="uploadFailLabel" name="uploadFail">
         <UploadFileList :fileList="uploaderStore.uploadFailFileList" />
       </el-tab-pane>
+      <el-tab-pane :label="downloadingLabel" name="downloading">
+        <DownloadTaskList :taskList="uploaderStore.downloadingTaskList" />
+      </el-tab-pane>
+      <el-tab-pane :label="downloadSuccessLabel" name="downloadSuccess">
+        <DownloadTaskList :taskList="uploaderStore.downloadSuccessTaskList" type="success" />
+      </el-tab-pane>
+      <el-tab-pane :label="downloadFailLabel" name="downloadFail">
+        <DownloadTaskList :taskList="uploaderStore.downloadFailTaskList" type="fail" />
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -55,6 +79,7 @@
 import { ref, computed } from 'vue'
 import { VideoPlay, VideoPause, Close, Delete, RefreshRight } from '@element-plus/icons-vue'
 import UploadFileList from '@/views/netdisk/components/Uploader/UploadFileList.vue'
+import DownloadTaskList from '@/views/netdisk/components/Uploader/DownloadTaskList.vue'
 import { useUploaderStore } from '@/stores/uploader'
 
 const uploaderStore = useUploaderStore()
@@ -63,6 +88,9 @@ const activeName = ref('uploading')
 const uploadingLabel = computed(() => `上传中(${uploaderStore.uploadingFileList.length})`)
 const uploadSuccessLabel = computed(() => `上传完成(${uploaderStore.uploadSuccessFileList.length})`)
 const uploadFailLabel = computed(() => `上传失败(${uploaderStore.uploadFailFileList.length})`)
+const downloadingLabel = computed(() => `打包中(${uploaderStore.downloadingTaskList.length})`)
+const downloadSuccessLabel = computed(() => `打包完成(${uploaderStore.downloadSuccessTaskList.length})`)
+const downloadFailLabel = computed(() => `打包失败(${uploaderStore.downloadFailTaskList.length})`)
 
 /**
  * 是否有暂停的文件
@@ -104,6 +132,14 @@ const handleClearAllSuccess = () => {
  */
 const handleRestartAllFailed = () => {
   uploaderStore.restartAllFailedUpload()
+}
+
+const handleClearAllDownloadSuccess = () => {
+  uploaderStore.clearAllDownloadSuccessRecord()
+}
+
+const handleRestartAllFailedDownload = () => {
+  uploaderStore.restartAllFailedDownload()
 }
 </script>
 
@@ -232,13 +268,28 @@ const handleRestartAllFailed = () => {
     
     .el-tabs__header {
       height: 100%;
+      width: auto;
+      margin-right: 10px;
       
       .el-tabs__nav-wrap {
         height: 100%;
+        width: auto;
         
         &::after {
           height: 100%;
         }
+      }
+
+      .el-tabs__nav {
+        width: auto;
+      }
+
+      .el-tabs__item {
+        width: auto;
+        min-width: 0;
+        justify-content: flex-start;
+        padding: 0 12px;
+        white-space: nowrap;
       }
     }
     

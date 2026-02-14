@@ -56,4 +56,14 @@ public class CacheKeyConsts {
      * 下载
      */
     public static final String DOWNLOAD = "download";
+
+    /**
+     * 任务
+     */
+    public static final String TASK = "task";
+
+    /**
+     * 签名
+     */
+    public static final String SIGN = "sign";
 }

@@ -4,14 +4,23 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import SparkMD5 from 'spark-md5'
-import type { UploadFileItem } from '@/views/netdisk/components/Uploader/types'
-import { STATUS } from '@/views/netdisk/components/Uploader/types'
+import type { DownloadTaskItem, UploadFileItem } from '@/views/netdisk/components/Uploader/types'
+import { DOWNLOAD_STATUS, STATUS } from '@/views/netdisk/components/Uploader/types'
 import type {
   UploadChunkRequest,
   UploadCompleteRequest,
   UploadInitRequest
 } from '@/api/v1/file/types'
-import { uploadCancel, uploadChunk, uploadComplete, uploadInit } from '@/api/v1/file'
+import {
+  createDownload,
+  getDownloadTask,
+  getDownloadTaskFileUrl,
+  getDownloadUrl,
+  uploadCancel,
+  uploadChunk,
+  uploadComplete,
+  uploadInit
+} from '@/api/v1/file'
 import { useUserStore } from '@/stores/user'
 
 const MAX_CONCURRENT = 3
@@ -25,6 +34,9 @@ export const useUploaderStore = defineStore('uploader', () => {
   const uploadingFileList = ref<Array<UploadFileItem>>([])
   const uploadSuccessFileList = ref<Array<UploadFileItem>>([])
   const uploadFailFileList = ref<Array<UploadFileItem>>([])
+  const downloadingTaskList = ref<Array<DownloadTaskItem>>([])
+  const downloadSuccessTaskList = ref<Array<DownloadTaskItem>>([])
+  const downloadFailTaskList = ref<Array<DownloadTaskItem>>([])
   const isShowUploader = ref(false)
 
   const runningCount = ref(0)
@@ -44,6 +56,21 @@ export const useUploaderStore = defineStore('uploader', () => {
   const getUploadFailFileByUid = (uid: string): UploadFileItem | undefined =>
     uploadFailFileList.value.find(item => item.uid === uid)
 
+  const getDownloadingTaskById = (taskId: string): DownloadTaskItem | undefined =>
+    downloadingTaskList.value.find(item => item.taskId === taskId)
+
+  const getDownloadFailTaskById = (taskId: string): DownloadTaskItem | undefined =>
+    downloadFailTaskList.value.find(item => item.taskId === taskId)
+
+  const updateDownloadingTask = (taskId: string, updater: (current: DownloadTaskItem) => DownloadTaskItem) => {
+    const index = downloadingTaskList.value.findIndex(item => item.taskId === taskId)
+    if (index === -1) {
+      return
+    }
+    const current = downloadingTaskList.value[index]
+    downloadingTaskList.value[index] = updater({ ...current })
+  }
+
   const clearUploadRecord = (uid: string, index: number, type: number) => {
     if (type === 1) {
       const file = getUploadingFileByUid(uid)
@@ -54,6 +81,19 @@ export const useUploaderStore = defineStore('uploader', () => {
     } else if (type === 3) {
       const file = getUploadFailFileByUid(uid)
       file && uploadFailFileList.value.splice(index, 1)
+    }
+  }
+
+  const clearDownloadRecord = (taskId: string, index: number, type: number) => {
+    if (type === 1) {
+      const task = getDownloadingTaskById(taskId)
+      task && downloadingTaskList.value.splice(index, 1)
+    } else if (type === 2) {
+      const task = downloadSuccessTaskList.value.find(item => item.taskId === taskId)
+      task && downloadSuccessTaskList.value.splice(index, 1)
+    } else if (type === 3) {
+      const task = getDownloadFailTaskById(taskId)
+      task && downloadFailTaskList.value.splice(index, 1)
     }
   }
 
@@ -497,6 +537,147 @@ export const useUploaderStore = defineStore('uploader', () => {
     scheduleUpload()
   }
 
+  const moveDownloadTaskToSuccess = (task: DownloadTaskItem, downloadSign: string, fileName?: string) => {
+    const successTask: DownloadTaskItem = {
+      ...task,
+      status: DOWNLOAD_STATUS.success.value,
+      progress: 100,
+      downloadSign,
+      fileName: fileName || task.fileName,
+      finishTime: new Date().toLocaleString()
+    }
+
+    const index = downloadingTaskList.value.findIndex(item => item.taskId === task.taskId)
+    if (index !== -1) {
+      downloadingTaskList.value.splice(index, 1)
+    }
+    downloadSuccessTaskList.value.unshift(successTask)
+  }
+
+  const moveDownloadTaskToFail = (task: DownloadTaskItem, errorMsg?: string) => {
+    const failTask: DownloadTaskItem = {
+      ...task,
+      status: DOWNLOAD_STATUS.fail.value,
+      errorMsg: errorMsg || '下载失败'
+    }
+    const index = downloadingTaskList.value.findIndex(item => item.taskId === task.taskId)
+    if (index !== -1) {
+      downloadingTaskList.value.splice(index, 1)
+    }
+    if (!downloadFailTaskList.value.find(item => item.taskId === failTask.taskId)) {
+      downloadFailTaskList.value.unshift(failTask)
+    }
+  }
+
+  const pollDownloadTaskStatus = async (task: DownloadTaskItem) => {
+    const maxPollCount = 600
+    let pollCount = 0
+    while (pollCount < maxPollCount) {
+      pollCount++
+      try {
+        const { data } = await getDownloadTask(task.taskId)
+        updateDownloadingTask(task.taskId, current => {
+          current.progress = data.progress || 0
+          current.fileName = data.fileName || current.fileName
+          current.totalFileCount = data.totalFileCount || current.totalFileCount || 0
+          current.completedFileCount = data.completedFileCount || current.completedFileCount || 0
+          current.status = DOWNLOAD_STATUS.downloading.value
+          return current
+        })
+
+        if (data.status === 2) {
+          const current = getDownloadingTaskById(task.taskId)
+          if (!current) {
+            return
+          }
+          if (data.downloadSign) {
+            moveDownloadTaskToSuccess(current, data.downloadSign, data.fileName)
+            window.open(getDownloadTaskFileUrl(data.downloadSign))
+          } else {
+            moveDownloadTaskToFail(current, '下载任务签名缺失')
+          }
+          return
+        }
+
+        if (data.status === 3 || data.status === 4) {
+          const current = getDownloadingTaskById(task.taskId)
+          if (current) {
+            moveDownloadTaskToFail(current, data.errorMsg || '下载任务失败')
+          }
+          return
+        }
+      } catch (e: any) {
+        const current = getDownloadingTaskById(task.taskId)
+        if (current) {
+          moveDownloadTaskToFail(current, normalizeErrorMsg(e, '下载任务查询失败'))
+        }
+        return
+      }
+
+      await sleep(3000)
+    }
+    const current = getDownloadingTaskById(task.taskId)
+    if (current) {
+      moveDownloadTaskToFail(current, '下载任务超时，请重试')
+    }
+  }
+
+  const addDownloadTask = async (taskId: string, ids: number[], fileName?: string) => {
+    isShowUploader.value = true
+    const taskItem: DownloadTaskItem = {
+      taskId,
+      ids,
+      fileName: fileName || '打包下载.zip',
+      status: DOWNLOAD_STATUS.preparing.value,
+      progress: 0,
+      totalFileCount: 0,
+      completedFileCount: 0,
+      errorMsg: null,
+      downloadSign: '',
+      createTime: Date.now()
+    }
+    downloadingTaskList.value.unshift(taskItem)
+    await pollDownloadTaskStatus(taskItem)
+  }
+
+  const startDownloadByIds = async (ids: number[], fileName?: string) => {
+    if (!ids || ids.length === 0) {
+      return
+    }
+    isShowUploader.value = true
+    const { data } = await createDownload(ids.join(','))
+    if (data.type === 'DIRECT' && data.sign) {
+      window.open(getDownloadUrl(data.sign))
+      return
+    }
+    if (data.type === 'TASK' && data.taskId) {
+      await addDownloadTask(data.taskId, ids, fileName)
+    }
+  }
+
+  const clearAllDownloadSuccessRecord = () => {
+    downloadSuccessTaskList.value = []
+  }
+
+  const restartFailedDownload = async (taskId: string) => {
+    const task = getDownloadFailTaskById(taskId)
+    if (!task || !task.ids || task.ids.length === 0) {
+      return
+    }
+    clearDownloadRecord(taskId, downloadFailTaskList.value.findIndex(item => item.taskId === taskId), 3)
+    await startDownloadByIds(task.ids, task.fileName)
+  }
+
+  const restartAllFailedDownload = async () => {
+    const failedTasks = [...downloadFailTaskList.value]
+    downloadFailTaskList.value = []
+    for (const task of failedTasks) {
+      if (task.ids && task.ids.length > 0) {
+        await startDownloadByIds(task.ids, task.fileName)
+      }
+    }
+  }
+
   return {
     isShowUploader,
     updateShowUploader,
@@ -504,6 +685,9 @@ export const useUploaderStore = defineStore('uploader', () => {
     uploadingFileList,
     uploadSuccessFileList,
     uploadFailFileList,
+    downloadingTaskList,
+    downloadSuccessTaskList,
+    downloadFailTaskList,
     pauseUpload,
     startUpload,
     cancelUpload,
@@ -512,6 +696,11 @@ export const useUploaderStore = defineStore('uploader', () => {
     pauseAllUpload,
     cancelAllUpload,
     clearAllSuccessRecord,
-    restartAllFailedUpload
+    restartAllFailedUpload,
+    startDownloadByIds,
+    clearDownloadRecord,
+    clearAllDownloadSuccessRecord,
+    restartFailedDownload,
+    restartAllFailedDownload
   }
 })

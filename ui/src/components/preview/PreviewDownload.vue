@@ -2,7 +2,7 @@
 
 import Utils from '@/utils/Utils'
 import Icon from '@/components/Icon.vue'
-import { createDownloadSign } from '@/api/v1/file'
+import { useUploaderStore } from '@/stores/uploader'
 import { OTHER, ZIP } from '@/enums/IconEnum'
 
 const props = defineProps({
@@ -11,10 +11,13 @@ const props = defineProps({
   }
 })
 
-const download = () => {
-  createDownloadSign(props.fileInfo.id).then(({ data }) => {
-    window.location.href = 'http://127.0.0.1:8080/api/v1/file/download?sign=' + data
-  })
+const uploaderStore = useUploaderStore()
+
+const download = async () => {
+  if (!props.fileInfo?.id) {
+    return
+  }
+  await uploaderStore.startDownloadByIds([props.fileInfo.id], props.fileInfo.name)
 }
 </script>
 

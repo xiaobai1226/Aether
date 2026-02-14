@@ -83,7 +83,7 @@ const toAdmin = () => {
                   :popper-style="{ padding: '0px' }">
         <template #reference>
           <span>
-             <el-tooltip content="上传列表">
+             <el-tooltip content="传输列表">
               <span class="iconfont icon-transfer"></span>
             </el-tooltip>
           </span>

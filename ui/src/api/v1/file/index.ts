@@ -4,6 +4,8 @@ import type { NetdiskInternalAxiosRequestConfig } from '@/utils/http'
 import type { AxiosPromise, AxiosProgressEvent } from 'axios'
 import type {
   CopyRequest, DeleteRequest,
+  DownloadCreateResponse,
+  DownloadTaskStatusResponse,
   FileRenameRequest,
   GetFileListByPageRequest,
   GetFileListByPageResponse, GetFolderListByPageRequest, MoveRequest,
@@ -265,11 +267,18 @@ export const getFileUrl = (id: number): string => {
 }
 
 /**
- * 获取下载链接
+ * 获取下载URL
+ */
+export const getDownloadUrl = (sign: string): string => {
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/download?sign=' + sign
+}
+
+/**
+ * 创建下载（自动判断直下或任务）
  * @param ids
  */
-export const createDownloadSign = (ids: string): AxiosPromise => {
-  const url = baseUrl + '/createDownloadSign'
+export const createDownload = (ids: string): AxiosPromise<DownloadCreateResponse> => {
+  const url = baseUrl + '/createDownload'
   const data = { ids: ids }
 
   return httpInstance.post(url, data, {
@@ -278,8 +287,21 @@ export const createDownloadSign = (ids: string): AxiosPromise => {
 }
 
 /**
- * 获取下载URL
+ * 获取下载任务状态
+ * @param taskId
  */
-export const getDownloadUrl = (sign: string): string => {
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/download?sign=' + sign
+export const getDownloadTask = (taskId: string): AxiosPromise<DownloadTaskStatusResponse> => {
+  const url = baseUrl + '/getDownloadTask'
+  return httpInstance.get(url, {
+    params: { taskId },
+    showSuccessMsg: false,
+    showLoading: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 获取下载任务文件URL
+ */
+export const getDownloadTaskFileUrl = (sign: string): string => {
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/downloadTaskFile?sign=' + sign
 }

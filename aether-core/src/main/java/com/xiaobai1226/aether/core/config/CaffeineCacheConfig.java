@@ -7,6 +7,8 @@ import org.noear.solon.annotation.Configuration;
 
 import java.time.Duration;
 
+import static com.xiaobai1226.aether.common.constant.SystemConsts.DOWNLOAD_FILE_SIGN_TIMEOUT;
+
 /**
  * 缓存配置类
  *
@@ -57,11 +59,22 @@ public class CaffeineCacheConfig {
 
     /**
      * 下载签名缓存
-     * 最大5000个条目，5分钟后过期
+     * 最大5000个条目，按配置时间后过期
      */
     @Bean("downloadSignCache")
     public Cache<String, CacheEntry<Object>> downloadSignCache() {
-        return Caffeine.newBuilder().maximumSize(5000).expireAfterWrite(Duration.ofMinutes(5))
+        return Caffeine.newBuilder().maximumSize(5000)
+                .expireAfterWrite(Duration.ofMinutes(DOWNLOAD_FILE_SIGN_TIMEOUT))
+                .build();
+    }
+
+    /**
+     * 下载任务缓存
+     * 最大2000个条目，6小时后过期
+     */
+    @Bean("downloadTaskCache")
+    public Cache<String, CacheEntry<Object>> downloadTaskCache() {
+        return Caffeine.newBuilder().maximumSize(2000).expireAfterWrite(Duration.ofHours(6))
                 .build();
     }
 

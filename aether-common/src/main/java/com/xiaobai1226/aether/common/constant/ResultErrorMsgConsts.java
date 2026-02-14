@@ -352,6 +352,21 @@ public class ResultErrorMsgConsts {
      */
     public static final String ERROR_SIGN = "sign不合法";
 
+    /**
+     * 下载任务不存在或已过期
+     */
+    public static final String ERROR_DOWNLOAD_TASK_NOT_FOUND = "下载任务不存在或已过期";
+
+    /**
+     * 下载任务尚未完成
+     */
+    public static final String ERROR_DOWNLOAD_TASK_NOT_READY = "下载任务尚未完成";
+
+    /**
+     * 下载任务执行失败
+     */
+    public static final String ERROR_DOWNLOAD_TASK_FAILED = "下载任务执行失败，请重试";
+
     ///////////////////////////////////////////////// 存储源 ///////////////////////////////////////////////
     /**
      * 存储源ID为空错误

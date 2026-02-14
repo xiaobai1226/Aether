@@ -5,7 +5,9 @@ import cn.hutool.core.util.RandomUtil;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.cache.DownloadCache;
 import com.xiaobai1226.aether.core.domain.dto.DownloadFileDTO;
+import com.xiaobai1226.aether.core.domain.dto.DownloadLocalFileDTO;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
+import com.xiaobai1226.aether.core.service.support.UserFileDownloadService;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -36,6 +38,9 @@ public class DownloadFileUseCase {
 
     @Inject
     private DownloadCache downloadCache;
+
+    @Inject
+    private UserFileDownloadService userFileDownloadService;
 
     /**
      * 创建下载签名
@@ -101,5 +106,34 @@ public class DownloadFileUseCase {
 
         log.info("文件下载成功: fileCount={}", userFileTreeDTOList.size());
         return downloadedFile;
+    }
+
+    /**
+     * 解析单文件本地下载信息（用于Range断点续传）
+     */
+    public DownloadLocalFileDTO resolveSingleLocalFileBySign(String sign) {
+        var downloadFileDTO = downloadCache.getDownloadInfo(sign);
+        if (downloadFileDTO == null) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_SIGN);
+        }
+
+        if (downloadFileDTO.getIds() == null || downloadFileDTO.getIds().size() != 1) {
+            return null;
+        }
+
+        var userFileTreeDTOList = userFileService.getUserFileTreeListByIds(
+                downloadFileDTO.getIds(),
+                downloadFileDTO.getUserId(),
+                NORMAL
+        );
+        if (CollUtil.isEmpty(userFileTreeDTOList) || userFileTreeDTOList.size() != 1) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+
+        var node = userFileTreeDTOList.getFirst();
+        if (!com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum.isFile(node.getItemType())) {
+            return null;
+        }
+        return userFileDownloadService.resolveSingleLocalFile(node, downloadFileDTO.getUserId());
     }
 }
