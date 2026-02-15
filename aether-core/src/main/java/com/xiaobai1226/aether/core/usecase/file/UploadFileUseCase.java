@@ -333,9 +333,11 @@ public class UploadFileUseCase {
         var uploadFileCacheDTO = new UploadFileCacheDTO();
         uploadFileCacheDTO.setTempDir(tempDir);
         try {
+            // 优先使用初始化任务时缓存的 parentId，确保文件夹上传场景下的子目录结构正确落库
+            var targetParentFolder = resolveTargetParentFolder(userId, uploadTempFileInfo, parentFolder);
             var finalFilePath = fileService.mergeFile(uploadTempFileInfo.getFileName(), uploadCompleteVO.getTaskId(),
-                    uploadTempFileInfo.getTempFolder(), parentFolder.getStorageSource().getPath());
-            var finalFullFilePath = FileUtils.generatePath(parentFolder.getStorageSource().getPath(), finalFilePath);
+                    uploadTempFileInfo.getTempFolder(), targetParentFolder.getStorageSource().getPath());
+            var finalFullFilePath = FileUtils.generatePath(targetParentFolder.getStorageSource().getPath(), finalFilePath);
             uploadFileCacheDTO.setFinalFilePath(finalFullFilePath);
 
             var finalFile = FileUtil.file(finalFullFilePath);
@@ -347,13 +349,13 @@ public class UploadFileUseCase {
             uploadFileCacheDTO.setThumbnailFilePath(thumbnailResult.getThumbnailFilePath());
 
             var fileDO = fileService.addFile(finalFileName, finalFilePath, finalFileSize, uploadTempFileInfo.getIdentifier(),
-                    thumbnailFileName, parentFolder.getStorageSourceId());
+                    thumbnailFileName, targetParentFolder.getStorageSourceId());
             if (fileDO == null) {
                 throw new FailResultException(SYSTEM_ERROR);
             }
 
-            addUserFile(userId, fileDO.getId(), parentFolder.getId(), uploadCompleteVO.getFileName(), FILE, NORMAL,
-                    finalFileSize, parentFolder.getStorageSourceId());
+            addUserFile(userId, fileDO.getId(), targetParentFolder.getId(), uploadCompleteVO.getFileName(), FILE, NORMAL,
+                    finalFileSize, targetParentFolder.getStorageSourceId());
 
             fileCache.delUploadTempFileInfo(userId, uploadCompleteVO.getTaskId());
             FileUtil.del(tempDir);
@@ -597,6 +599,50 @@ public class UploadFileUseCase {
         }
 
         return storageSourceService.getStorageSourceById(storageSourceId, userId);
+    }
+
+    /**
+     * 解析上传完成时的目标父目录
+     * 说明：优先使用 init 阶段缓存的 parentId，确保目录上传时不会把子文件错误落到根目录
+     */
+    private UserFolderDTO resolveTargetParentFolder(Long userId, UploadFileTempDTO uploadFileTempDTO, UserFolderDTO fallbackFolder) {
+        if (uploadFileTempDTO == null || uploadFileTempDTO.getParentId() == null) {
+            return fallbackFolder;
+        }
+
+        var targetParentId = uploadFileTempDTO.getParentId();
+        if (Objects.equals(targetParentId, fallbackFolder.getId())) {
+            return fallbackFolder;
+        }
+
+        // parentId=0 代表根目录，直接走统一方法获取默认存储源
+        if (targetParentId == 0L) {
+            var rootFolder = userFileService.getFolderDTO(userId, null);
+            if (rootFolder == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+            return rootFolder;
+        }
+
+        var parentUserFile = userFileService.getUserFileByIdAndUserId(targetParentId, userId, NORMAL);
+        if (parentUserFile == null || UserFileItemTypeEnum.isFile(parentUserFile.getItemType())) {
+            throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+        }
+
+        var targetFolder = new UserFolderDTO();
+        targetFolder.setId(parentUserFile.getId());
+        targetFolder.setUserId(parentUserFile.getUserId());
+        targetFolder.setParentId(parentUserFile.getParentId());
+        targetFolder.setName(parentUserFile.getName());
+        targetFolder.setStorageSourceId(parentUserFile.getStorageSourceId());
+        targetFolder.setStorageSourceType(parentUserFile.getStorageSourceType());
+
+        var storageSource = storageSourceService.getStorageSourceById(targetFolder.getStorageSourceId(), userId);
+        if (storageSource == null) {
+            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
+        }
+        targetFolder.setStorageSource(storageSource);
+        return targetFolder;
     }
 
     private UploadTaskInitDTO buildInitResult(Long userId, UploadFileTempDTO uploadFileTempDTO, String taskId) {

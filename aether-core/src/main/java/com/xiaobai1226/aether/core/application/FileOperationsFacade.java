@@ -178,8 +178,17 @@ public class FileOperationsFacade {
                 throw new FailResultException(SYSTEM_ERROR);
             }
             var newParentFolder = BeanUtil.copyProperties(newParentUserFileDO, UserFolderDTO.class);
-            newParentFolder.setStorageSourceId(parentFolder.getStorageSourceId());
-            newParentFolder.setStorageSource(parentFolder.getStorageSource()); // 继承父目录的存储源对象
+            // 以目标子目录自身的存储源为准，避免覆盖已有目录的存储源设置
+            var targetStorageSourceId = newParentUserFileDO.getStorageSourceId();
+            if (targetStorageSourceId == null) {
+                targetStorageSourceId = parentFolder.getStorageSourceId();
+            }
+            var targetStorageSource = storageSourceService.getStorageSourceById(targetStorageSourceId, userId);
+            if (targetStorageSource == null) {
+                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
+            }
+            newParentFolder.setStorageSourceId(targetStorageSourceId);
+            newParentFolder.setStorageSource(targetStorageSource);
             parentFolder = newParentFolder;
         }
 
