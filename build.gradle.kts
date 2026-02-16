@@ -7,7 +7,7 @@ subprojects {
     apply(plugin = "java-library")
 
     group = "com.xiaobai1226"
-    val appVersion by extra("0.10.1")
+    val appVersion by extra("0.11.0")
     version = appVersion
     description = "家庭网盘项目"
     java.sourceCompatibility = JavaVersion.VERSION_21

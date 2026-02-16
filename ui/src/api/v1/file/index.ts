@@ -4,12 +4,14 @@ import type { NetdiskInternalAxiosRequestConfig } from '@/utils/http'
 import type { AxiosPromise, AxiosProgressEvent } from 'axios'
 import type {
   CopyRequest, DeleteRequest,
+  CreateDirectLinkRequest, CreateDirectLinkResponse,
+  GetDirectLinkListByPageRequest, GetDirectLinkListByPageResponse,
   DownloadCreateResponse,
   DownloadTaskStatusResponse,
   FileRenameRequest,
   GetFileListByPageRequest,
   GetFileListByPageResponse, GetFolderListByPageRequest, MoveRequest,
-  NewFolderRequest, UploadCancelRequest, UploadChunkRequest, UploadChunkResponse, UploadCompleteRequest, UploadCompleteResponse, UploadInitRequest, UploadInitResponse, UploadStatusRequest, UploadStatusResponse
+  NewFolderRequest, RevokeDirectLinkRequest, UpdateDirectLinkExpireRequest, UploadCancelRequest, UploadChunkRequest, UploadChunkResponse, UploadCompleteRequest, UploadCompleteResponse, UploadInitRequest, UploadInitResponse, UploadStatusRequest, UploadStatusResponse
 } from '@/api/v1/file/types'
 import { useAccountStore } from '@/stores/account'
 import { ApiVersion } from '@/api/ApiVersion'
@@ -185,7 +187,7 @@ export const getThumbnailUrl = (thumbnail: string): string => {
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
   const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getThumbnail?thumbnail=' + thumbnail + '&sign=' + sign
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getThumbnail?thumbnail=' + encodeURIComponent(thumbnail) + '&sign=' + encodeURIComponent(sign)
 }
 
 /**
@@ -211,7 +213,7 @@ export const getImageUrl = (id: number): string => {
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
   const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&sign=' + sign
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&sign=' + encodeURIComponent(sign)
 }
 
 /**
@@ -237,7 +239,7 @@ export const getVideoUrl = (id: number): string => {
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
   const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getVideo?id=' + id + '&sign=' + sign
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getVideo?id=' + id + '&sign=' + encodeURIComponent(sign)
 }
 
 /**
@@ -263,7 +265,7 @@ export const getFileUrl = (id: number): string => {
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
   const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getFile?id=' + id + '&sign=' + sign
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getFile?id=' + id + '&sign=' + encodeURIComponent(sign)
 }
 
 /**
@@ -281,6 +283,58 @@ export const createDownload = (ids: string): AxiosPromise<DownloadCreateResponse
   const url = baseUrl + '/createDownload'
   const data = { ids: ids }
 
+  return httpInstance.post(url, data, {
+    showSuccessMsg: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 创建文件直链
+ * @param data
+ */
+export const createDirectLink = (data: CreateDirectLinkRequest): AxiosPromise<CreateDirectLinkResponse> => {
+  const url = baseUrl + '/createDirectLink'
+  return httpInstance.post(url, data, {
+    showSuccessMsg: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 撤销文件直链
+ * @param data
+ */
+export const revokeDirectLink = (data: RevokeDirectLinkRequest): AxiosPromise => {
+  const url = baseUrl + '/revokeDirectLink'
+  return httpInstance.post(url, data, {
+    showSuccessMsg: true
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 获取文件直链URL
+ */
+export const getDirectLinkUrl = (token: string, type: 'file' | 'image' | 'video' = 'file'): string => {
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/direct?token=' + encodeURIComponent(token) + '&type=' + encodeURIComponent(type)
+}
+
+/**
+ * 分页获取直链记录
+ * @param params
+ */
+export const getDirectLinkListByPage = (params: GetDirectLinkListByPageRequest): AxiosPromise<GetDirectLinkListByPageResponse> => {
+  const url = baseUrl + '/getDirectLinkListByPage'
+  return httpInstance.get(url, {
+    params,
+    showSuccessMsg: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 更新直链有效期
+ * @param data
+ */
+export const updateDirectLinkExpire = (data: UpdateDirectLinkExpireRequest): AxiosPromise<CreateDirectLinkResponse> => {
+  const url = baseUrl + '/updateDirectLinkExpire'
   return httpInstance.post(url, data, {
     showSuccessMsg: false
   } as NetdiskInternalAxiosRequestConfig)

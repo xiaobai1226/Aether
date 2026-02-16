@@ -126,3 +126,22 @@ CREATE TABLE share_user_file (
     share_id varchar(50) NOT NULL COMMENT '分享ID',
     user_file_id bigint unsigned NOT NULL COMMENT '用户文件ID'
 ) COMMENT '分享文件中间表' ENGINE = InnoDB CHARACTER SET = utf8mb4;
+
+-- ----------------------------
+-- Table structure for
+-- 文件直链表
+-- ----------------------------
+DROP TABLE IF EXISTS direct_link;
+CREATE TABLE direct_link (
+    id bigint unsigned AUTO_INCREMENT COMMENT '主键ID' PRIMARY KEY,
+    token varchar(64) NOT NULL COMMENT '直链token',
+    user_file_id bigint unsigned NOT NULL COMMENT '用户文件ID',
+    user_id bigint unsigned NOT NULL COMMENT '所属用户ID',
+    status tinyint(1) DEFAULT 1 NOT NULL COMMENT '状态 1 启用 0 失效',
+    expire_at datetime NULL COMMENT '过期时间，NULL为永久',
+    create_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    update_time datetime DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+    UNIQUE KEY uk_direct_link_token (token),
+    KEY idx_direct_link_user_file (user_file_id),
+    KEY idx_direct_link_user (user_id)
+) COMMENT '文件直链表' ENGINE = InnoDB CHARACTER SET = utf8mb4;

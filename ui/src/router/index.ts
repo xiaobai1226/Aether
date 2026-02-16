@@ -4,6 +4,7 @@ import Layout from '@/views/layout/index.vue'
 import Netdisk from '@/views/netdisk/index.vue'
 import FileList from '@/views/netdisk/components/FileList/index.vue'
 import RecycleBin from '@/views/netdisk/components/RecycleBin/index.vue'
+import DirectLinkList from '@/views/netdisk/components/DirectLinkList/index.vue'
 import AdminLayout from '@/views/admin/layout/index.vue'
 import UserList from '@/views/admin/components/UserList/index.vue'
 import AdminFileList from '@/views/admin/components/FileList/index.vue'
@@ -41,6 +42,11 @@ const router = createRouter({
               path: 'recyclebin',
               name: '回收站',
               component: RecycleBin
+            },
+            {
+              path: 'directlink',
+              name: '直链记录',
+              component: DirectLinkList
             }
             // {
             //     path: "share",

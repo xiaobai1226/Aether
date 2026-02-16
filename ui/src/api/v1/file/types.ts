@@ -373,3 +373,92 @@ export interface DownloadCreateResponse {
    */
   taskId?: string;
 }
+
+/**
+ * 创建文件直链请求
+ */
+export interface CreateDirectLinkRequest {
+  /**
+   * 用户文件ID
+   */
+  id: number;
+
+  /**
+   * 直链有效期（天），0为永久
+   */
+  expireDays?: number;
+}
+
+/**
+ * 创建文件直链响应
+ */
+export interface CreateDirectLinkResponse {
+  /**
+   * 直链token
+   */
+  token: string;
+
+  /**
+   * 过期时间，NULL为永久
+   */
+  expireAt?: string;
+}
+
+/**
+ * 撤销文件直链请求
+ */
+export interface RevokeDirectLinkRequest {
+  /**
+   * 直链token
+   */
+  token: string;
+}
+
+/**
+ * 获取直链记录分页请求
+ */
+export interface GetDirectLinkListByPageRequest {
+  /**
+   * 页码
+   */
+  pageNum: number;
+
+  /**
+   * 每页条数
+   */
+  pageSize: number;
+}
+
+/**
+ * 直链记录
+ */
+export interface DirectLinkRecord {
+  token: string;
+  userFileId: number;
+  fileName: string;
+  folderPath?: string;
+  suffix?: string;
+  status: number;
+  expireAt?: string;
+  createTime: string;
+  bizStatus: 'ACTIVE' | 'EXPIRED' | 'DISABLED';
+}
+
+/**
+ * 获取直链记录分页响应
+ */
+export interface GetDirectLinkListByPageResponse {
+  pageNum: number;
+  pageSize: number;
+  total: number;
+  totalPage: number;
+  list: Array<DirectLinkRecord>;
+}
+
+/**
+ * 更新直链有效期请求
+ */
+export interface UpdateDirectLinkExpireRequest {
+  token: string;
+  expireDays: number;
+}

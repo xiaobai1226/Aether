@@ -37,7 +37,9 @@ public class SaTokenFilter implements Filter {
 
             // 下载
             "/api/v1/file/download",
-            "/api/v1/file/downloadTaskFile"
+            "/api/v1/file/downloadTaskFile",
+            // 文件直链访问
+            "/api/v1/file/direct"
         };
 
     /**

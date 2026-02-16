@@ -11,7 +11,7 @@ import { useSystemStore } from '@/stores/system'
 /**
  * 父类回调方法
  */
-const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file', 'set-storage-source'])
+const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file', 'set-storage-source', 'create-direct-link'])
 
 /**
  * 获取系统配置
@@ -272,6 +272,9 @@ const sort = (prop: string, order: string) => {
  */
 const handleCommand = (command: string, row: UserFileInfo, index: number) => {
   switch (command) {
+    case 'direct-link':
+      emit('create-direct-link', row)
+      break
     case 'move':
       emit('move-file', row)
       break
@@ -355,6 +358,9 @@ defineExpose({ clearSelection, restoreSelection, sort })
               </span>
               <template #dropdown>
                 <el-dropdown-menu>
+                  <el-dropdown-item command="direct-link">
+                    <span class="iconfont icon-link"></span> 生成直链
+                  </el-dropdown-item>
                   <el-dropdown-item command="move">
                     <span class="iconfont icon-move"></span> 移动
                   </el-dropdown-item>

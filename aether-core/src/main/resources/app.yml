@@ -7,6 +7,9 @@ project:
   recycle-bin:
     # 回收站文件保留天数（默认10天）
     retention-days: 10
+  direct-link:
+    # 默认有效期（天），0 表示永久
+    default-expire-days: 7
 
 solon:
   app:

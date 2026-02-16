@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { DocumentCopy, Download, Setting, Select } from '@element-plus/icons-vue'
 import { getFile } from '@/api/v1/file'
@@ -31,6 +31,8 @@ const currentEncodeName = computed(() => {
 
 const readTxt = () => {
   if (props.fileId) {
+    txtContent.value = ''
+    blobResult.value = undefined
     loading.value = true
     getFile(props.fileId).then(({ data }) => {
       blobResult.value = new Blob([data])
@@ -64,6 +66,10 @@ const showTxt = () => {
 }
 
 onMounted(() => {
+  readTxt()
+})
+
+watch(() => props.fileId, () => {
   readTxt()
 })
 

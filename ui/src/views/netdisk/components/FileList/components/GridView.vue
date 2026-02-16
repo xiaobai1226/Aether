@@ -10,7 +10,7 @@ import { PLAY, VIDEO } from '@/enums/IconEnum'
 /**
  * 父类回调方法
  */
-const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file', 'set-storage-source'])
+const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file', 'set-storage-source', 'create-direct-link'])
 
 const props = defineProps({
   /**
@@ -231,6 +231,10 @@ defineExpose({ clearSelection })
                 <template #dropdown>
                   <el-dropdown-menu>
                     <div class="op-dropdown-item">
+                      <el-dropdown-item @click="emit('create-direct-link', userFile)">
+                        <span class="iconfont icon-link op-dropdown-iconfont" />
+                        <span class="op-dropdown-txt">生成直链</span>
+                      </el-dropdown-item>
                       <el-dropdown-item @click="download(userFile)">
                         <span class="iconfont icon-download op-dropdown-iconfont" />
                         <span class="op-dropdown-txt">下载</span>
@@ -428,6 +432,10 @@ defineExpose({ clearSelection })
 
 .op-dropdown-item {
   .icon-download {
+    font-size: 10px;
+  }
+
+  .icon-link {
     font-size: 10px;
   }
 

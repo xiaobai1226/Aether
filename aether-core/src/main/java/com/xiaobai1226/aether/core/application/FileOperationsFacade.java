@@ -12,8 +12,11 @@ import com.xiaobai1226.aether.common.util.FileUtils;
 import com.xiaobai1226.aether.common.util.ImageUtils;
 import com.xiaobai1226.aether.core.cache.DownloadCache;
 import com.xiaobai1226.aether.core.domain.dto.DownloadCreateResultDTO;
+import com.xiaobai1226.aether.core.domain.dto.DirectLinkCreateResultDTO;
+import com.xiaobai1226.aether.core.domain.dto.DirectLinkRecordDTO;
 import com.xiaobai1226.aether.core.domain.dto.DownloadLocalFileDTO;
 import com.xiaobai1226.aether.core.domain.dto.DownloadTaskFileDTO;
+import com.xiaobai1226.aether.core.domain.dto.PreviewLocalFileDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadChunkResultDTO;
 import com.xiaobai1226.aether.core.domain.dto.DownloadTaskStatusDTO;
 import com.xiaobai1226.aether.core.domain.dto.UploadResultDTO;
@@ -48,7 +51,6 @@ import java.security.MessageDigest;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static cn.hutool.http.ContentType.OCTET_STREAM;
 import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.*;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.PARAM_IS_INVALID;
@@ -105,6 +107,9 @@ public class FileOperationsFacade {
 
     @Inject
     private DownloadFileUseCase downloadFileUseCase;
+
+    @Inject
+    private DirectLinkUseCase directLinkUseCase;
 
     @Inject
     private DownloadTaskUseCase downloadTaskUseCase;
@@ -404,6 +409,48 @@ public class FileOperationsFacade {
     }
 
     /**
+     * 创建文件直链
+     */
+    public DirectLinkCreateResultDTO createDirectLink(Long id, Integer expireDays, Long userId) {
+        return directLinkUseCase.createDirectLink(id, expireDays, userId);
+    }
+
+    /**
+     * 撤销文件直链
+     */
+    public void revokeDirectLink(String token, Long userId) {
+        directLinkUseCase.revokeDirectLink(token, userId);
+    }
+
+    /**
+     * 分页获取文件直链记录
+     */
+    public PageResult<DirectLinkRecordDTO> getDirectLinkListByPage(Integer pageNum, Integer pageSize, Long userId) {
+        return directLinkUseCase.getDirectLinkListByPage(pageNum, pageSize, userId);
+    }
+
+    /**
+     * 更新直链有效期
+     */
+    public DirectLinkCreateResultDTO updateDirectLinkExpire(String token, Integer expireDays, Long userId) {
+        return directLinkUseCase.updateDirectLinkExpire(token, expireDays, userId);
+    }
+
+    /**
+     * 通过文件直链访问文件
+     */
+    public DownloadedFile getFileByDirectLink(String token, String type) {
+        var accessContext = directLinkUseCase.checkAndGetAccessContext(token);
+        if ("image".equalsIgnoreCase(type)) {
+            return getImage(accessContext.getUserFileId(), accessContext.getUserId());
+        }
+        if ("video".equalsIgnoreCase(type)) {
+            return getVideo(accessContext.getUserFileId(), accessContext.getUserId());
+        }
+        return getFile(accessContext.getUserFileId(), accessContext.getUserId());
+    }
+
+    /**
      * 获取缩略图
      * 
      * @param thumbnail 缩略图路径
@@ -411,15 +458,28 @@ public class FileOperationsFacade {
      */
     public DownloadedFile getThumbnail(String thumbnail) {
         try {
-            var downloadedFile = thumbnailService.getThumbnailFile(thumbnail);
-            if (downloadedFile == null) {
+            var previewFile = getThumbnailLocalFile(thumbnail);
+            if (previewFile == null) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
+            var downloadedFile = new DownloadedFile(previewFile.getFile(), previewFile.getFileName());
+            downloadedFile.asAttachment(false);
             return downloadedFile;
         } catch (IOException e) {
             log.error(e.getMessage(), e);
             throw new FailResultException(SYSTEM_ERROR);
         }
+    }
+
+    /**
+     * 获取缩略图本地文件
+     */
+    public PreviewLocalFileDTO getThumbnailLocalFile(String thumbnail) {
+        var file = thumbnailService.getThumbnailLocalFile(thumbnail);
+        if (file == null) {
+            return null;
+        }
+        return new PreviewLocalFileDTO(file, file.getName());
     }
 
     /**
@@ -431,44 +491,53 @@ public class FileOperationsFacade {
      */
     public DownloadedFile getImage(Long id, Long userId) {
         try {
-            var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
-            if (userFileDO == null || !CategoryEnum.isPictureBySuffix(userFileDO.getSuffix())) {
+            var previewFile = getImageLocalFile(id, userId);
+            if (previewFile == null) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
-
-            var fileDO = fileService.getFileById(userFileDO.getFileId());
-            if (fileDO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
-            if (storageSource == null) {
-                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-            }
-
-            var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());
-            if (!FileUtil.exist(fileFullPath)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            DownloadedFile downloadedFile;
-            if (FileTypeEnum.isHeic(fileDO.getSuffix())) {
-                var webpBytes = ImageUtils.heic2Webp(fileFullPath);
-                if (webpBytes == null) {
-                    throw new FailResultException(SYSTEM_ERROR);
-                }
-                downloadedFile = new DownloadedFile(OCTET_STREAM.getValue(), webpBytes, userFileDO.getName());
-            } else {
-                var file = FileUtil.file(fileFullPath);
-                downloadedFile = new DownloadedFile(file, userFileDO.getName());
-            }
-
+            var downloadedFile = new DownloadedFile(previewFile.getFile(), previewFile.getFileName());
             downloadedFile.asAttachment(false);
             return downloadedFile;
         } catch (IOException e) {
             log.error(e.getMessage(), e);
             throw new FailResultException(SYSTEM_ERROR);
         }
+    }
+
+    /**
+     * 获取图片本地文件
+     */
+    public PreviewLocalFileDTO getImageLocalFile(Long id, Long userId) {
+        var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
+        if (userFileDO == null || !CategoryEnum.isPictureBySuffix(userFileDO.getSuffix())) {
+            return null;
+        }
+
+        var fileDO = fileService.getFileById(userFileDO.getFileId());
+        if (fileDO == null) {
+            return null;
+        }
+
+        var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
+        if (storageSource == null) {
+            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
+        }
+
+        var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());
+        if (!FileUtil.exist(fileFullPath)) {
+            return null;
+        }
+
+        if (FileTypeEnum.isHeic(fileDO.getSuffix())) {
+            var webpFile = ImageUtils.heic2WebpFile(fileFullPath);
+            if (webpFile == null) {
+                throw new FailResultException(SYSTEM_ERROR);
+            }
+            var previewName = FileUtil.mainName(userFileDO.getName()) + ".webp";
+            return new PreviewLocalFileDTO(webpFile, previewName);
+        }
+
+        return new PreviewLocalFileDTO(FileUtil.file(fileFullPath), userFileDO.getName());
     }
 
     /**
@@ -480,34 +549,44 @@ public class FileOperationsFacade {
      */
     public DownloadedFile getVideo(Long id, Long userId) {
         try {
-            var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
-            if (userFileDO == null || !CategoryEnum.isVideoBySuffix(userFileDO.getSuffix())) {
+            var previewFile = getVideoLocalFile(id, userId);
+            if (previewFile == null) {
                 throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
             }
-
-            var fileDO = fileService.getFileById(userFileDO.getFileId());
-            if (fileDO == null) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
-            if (storageSource == null) {
-                throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
-            }
-
-            var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());
-            if (!FileUtil.exist(fileFullPath)) {
-                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
-            }
-
-            var file = FileUtil.file(fileFullPath);
-            var downloadedFile = new DownloadedFile(file, userFileDO.getName());
+            var downloadedFile = new DownloadedFile(previewFile.getFile(), previewFile.getFileName());
             downloadedFile.asAttachment(false);
             return downloadedFile;
         } catch (IOException e) {
             log.error(e.getMessage(), e);
             throw new FailResultException(SYSTEM_ERROR);
         }
+    }
+
+    /**
+     * 获取视频本地文件
+     */
+    public PreviewLocalFileDTO getVideoLocalFile(Long id, Long userId) {
+        var userFileDO = userFileService.getUserFileByIdAndUserId(id, userId, NORMAL);
+        if (userFileDO == null || !CategoryEnum.isVideoBySuffix(userFileDO.getSuffix())) {
+            return null;
+        }
+
+        var fileDO = fileService.getFileById(userFileDO.getFileId());
+        if (fileDO == null) {
+            return null;
+        }
+
+        var storageSource = storageSourceService.getStorageSourceById(fileDO.getStorageSourceId(), userId);
+        if (storageSource == null) {
+            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_NO_STORAGE_SOURCE);
+        }
+
+        var fileFullPath = FileUtils.generatePath(storageSource.getPath(), fileDO.getPath());
+        if (!FileUtil.exist(fileFullPath)) {
+            return null;
+        }
+
+        return new PreviewLocalFileDTO(FileUtil.file(fileFullPath), userFileDO.getName());
     }
 
     /**

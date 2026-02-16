@@ -432,4 +432,24 @@ public class ResultErrorMsgConsts {
      * 文件迁移失败错误
      */
     public static final String ERROR_FILE_MIGRATION = "文件迁移失败";
+
+    /**
+     * 文件直链不存在或已失效
+     */
+    public static final String ERROR_DIRECT_LINK_NO_EXIST = "文件直链不存在或已失效";
+
+    /**
+     * 直链有效期参数不合法
+     */
+    public static final String ERROR_DIRECT_LINK_EXPIRE_DAYS_INVALID = "直链有效期必须大于等于0";
+
+    /**
+     * 页码不能为空
+     */
+    public static final String ERROR_PAGE_NUM_EMPTY = "页码不能为空";
+
+    /**
+     * 每页条数不能为空
+     */
+    public static final String ERROR_PAGE_SIZE_EMPTY = "每页条数不能为空";
 }

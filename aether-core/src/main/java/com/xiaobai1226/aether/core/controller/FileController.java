@@ -12,13 +12,17 @@ import com.xiaobai1226.aether.common.domain.dto.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.*;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.core.handle.DownloadedFile;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.*;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
@@ -180,8 +184,14 @@ public class FileController {
     @Mapping("/getThumbnail")
     public void getThumbnail(Context ctx, @Param("thumbnail") String thumbnail) {
         try {
-            var downloadedFile = fileOperationsFacade.getThumbnail(thumbnail);
-            ctx.outputAsFile(downloadedFile);
+            var previewFile = fileOperationsFacade.getThumbnailLocalFile(thumbnail);
+            if (previewFile == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+            if (setCacheHeadersForPreview(ctx, previewFile.getFile(), 2592000)) {
+                return;
+            }
+            ctx.outputAsFile(new DownloadedFile(previewFile.getFile(), previewFile.getFileName()));
         } catch (IOException e) {
             log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
@@ -195,8 +205,14 @@ public class FileController {
     @Mapping("/getImage")
     public void getImage(Context ctx, @Param("id") Long id, @CurrentUserId Long userId) {
         try {
-            var downloadedFile = fileOperationsFacade.getImage(id, userId);
-            ctx.outputAsFile(downloadedFile);
+            var previewFile = fileOperationsFacade.getImageLocalFile(id, userId);
+            if (previewFile == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+            if (setCacheHeadersForPreview(ctx, previewFile.getFile(), 2592000)) {
+                return;
+            }
+            ctx.outputAsFile(new DownloadedFile(previewFile.getFile(), previewFile.getFileName()));
         } catch (IOException e) {
             log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
@@ -210,8 +226,11 @@ public class FileController {
     @Mapping("/getVideo")
     public void getVideo(Context ctx, @Param("id") Long id, @CurrentUserId Long userId) {
         try {
-            var downloadedFile = fileOperationsFacade.getVideo(id, userId);
-            ctx.outputAsFile(downloadedFile);
+            var previewFile = fileOperationsFacade.getVideoLocalFile(id, userId);
+            if (previewFile == null) {
+                throw new FailResultException(PARAM_IS_INVALID, ERROR_FILE_NO_EXIST);
+            }
+            outputFileWithRangeSupport(ctx, previewFile.getFile(), previewFile.getFileName());
         } catch (IOException e) {
             log.error(e.getMessage());
             throw new FailResultException(SYSTEM_ERROR);
@@ -229,6 +248,61 @@ public class FileController {
             ctx.outputAsFile(downloadedFile);
         } catch (IOException e) {
             log.error(e.getMessage());
+            throw new FailResultException(SYSTEM_ERROR);
+        }
+    }
+
+    /**
+     * 创建文件直链
+     */
+    @Post
+    @Mapping("/createDirectLink")
+    public DirectLinkCreateResultDTO createDirectLink(@Validated CreateDirectLinkVO createDirectLinkVO,
+            @CurrentUserId Long userId) {
+        return fileOperationsFacade.createDirectLink(createDirectLinkVO.getId(), createDirectLinkVO.getExpireDays(), userId);
+    }
+
+    /**
+     * 撤销文件直链
+     */
+    @Post
+    @Mapping("/revokeDirectLink")
+    public Result<Void> revokeDirectLink(@Validated RevokeDirectLinkVO revokeDirectLinkVO, @CurrentUserId Long userId) {
+        fileOperationsFacade.revokeDirectLink(revokeDirectLinkVO.getToken(), userId);
+        return Result.success("撤销文件直链成功");
+    }
+
+    /**
+     * 分页获取文件直链记录
+     */
+    @Get
+    @Mapping("/getDirectLinkListByPage")
+    public PageResult<DirectLinkRecordDTO> getDirectLinkListByPage(@Validated DirectLinkListVO directLinkListVO,
+            @CurrentUserId Long userId) {
+        return fileOperationsFacade.getDirectLinkListByPage(directLinkListVO.getPageNum(), directLinkListVO.getPageSize(), userId);
+    }
+
+    /**
+     * 更新直链有效期
+     */
+    @Post
+    @Mapping("/updateDirectLinkExpire")
+    public DirectLinkCreateResultDTO updateDirectLinkExpire(@Validated UpdateDirectLinkExpireVO updateDirectLinkExpireVO,
+            @CurrentUserId Long userId) {
+        return fileOperationsFacade.updateDirectLinkExpire(updateDirectLinkExpireVO.getToken(), updateDirectLinkExpireVO.getExpireDays(), userId);
+    }
+
+    /**
+     * 通过文件直链访问文件
+     */
+    @Get
+    @Mapping("/direct")
+    public void direct(Context ctx, @Param("token") String token, @Param("type") String type) {
+        try {
+            var downloadedFile = fileOperationsFacade.getFileByDirectLink(token, type);
+            ctx.outputAsFile(downloadedFile);
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
             throw new FailResultException(SYSTEM_ERROR);
         }
     }
@@ -403,4 +477,134 @@ public class FileController {
     // public void getFile() {
     // // TODO 待做，看视频
     // }
+
+    /**
+     * 预览资源缓存头 + ETag 条件请求
+     */
+    private boolean setCacheHeadersForPreview(Context ctx, File file, int maxAgeSeconds) {
+        String etag = buildWeakEtag(file);
+        String ifNoneMatch = ctx.header("If-None-Match");
+        ctx.headerSet("Cache-Control", "public, max-age=" + maxAgeSeconds);
+        ctx.headerSet("ETag", etag);
+        if (etag.equals(ifNoneMatch)) {
+            ctx.status(304);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 视频预览输出（支持单段 Range）
+     */
+    private void outputFileWithRangeSupport(Context ctx, File file, String fileName) throws IOException {
+        long fileLength = file.length();
+        ctx.headerSet("Accept-Ranges", "bytes");
+        ctx.headerSet("Cache-Control", "public, max-age=600");
+        ctx.headerSet("ETag", buildWeakEtag(file));
+        String contentType = URLConnection.guessContentTypeFromName(fileName);
+        if (contentType != null) {
+            ctx.contentType(contentType);
+        }
+
+        String rangeHeader = ctx.header("Range");
+        if (rangeHeader == null || !rangeHeader.startsWith("bytes=")) {
+            ctx.headerSet("Content-Length", String.valueOf(fileLength));
+            try (InputStream in = new FileInputStream(file)) {
+                ctx.output(in);
+            }
+            return;
+        }
+
+        long[] range = parseRange(rangeHeader, fileLength);
+        if (range == null) {
+            ctx.status(416);
+            ctx.headerSet("Content-Range", "bytes */" + fileLength);
+            return;
+        }
+
+        long start = range[0];
+        long end = range[1];
+        long contentLength = end - start + 1;
+
+        ctx.status(206);
+        ctx.headerSet("Content-Range", "bytes " + start + "-" + end + "/" + fileLength);
+        ctx.headerSet("Content-Length", String.valueOf(contentLength));
+
+        try (FileInputStream fis = new FileInputStream(file)) {
+            fis.skipNBytes(start);
+            ctx.output(new LimitedInputStream(fis, contentLength));
+        }
+    }
+
+    private long[] parseRange(String rangeHeader, long fileLength) {
+        try {
+            String rangeValue = rangeHeader.substring("bytes=".length()).trim();
+            int dashIndex = rangeValue.indexOf("-");
+            if (dashIndex < 0) {
+                return null;
+            }
+            String startPart = rangeValue.substring(0, dashIndex).trim();
+            String endPart = rangeValue.substring(dashIndex + 1).trim();
+
+            long start;
+            long end;
+            if (startPart.isEmpty()) {
+                long suffixLength = Long.parseLong(endPart);
+                if (suffixLength <= 0) {
+                    return null;
+                }
+                start = Math.max(0, fileLength - suffixLength);
+                end = fileLength - 1;
+            } else {
+                start = Long.parseLong(startPart);
+                end = endPart.isEmpty() ? fileLength - 1 : Long.parseLong(endPart);
+            }
+
+            if (start < 0 || end < start || start >= fileLength) {
+                return null;
+            }
+            end = Math.min(end, fileLength - 1);
+            return new long[] { start, end };
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String buildWeakEtag(File file) {
+        return "W/\"" + file.lastModified() + "-" + file.length() + "\"";
+    }
+
+    private static final class LimitedInputStream extends FilterInputStream {
+        private long remaining;
+
+        private LimitedInputStream(InputStream in, long limit) {
+            super(in);
+            this.remaining = limit;
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+            int b = super.read();
+            if (b != -1) {
+                remaining--;
+            }
+            return b;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+            int max = (int) Math.min(len, remaining);
+            int read = super.read(b, off, max);
+            if (read > 0) {
+                remaining -= read;
+            }
+            return read;
+        }
+    }
 }

@@ -20,6 +20,7 @@ import org.noear.solon.core.handle.DownloadedFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Date;
 
 /**
@@ -171,23 +172,44 @@ public class ThumbnailService {
      * @throws IOException 如果文件读取失败
      */
     public DownloadedFile getThumbnailFile(String thumbnailFileName) throws IOException {
+        var thumbnailFile = getThumbnailLocalFile(thumbnailFileName);
+        if (thumbnailFile == null) {
+            return null;
+        }
+
+        DownloadedFile downloadedFile = new DownloadedFile(thumbnailFile);
+        downloadedFile.asAttachment(false);
+        return downloadedFile;
+    }
+
+    /**
+     * 获取缩略图本地文件（带路径安全校验）
+     *
+     * @param thumbnailFileName 缩略图相对路径
+     * @return 缩略图文件，不存在或非法则返回 null
+     */
+    public File getThumbnailLocalFile(String thumbnailFileName) {
         if (StrUtil.isBlank(thumbnailFileName)) {
             log.warn("获取缩略图参数为空");
             return null;
         }
 
-        var thumbnailFilePath = FileUtils.generatePath(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL,
-                thumbnailFileName);
-        
-        if (!FileUtil.exist(thumbnailFilePath)) {
-            log.warn("缩略图文件不存在: {}", thumbnailFilePath);
+        Path thumbnailRootPath = Path.of(rootPath, FolderNameConsts.PATH_THUMBNAIL_FILE_FULL).normalize();
+        Path targetPath = thumbnailRootPath.resolve(thumbnailFileName).normalize();
+
+        // 路径必须在缩略图根目录下，防止通过 ../ 访问越界文件
+        if (!targetPath.startsWith(thumbnailRootPath)) {
+            log.warn("缩略图路径非法: {}", thumbnailFileName);
             return null;
         }
 
-        File file = FileUtil.file(thumbnailFilePath);
-        DownloadedFile downloadedFile = new DownloadedFile(file);
-        downloadedFile.asAttachment(false);
-        return downloadedFile;
+        var thumbnailFilePath = targetPath.toString();
+        if (!FileUtil.exist(thumbnailFilePath)) {
+            log.warn("缩略图文件不存在: {}", targetPath);
+            return null;
+        }
+
+        return FileUtil.file(thumbnailFilePath);
     }
 
     /**

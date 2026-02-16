@@ -16,12 +16,12 @@ public class FailResultException extends RuntimeException {
     private Result<Void> result;
 
     public FailResultException(ResultCodeEnum resultCode) {
-        super();
+        super(resultCode.msg());
         this.result = Result.fail(resultCode);
     }
 
     public FailResultException(ResultCodeEnum resultCode, String msg) {
-        super();
+        super(msg);
         this.result = Result.fail(resultCode, msg);
     }
 

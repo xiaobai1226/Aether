@@ -58,6 +58,9 @@ const props = defineProps({
  * 加载下一页
  */
 const loadNextPage = () => {
+  if (disabled.value || !props.fetch) {
+    return
+  }
   props.dataSource.pageNum = props.dataSource.pageNum + 1
   props.fetch()
 }
