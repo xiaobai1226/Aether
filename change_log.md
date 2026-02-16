@@ -1,4 +1,9 @@
 # 修改记录
+## 0.11.0
+1. 优化预览相关逻辑
+2. 优化缩略图相关逻辑
+3. 增加文件直链功能
+
 ## 0.10.0
 1. 使用Version Catalog替代buildSrc管理Gradle依赖版本
 2. 移除org.noear:solon-view-thymeleaf依赖，使用默认
