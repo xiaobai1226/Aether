@@ -54,55 +54,18 @@ const props = defineProps({
   // 图标宽度
   width: Number,
   // 图片填充方式
-  fit: String
+  fit: String,
+  // 懒加载预加载距离（IntersectionObserver rootMargin）
+  lazyRootMargin: {
+    type: String,
+    default: '120px'
+  }
 })
 
 const thumbnailUrl = ref('')
 const iconRef = ref<HTMLElement>()
 const canLoadThumbnail = ref(false)
 let thumbnailObserver: IntersectionObserver | null = null
-let releaseQueueSlot: (() => void) | null = null
-
-const THUMBNAIL_MAX_CONCURRENCY = 6
-type ThumbnailQueueState = {
-  active: number;
-  queue: Array<() => void>;
-}
-
-const getThumbnailQueueState = (): ThumbnailQueueState => {
-  const globalKey = '__AETHER_THUMBNAIL_QUEUE_STATE__'
-  const target = globalThis as unknown as Record<string, ThumbnailQueueState | undefined>
-  if (!target[globalKey]) {
-    target[globalKey] = {
-      active: 0,
-      queue: []
-    }
-  }
-  return target[globalKey] as ThumbnailQueueState
-}
-
-const acquireThumbnailSlot = (): Promise<() => void> => {
-  return new Promise((resolve) => {
-    const queueState = getThumbnailQueueState()
-    const start = () => {
-      queueState.active++
-      resolve(() => {
-        queueState.active = Math.max(0, queueState.active - 1)
-        const next = queueState.queue.shift()
-        if (next) {
-          next()
-        }
-      })
-    }
-
-    if (queueState.active < THUMBNAIL_MAX_CONCURRENCY) {
-      start()
-      return
-    }
-
-    queueState.queue.push(start)
-  })
-}
 
 const clearThumbnailObserver = () => {
   if (thumbnailObserver) {
@@ -111,17 +74,9 @@ const clearThumbnailObserver = () => {
   }
 }
 
-const releaseThumbnailQueueSlot = () => {
-  if (releaseQueueSlot) {
-    releaseQueueSlot()
-    releaseQueueSlot = null
-  }
-}
-
 const initThumbnailObserver = () => {
   clearThumbnailObserver()
   canLoadThumbnail.value = false
-  releaseThumbnailQueueSlot()
 
   if (!props.thumbnail) {
     canLoadThumbnail.value = true
@@ -145,7 +100,7 @@ const initThumbnailObserver = () => {
       clearThumbnailObserver()
     }
   }, {
-    rootMargin: '120px'
+    rootMargin: props.lazyRootMargin as string
   })
   thumbnailObserver.observe(iconRef.value)
 }
@@ -166,11 +121,9 @@ const getImage = () => {
 
   if (props.thumbnail) {
     if (canLoadThumbnail.value) {
-      if (!thumbnailUrl.value || thumbnailUrl.value === OTHER.iconUrl || thumbnailUrl.value === FOLDER.iconUrl) {
-        acquireThumbnailSlot().then((release) => {
-          releaseQueueSlot = release
-          thumbnailUrl.value = getThumbnailUrl(props.thumbnail as string)
-        })
+      const nextThumbnailUrl = getThumbnailUrl(props.thumbnail as string)
+      if (thumbnailUrl.value !== nextThumbnailUrl) {
+        thumbnailUrl.value = nextThumbnailUrl
       }
     } else {
       // 先渲染类型图标，进入可视区再加载缩略图
@@ -219,14 +172,13 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearThumbnailObserver()
-  releaseThumbnailQueueSlot()
 })
 </script>
 
 <template>
   <span ref="iconRef" :style="{width: (width ? width : iconConfig.width) + 'px', height: (width ? width : iconConfig.width) + 'px'}"
         class="icon">
-    <el-image :src="thumbnailUrl" loading="lazy" @load="releaseThumbnailQueueSlot" @error="() => { releaseThumbnailQueueSlot(); getFinalImage() }"
+    <el-image :src="thumbnailUrl" loading="lazy" @error="getFinalImage"
               :style="{'object-fit': (fit ? fit : iconConfig.fit), 'border-radius': iconConfig.borderRadius + 'px', width: iconConfig.imgWidth, height: iconConfig.imgHeight, 'max-width': iconConfig.imgMaxWidth, 'max-height': iconConfig.imgMaxHeight }" />
   </span>
 </template>

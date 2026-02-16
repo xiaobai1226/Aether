@@ -269,6 +269,7 @@ defineExpose({ clearSelection })
             <div class="icon">
               <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
                     :icon-config="mode === 0 ? thumbnailIconConfig : largeIconConfig"
+                    :lazy-root-margin="mode === 0 ? '220px' : '180px'"
                     :width="getIconWidth(userFile.thumbnail)" />
               <Icon class="play" v-if="(userFile.suffix && VIDEO.suffixSet.has(userFile.suffix))"
                     :icon-url="PLAY.iconUrl" :width="mode === 0 ? 14 : 20" />

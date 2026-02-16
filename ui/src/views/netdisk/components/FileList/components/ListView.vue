@@ -328,7 +328,7 @@ defineExpose({ clearSelection, restoreSelection, sort })
         <!--                <Icon :thumbnail="row.thumbnail" :width="32"></Icon>-->
         <!--              </template>-->
         <!--              <template v-else>-->
-        <Icon :itemType="row.itemType" :suffix="row.suffix" :thumbnail="row.thumbnail" />
+        <Icon :itemType="row.itemType" :suffix="row.suffix" :thumbnail="row.thumbnail" lazy-root-margin="160px" />
         <!--              </template>-->
         <span class="file-name" :title="row.name">
               {{ row.name }}
