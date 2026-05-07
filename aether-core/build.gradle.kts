@@ -1,6 +1,5 @@
 dependencies {
     implementation(libs.solon.web)
-    implementation(libs.solon.web.webdav)
     implementation(libs.solon.logging.logback)
     implementation(libs.solon.satoken.plugin)
     implementation(libs.solon.scheduling.simple)
@@ -9,6 +8,7 @@ dependencies {
 
     // 内部模块
     implementation(project(":aether-common"))
+    implementation(project(":aether-webdav"))
     implementation(project(":aether-domain"))
     implementation(project(":aether-dao"))
     implementation(project(":aether-admin"))

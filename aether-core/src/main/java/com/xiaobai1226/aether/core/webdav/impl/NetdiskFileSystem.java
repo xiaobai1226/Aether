@@ -30,9 +30,9 @@ import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.Utils;
 import org.noear.solon.data.cache.CacheService;
-import org.noear.solon.web.webdav.FileInfo;
-import org.noear.solon.web.webdav.FileSystem;
-import org.noear.solon.web.webdav.impl.ShardingInputStream;
+import com.xiaobai1226.aether.webdav.FileInfo;
+import com.xiaobai1226.aether.webdav.FileSystem;
+import com.xiaobai1226.aether.webdav.impl.ShardingInputStream;
 
 import java.io.InputStream;
 import java.io.OutputStream;

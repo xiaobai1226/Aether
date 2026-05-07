@@ -11,11 +11,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.handle.Context;
-import org.noear.solon.web.webdav.FileInfo;
-import org.noear.solon.web.webdav.FileSystem;
-import org.noear.solon.web.webdav.WebdavAbstractHandler;
+import com.xiaobai1226.aether.webdav.FileInfo;
+import com.xiaobai1226.aether.webdav.FileSystem;
+import com.xiaobai1226.aether.webdav.WebdavAbstractHandler;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * WebDAV 抽象处理器实现
@@ -275,7 +279,7 @@ public class NetdiskWebdavHandler extends WebdavAbstractHandler {
         }
 
         // URL 编码
-        href = URLUtil.encode(href);
+        href = encodePath(href);
 
         return StrUtil.format(template,
                 href,
@@ -328,7 +332,7 @@ public class NetdiskWebdavHandler extends WebdavAbstractHandler {
      * @return 去除前缀后的路径
      */
     private String stripPrefix(String p) {
-        p = URLUtil.decode(p);
+        p = decodePath(p);
         int index = p.indexOf(this.prefix());
         if (index == -1) {
             return "";
@@ -344,5 +348,23 @@ public class NetdiskWebdavHandler extends WebdavAbstractHandler {
             return r;
         }
         return "";
+    }
+
+    private String decodePath(String path) {
+        if (path == null) {
+            return null;
+        }
+
+        return URLUtil.decode(path.replace("+", "%2B"));
+    }
+
+    private String encodePath(String path) {
+        if (path == null) {
+            return null;
+        }
+
+        return Arrays.stream(path.split("/", -1))
+                .map(segment -> URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20"))
+                .collect(Collectors.joining("/"));
     }
 }
