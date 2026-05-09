@@ -1,28 +1,25 @@
 package com.xiaobai1226.aether.core.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.xiaobai1226.aether.core.annotation.CurrentUserId;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.core.dao.redis.ShareRedisDAO;
+import com.xiaobai1226.aether.core.cache.ShareCache;
 import com.xiaobai1226.aether.core.domain.dto.*;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.share.*;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
-import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.core.enums.UserFileStatusEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.ShareFileService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.dto.ShareFileDTO;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
 
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
 import static com.xiaobai1226.aether.core.constant.result.error.ResultShareErrMsgConsts.*;
@@ -46,21 +43,19 @@ public class ShareFileController {
     private UserFileService userFileService;
 
     /**
-     * 分享文件Redis缓存
+     * 分享文件缓存
      */
     @Inject
-    private ShareRedisDAO shareRedisDAO;
+    private ShareCache shareCache;
 
     /**
      * 创建分享文件
      */
     @Post
     @Mapping("/create")
-    public Result<CreateShareFileDTO> create(@Validated CreateShareFileVO createShareFileVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+    public Result<CreateShareFileDTO> create(@Validated CreateShareFileVO createShareFileVO, @CurrentUserId Long userId) {
 
-        var ids = Arrays.stream(createShareFileVO.getIds().split(StrUtil.COMMA)).mapToInt(Integer::parseInt).boxed().toList();
+        var ids = Arrays.stream(createShareFileVO.getIds().split(StrUtil.COMMA)).mapToLong(Long::parseLong).boxed().toList();
 
         if (CollUtil.isEmpty(ids)) {
             throw new FailResultException(PARAM_IS_INVALID, ERROR_SHARE_CONTENT_EMPTY);
@@ -89,9 +84,7 @@ public class ShareFileController {
      */
     @Get
     @Mapping("/getShareListByPage")
-    public PageResult<ShareFileDTO> getShareListByPage(PageVO shareFileVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+    public PageResult<ShareFileDTO> getShareListByPage(PageVO shareFileVO, @CurrentUserId Long userId) {
 
         return shareFileService.getShareFileList(userId, shareFileVO);
     }
@@ -101,9 +94,7 @@ public class ShareFileController {
      */
     @Post
     @Mapping("/cancel")
-    public Result<CreateShareFileDTO> cancel(@Body CancelShareFileVO cancelShareFileVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+    public Result<CreateShareFileDTO> cancel(@Body CancelShareFileVO cancelShareFileVO, @CurrentUserId Long userId) {
 
         var shareIds = Arrays.stream(cancelShareFileVO.getIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
 
@@ -147,10 +138,10 @@ public class ShareFileController {
 //        Integer userId = null;
 //        if (StpUtil.isLogin()) {
 //            // 获取当前会话账号id, 并转化为`int`类型
-//            userId = StpUtil.getLoginIdAsInt();
+//            userId = StpUtil.getLoginIdAsLong();
 //        }
 //
-//        var shareInfo = shareRedisDAO.getShareInfo(shareId);
+//        var shareInfo = shareCache.getShareInfo(shareId);
 //        if (shareInfo == null) {
 //            return null;
 //        }
@@ -184,7 +175,7 @@ public class ShareFileController {
 //    @Mapping("/getShareFileListByShareIdPagination")
 //    public PageResultDataDTO<UserFileDTO> getShareFileListByShareIdPagination(GetShareFileInfoListVO getShareFileInfoListVO) {
 //
-//        var shareInfo = shareRedisDAO.getShareInfo(getShareFileInfoListVO.getShareId());
+//        var shareInfo = shareCache.getShareInfo(getShareFileInfoListVO.getShareId());
 //        if (shareInfo == null) {
 //            // TODO 需要返回特定状态码，表示没有输入校验码校验
 //            return null;
@@ -234,66 +225,64 @@ public class ShareFileController {
      *
      * @param save2NetdiskVO 保存到网盘信息
      */
-    @Post
-    @Mapping("/save2NetDisk")
-    public void saveToNetDisk(Save2NetdiskVO save2NetdiskVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+//     @Post
+//     @Mapping("/save2NetDisk")
+//     public void saveToNetDisk(Save2NetdiskVO save2NetdiskVO, @CurrentUserId Long userId) {
 
-        var shareInfo = shareRedisDAO.getShareInfo(save2NetdiskVO.getShareId());
-        if (shareInfo == null) {
-            // TODO 抛出异常，表示没有输入校验码校验
-            return;
-        }
+//         var shareInfo = shareCache.getShareInfo(save2NetdiskVO.getShareId());
+//         if (shareInfo == null) {
+//             // TODO 抛出异常，表示没有输入校验码校验
+//             return;
+//         }
 
-        if (userId == shareInfo.getUserId()) {
-            throw new FailResultException(PARAM_IS_INVALID, "不能分享给自己");
-        }
+//         if (userId == shareInfo.getUserId()) {
+//             throw new FailResultException(PARAM_IS_INVALID, "不能分享给自己");
+//         }
 
-        List<Integer> sourceIds = Arrays.stream(save2NetdiskVO.getIdsStr().split(",")).mapToInt(Integer::parseInt).boxed().toList();
+//         List<Long> sourceIds = Arrays.stream(save2NetdiskVO.getIdsStr().split(",")).mapToLong(Long::parseLong).boxed().toList();
 
-        if (sourceIds.isEmpty()) {
-            throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
-        }
+//         if (sourceIds.isEmpty()) {
+//             throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
+//         }
 
-        var sourceUserFileTreeDTOList = userFileService.getUserFileTreeDTOByIdsAndUserId(sourceIds, shareInfo.getUserId(), UserFileStatusEnum.NORMAL.flag());
+//         var sourceUserFileTreeDTOList = userFileService.getUserFileTreeDTOByIdsAndUserId(sourceIds, shareInfo.getUserId(), UserFileStatusEnum.NORMAL.flag());
 
-        if (sourceUserFileTreeDTOList == null || sourceUserFileTreeDTOList.size() != sourceIds.size()) {
-            throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
-        }
+//         if (sourceUserFileTreeDTOList == null || sourceUserFileTreeDTOList.size() != sourceIds.size()) {
+//             throw new FailResultException(PARAM_IS_INVALID, "分享内容不能为空");
+//         }
 
-        // TODO 校验分享文件是否属于本次分享
+//         // TODO 校验分享文件是否属于本次分享
 
-        // 校验目标文件夹是否存在
-        UserFileDO targetUserFileDO = null;
-        var targetId = 0;
-        // 如果不是根目录则判断目标文件夹是否存在
-        if (save2NetdiskVO.getPath() != null) {
-            targetUserFileDO = userFileService.getParentUserFileByPathAndItemType(userId, save2NetdiskVO.getPath());
+//         // 校验目标文件夹是否存在
+//         UserFileDO targetUserFileDO = null;
+//         Long targetId = 0L;
+//         // 如果不是根目录则判断目标文件夹是否存在
+//         if (save2NetdiskVO.getPath() != null) {
+//             targetUserFileDO = userFileService.getParentUserFileByPathAndItemType(userId, save2NetdiskVO.getPath());
 
-            if (targetUserFileDO == null || !Objects.equals(UserFileItemTypeEnum.FOLDER.flag(), targetUserFileDO.getItemType())) {
-                throw new FailResultException(PARAM_IS_INVALID, "目标文件夹不存在");
-            }
-            targetId = targetUserFileDO.getId();
-        }
+//             if (targetUserFileDO == null || !Objects.equals(UserFileItemTypeEnum.FOLDER.flag(), targetUserFileDO.getItemType())) {
+//                 throw new FailResultException(PARAM_IS_INVALID, "目标文件夹不存在");
+//             }
+//             targetId = targetUserFileDO.getId();
+//         }
 
-        // 获取全部要复制文件
-        userFileService.recursiveGetUserFileTreeDTO(sourceUserFileTreeDTOList, userId);
-        var totalSize = userFileService.getUserFileTreeSpaceUsage(sourceUserFileTreeDTOList);
+//         // 获取全部要复制文件
+//         userFileService.recursiveGetUserFileTreeDTO(sourceUserFileTreeDTOList, userId);
+//         var totalSize = userFileService.getUserFileTreeSpaceUsage(sourceUserFileTreeDTOList);
 
-        // 检测存储空间是否足够
-//        var userSpaceUsage = userService.getUserSpaceUsage(userId);
-//        if (userSpaceUsage == null || userSpaceUsage.getRealRemainStorage() < totalSize) {
-//            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
-//        }
+//         // 检测存储空间是否足够
+// //        var userSpaceUsage = userService.getUserSpaceUsage(userId);
+// //        if (userSpaceUsage == null || userSpaceUsage.getRealRemainStorage() < totalSize) {
+// //            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_INSUFFICIENT_STORAGE);
+// //        }
 
-        // 复制文件
-//        var result = userFileService.copy(targetUserFileDO, userId, sourceUserFileTreeDTOList, totalSize);
+//         // 复制文件
+// //        var result = userFileService.copy(targetUserFileDO, userId, sourceUserFileTreeDTOList, totalSize);
 
-//        if (!result) {
-//            throw new FailResultException(BAD_REQUEST_ERROR, "复制失败");
-//        }
+// //        if (!result) {
+// //            throw new FailResultException(BAD_REQUEST_ERROR, "复制失败");
+// //        }
 
-//        return ResultDataUtils.success(SUCCESS_MSG_COPY.msg());
-    }
+// //        return ResultDataUtils.success(SUCCESS_MSG_COPY.msg());
+//     }
 }

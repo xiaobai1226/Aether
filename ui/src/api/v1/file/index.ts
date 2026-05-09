@@ -1,13 +1,17 @@
-import httpInstance from '@/utils/http'
+import httpInstance, { uploadHttpInstance } from '@/utils/http'
 import httpArrayBufferInstance from '@/utils/HttpArrayBuffer'
 import type { NetdiskInternalAxiosRequestConfig } from '@/utils/http'
 import type { AxiosPromise, AxiosProgressEvent } from 'axios'
 import type {
   CopyRequest, DeleteRequest,
+  CreateDirectLinkRequest, CreateDirectLinkResponse,
+  GetDirectLinkListByPageRequest, GetDirectLinkListByPageResponse,
+  DownloadCreateResponse,
+  DownloadTaskStatusResponse,
   FileRenameRequest,
   GetFileListByPageRequest,
   GetFileListByPageResponse, GetFolderListByPageRequest, MoveRequest,
-  NewFolderRequest, UploadFileRequest, UploadFileResponse
+  NewFolderRequest, RevokeDirectLinkRequest, UpdateDirectLinkExpireRequest, UploadCancelRequest, UploadChunkRequest, UploadChunkResponse, UploadCompleteRequest, UploadCompleteResponse, UploadInitRequest, UploadInitResponse, UploadStatusRequest, UploadStatusResponse
 } from '@/api/v1/file/types'
 import { useAccountStore } from '@/stores/account'
 import { ApiVersion } from '@/api/ApiVersion'
@@ -68,23 +72,29 @@ export const rename = (data: FileRenameRequest): AxiosPromise => {
   })
 }
 
-/**
- * 上传文件
- * @param uploadFileRequest 请求参数
- * @param chunkFile 上传文件
- * @param onUploadProgress 上传进度回调
- */
-export const uploadFile = (uploadFileRequest: UploadFileRequest, chunkFile: Blob, onUploadProgress: (progressEvent: AxiosProgressEvent) => void): AxiosPromise<UploadFileResponse> => {
+export const uploadInit = (data: UploadInitRequest): AxiosPromise<UploadInitResponse> => {
+  return httpInstance.post(baseUrl + '/uploadInit', data, {
+    showErrMsg: false,
+    showSuccessMsg: false,
+    showLoading: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+export const uploadChunk = (
+  uploadChunkRequest: UploadChunkRequest,
+  chunkFile: Blob,
+  onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
+  signal?: AbortSignal
+): AxiosPromise<UploadChunkResponse> => {
   const formData = new FormData()
   formData.append('file', chunkFile)
-  Object.entries(uploadFileRequest).forEach(([key, value]) => {
-    formData.append(key, value)
+  Object.entries(uploadChunkRequest).forEach(([key, value]) => {
+    formData.append(key, String(value))
   })
-  // formData.append('uploadFileVO', JSON.stringify(uploadFileRequest));
 
-  const url = baseUrl + '/uploadFile'
-  return httpInstance.post(url, formData, {
-    onUploadProgress: onUploadProgress,
+  return uploadHttpInstance.post(baseUrl + '/uploadChunk', formData, {
+    onUploadProgress,
+    signal,
     headers: {
       'Content-Type': 'multipart/form-data'
     },
@@ -94,14 +104,25 @@ export const uploadFile = (uploadFileRequest: UploadFileRequest, chunkFile: Blob
   } as NetdiskInternalAxiosRequestConfig)
 }
 
-/**
- * 取消文件上传
- * @param taskId 任务ID
- */
-export const cancelUploadFile = (taskId: string): AxiosPromise => {
-  const url = baseUrl + '/cancelUploadFile'
-  const data = { taskId: taskId }
-  return httpInstance.post(url, data, {
+export const uploadStatus = (params: UploadStatusRequest): AxiosPromise<UploadStatusResponse> => {
+  return httpInstance.get(baseUrl + '/uploadStatus', {
+    params,
+    showErrMsg: false,
+    showSuccessMsg: false,
+    showLoading: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+export const uploadComplete = (data: UploadCompleteRequest): AxiosPromise<UploadCompleteResponse> => {
+  return httpInstance.post(baseUrl + '/uploadComplete', data, {
+    showErrMsg: false,
+    showSuccessMsg: false,
+    showLoading: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+export const uploadCancel = (data: UploadCancelRequest): AxiosPromise => {
+  return httpInstance.post(baseUrl + '/uploadCancel', data, {
     showSuccessMsg: false,
     showLoading: false
   } as NetdiskInternalAxiosRequestConfig)
@@ -166,7 +187,7 @@ export const getThumbnailUrl = (thumbnail: string): string => {
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
   const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getThumbnail?thumbnail=' + thumbnail + '&sign=' + sign
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getThumbnail?thumbnail=' + encodeURIComponent(thumbnail) + '&sign=' + encodeURIComponent(sign)
 }
 
 /**
@@ -192,7 +213,7 @@ export const getImageUrl = (id: number): string => {
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
   const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&sign=' + sign
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getImage?id=' + id + '&sign=' + encodeURIComponent(sign)
 }
 
 /**
@@ -218,7 +239,7 @@ export const getVideoUrl = (id: number): string => {
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
   const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getVideo?id=' + id + '&sign=' + sign
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getVideo?id=' + id + '&sign=' + encodeURIComponent(sign)
 }
 
 /**
@@ -244,15 +265,22 @@ export const getFileUrl = (id: number): string => {
   const tokenString = tokenName + ':' + tokenPrefix + ' ' + token
   const sign = btoa(tokenString)
 
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getFile?id=' + id + '&sign=' + sign
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/getFile?id=' + id + '&sign=' + encodeURIComponent(sign)
 }
 
 /**
- * 获取下载链接
+ * 获取下载URL
+ */
+export const getDownloadUrl = (sign: string): string => {
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/download?sign=' + sign
+}
+
+/**
+ * 创建下载（自动判断直下或任务）
  * @param ids
  */
-export const createDownloadSign = (ids: string): AxiosPromise => {
-  const url = baseUrl + '/createDownloadSign'
+export const createDownload = (ids: string): AxiosPromise<DownloadCreateResponse> => {
+  const url = baseUrl + '/createDownload'
   const data = { ids: ids }
 
   return httpInstance.post(url, data, {
@@ -261,8 +289,73 @@ export const createDownloadSign = (ids: string): AxiosPromise => {
 }
 
 /**
- * 获取下载URL
+ * 创建文件直链
+ * @param data
  */
-export const getDownloadUrl = (sign: string): string => {
-  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/download?sign=' + sign
+export const createDirectLink = (data: CreateDirectLinkRequest): AxiosPromise<CreateDirectLinkResponse> => {
+  const url = baseUrl + '/createDirectLink'
+  return httpInstance.post(url, data, {
+    showSuccessMsg: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 撤销文件直链
+ * @param data
+ */
+export const revokeDirectLink = (data: RevokeDirectLinkRequest): AxiosPromise => {
+  const url = baseUrl + '/revokeDirectLink'
+  return httpInstance.post(url, data, {
+    showSuccessMsg: true
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 获取文件直链URL
+ */
+export const getDirectLinkUrl = (token: string, type: 'file' | 'image' | 'video' = 'file'): string => {
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/direct?token=' + encodeURIComponent(token) + '&type=' + encodeURIComponent(type)
+}
+
+/**
+ * 分页获取直链记录
+ * @param params
+ */
+export const getDirectLinkListByPage = (params: GetDirectLinkListByPageRequest): AxiosPromise<GetDirectLinkListByPageResponse> => {
+  const url = baseUrl + '/getDirectLinkListByPage'
+  return httpInstance.get(url, {
+    params,
+    showSuccessMsg: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 更新直链有效期
+ * @param data
+ */
+export const updateDirectLinkExpire = (data: UpdateDirectLinkExpireRequest): AxiosPromise<CreateDirectLinkResponse> => {
+  const url = baseUrl + '/updateDirectLinkExpire'
+  return httpInstance.post(url, data, {
+    showSuccessMsg: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 获取下载任务状态
+ * @param taskId
+ */
+export const getDownloadTask = (taskId: string): AxiosPromise<DownloadTaskStatusResponse> => {
+  const url = baseUrl + '/getDownloadTask'
+  return httpInstance.get(url, {
+    params: { taskId },
+    showSuccessMsg: false,
+    showLoading: false
+  } as NetdiskInternalAxiosRequestConfig)
+}
+
+/**
+ * 获取下载任务文件URL
+ */
+export const getDownloadTaskFileUrl = (sign: string): string => {
+  return import.meta.env.VITE_HTTP_BASE_URL + baseUrl + '/downloadTaskFile?sign=' + sign
 }

@@ -76,6 +76,16 @@ export enum ResultErrorMsgEnum {
   ERROR_FILE_NAME_EMPTY = '文件(夹)名称不能为空',
 
   /**
+   * 文件名称为空错误
+   */
+  ERROR_FILE_NAME_ONLY_EMPTY = '文件名称不能为空',
+
+  /**
+   * 文件夹名称为空错误
+   */
+  ERROR_FOLDER_NAME_EMPTY = '文件夹名称不能为空',
+
+  /**
    * 文件(夹)名称格式错误
    */
   ERROR_FILE_NAME_FORMAT = '文件(夹)名称不能包含<>|*?/',

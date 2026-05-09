@@ -16,19 +16,22 @@
                   :fetch="loadDataList" :initFetch="false" :loading="loading"
                   :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
-                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" 
+                  @set-storage-source="setStorageSource" @create-direct-link="handleCreateDirectLink" />
         <!-- 缩略模式 -->
         <GridView ref="thumbnailViewRef" v-else-if="netdiskConfig.displayMode.id === Thumbnail.id"
                   :width="128" :height="170" :mode="0"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
-                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" 
+                  @set-storage-source="setStorageSource" @create-direct-link="handleCreateDirectLink" />
         <!-- 大图模式 -->
         <GridView ref="largeViewRef" v-else-if="netdiskConfig.displayMode.id === Large.id"
                   :width="168" :height="245" :mode="1"
                   :dataSource="tableData" :fetch="loadDataList" :loading="loading" :selectedIds="selectedIds"
                   @update-selected="updateSelected" @click="click" @download="download" @del-file="delFile"
-                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" />
+                  @show-edit-panel="showEditPanel" @move-file="moveFile" @copy-file="copyFile" 
+                  @set-storage-source="setStorageSource" @create-direct-link="handleCreateDirectLink" />
       </div>
       <div class="no-data" v-else>
         <div class="no-data-inner">
@@ -51,6 +54,8 @@
     <FolderSelect ref="folderSelectRef" @folderSelect="handleMoveOrCopyCallback" />
     <!-- 预览 -->
     <Preview ref="previewRef" />
+    <!-- 设置存储源对话框 -->
+    <SetStorageSourceDialog ref="setStorageSourceDialogRef" @success="reload" />
     <!-- 分享 -->
     <!--    <ShareFile ref="shareFileRef"></ShareFile>-->
   </div>
@@ -65,8 +70,8 @@ import {
   del,
   move,
   copy,
-  createDownloadSign,
-  getDownloadUrl
+  createDirectLink,
+  getDirectLinkUrl
 } from '@/api/v1/file'
 import type {
   GetFileListByPageRequest,
@@ -87,17 +92,20 @@ import { useUserStore } from '@/stores/user'
 import { RegexEnum } from '@/enums/RegexEnum'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
 import { useSystemStore } from '@/stores/system'
+import { useUploaderStore } from '@/stores/uploader'
 import { List, Thumbnail, Large } from '@/enums/DisplayModeEnum'
 import ListView from '@/views/netdisk/components/FileList/components/ListView.vue'
 import GridView from '@/views/netdisk/components/FileList/components/GridView.vue'
 import ActionBar from '@/views/netdisk/components/FileList/components/ActionBar.vue'
 import NavigationActionBar from '@/views/netdisk/components/FileList/components/NavigationActionBar.vue'
-import { FOLDER, NO_DATA, FILE } from '@/enums/IconEnum'
+import SetStorageSourceDialog from '@/views/netdisk/components/FileList/components/SetStorageSourceDialog.vue'
+import { FOLDER, NO_DATA, FILE, IMAGE, VIDEO } from '@/enums/IconEnum'
 
 /**
  * 从pinia获取用户数据
  */
 const userStore = useUserStore()
+const uploaderStore = useUploaderStore()
 
 /**
  * 获取系统配置
@@ -117,7 +125,7 @@ const route = useRoute()
 const tableData = ref<GetFileListByPageResponse>({
   list: [],
   pageNum: 1,
-  pageSize: 50,
+  pageSize: 100,
   total: 0,
   totalPage: 0
 })
@@ -167,7 +175,7 @@ const loadDataList = () => {
         tableData.value = {
           list: [],
           pageNum: 1,
-          pageSize: 50,
+          pageSize: 100,
           total: 0,
           totalPage: 0
         }
@@ -213,6 +221,7 @@ const showEditPanel = (index: number) => {
   let message = '新建文件夹'
   let inputValue = '新建文件夹'
   let selectEndIndex = inputValue.length
+  let isFile = false // 标识是否为文件，false 表示文件夹
 
   // 如果是重命名
   if (index !== -1) {
@@ -227,10 +236,13 @@ const showEditPanel = (index: number) => {
     selectEndIndex = inputValue.length
 
     if (currentData.itemType == 1) {
+      isFile = true // 文件
       let lastIndex = inputValue.lastIndexOf('.')
       if (lastIndex != -1) {
         selectEndIndex = lastIndex
       }
+    } else {
+      isFile = false // 文件夹
     }
   }
 
@@ -243,7 +255,8 @@ const showEditPanel = (index: number) => {
       // 校验名称格式
       const regex = new RegExp(RegexEnum.REGEX_FILE_NAME)
       if (!value) {
-        return ResultErrorMsgEnum.ERROR_FILE_NAME_EMPTY
+        // 根据是文件还是文件夹返回不同的错误提示
+        return isFile ? ResultErrorMsgEnum.ERROR_FILE_NAME_ONLY_EMPTY : ResultErrorMsgEnum.ERROR_FOLDER_NAME_EMPTY
       } else if (value.length > 255) {
         return ResultErrorMsgEnum.ERROR_FILE_NAME_LENGTH as string
       } else if (!regex.test(value)) {
@@ -291,12 +304,42 @@ const showEditPanel = (index: number) => {
   })
 
   nextTick().then(() => {
-    const inputElement = document.querySelector('.el-message-box__input input') as HTMLInputElement
-    if (inputElement) {
-      // 选择输入框中的文字
-      inputElement.select()
-      inputElement.setSelectionRange(0, selectEndIndex)
-    }
+    // 等待 MessageBox 完全渲染
+    setTimeout(() => {
+      const inputElement = document.querySelector('.el-message-box__input input') as HTMLInputElement
+      if (inputElement) {
+        // 保存原始的 select 方法
+        const originalSelect = inputElement.select.bind(inputElement)
+        
+        // 覆盖 select 方法，使其使用我们的选中范围而不是全选
+        inputElement.select = function() {
+          inputElement.setSelectionRange(0, selectEndIndex)
+        }
+        
+        // 立即设置选中范围
+        inputElement.setSelectionRange(0, selectEndIndex)
+        inputElement.focus()
+        
+        // 监听输入框的 focus 事件，确保聚焦时使用我们的选中范围
+        const handleFocus = () => {
+          // 使用 requestAnimationFrame 确保在浏览器下一帧执行
+          requestAnimationFrame(() => {
+            inputElement.setSelectionRange(0, selectEndIndex)
+          })
+        }
+        
+        inputElement.addEventListener('focus', handleFocus)
+        
+        // 清理：恢复原始方法并移除事件监听
+        const cleanup = () => {
+          inputElement.select = originalSelect
+          inputElement.removeEventListener('focus', handleFocus)
+        }
+        
+        // 500ms 后清理
+        setTimeout(cleanup, 500)
+      }
+    }, 50)
   })
 
 }
@@ -368,7 +411,7 @@ const handleMove = (targetPath: string) => {
   }
 
   const data: MoveRequest = {
-    sourceIds: currentMoveOrCopyFileIds.value.join(',')
+    sourceIds: currentMoveOrCopyFileIds.value
   }
 
   if (targetPath != null) {
@@ -417,7 +460,7 @@ const handleCopy = (targetPath: string) => {
   }
 
   const data: CopyRequest = {
-    sourceIds: currentMoveOrCopyFileIds.value.join(',')
+    sourceIds: currentMoveOrCopyFileIds.value
   }
 
   if (targetPath != null) {
@@ -477,7 +520,7 @@ const delFile = (userFileInfo: UserFileInfo) => {
 const handleDelete = (currentDelFileIds: Array<number>, message: string) => {
   Confirm(message, () => {
     const data: DeleteRequest = {
-      ids: currentDelFileIds.join(',')
+      ids: currentDelFileIds
     }
 
     del(data).then(() => {
@@ -510,7 +553,8 @@ const click = (userFile: UserFileInfo) => {
     return
   }
 
-  previewRef.value.showPreview(userFile, 0)
+  // 传递当前目录的所有文件列表，用于图片预览时的左右切换
+  previewRef.value.showPreview(userFile, 0, tableData.value.list)
 }
 
 // 下载文件
@@ -533,15 +577,11 @@ const download = (userFileInfo: UserFileInfo) => {
  */
 const handleDownload = (currentDownloadFileIds: Array<number>, type: number) => {
   if (type === 1) {
-    currentDownloadFileIds.forEach((id => {
-      createDownloadSign(id.toString()).then(({ data }) => {
-        window.open(getDownloadUrl(data))
-      })
-    }))
-  } else if (type === 2) {
-    createDownloadSign(currentDownloadFileIds.join(',')).then(({ data }) => {
-      window.open(getDownloadUrl(data))
+    currentDownloadFileIds.forEach((id) => {
+      uploaderStore.startDownloadByIds([id])
     })
+  } else if (type === 2) {
+    uploaderStore.startDownloadByIds(currentDownloadFileIds)
   }
 }
 
@@ -550,6 +590,81 @@ const listViewRef = ref()
 const thumbnailViewRef = ref()
 
 const largeViewRef = ref()
+
+const setStorageSourceDialogRef = ref()
+
+/**
+ * 设置存储源
+ */
+const setStorageSource = (userFile: UserFileInfo) => {
+  if (!userFile || !userFile.id) {
+    ElMessage.warning('请选择有效的文件夹')
+    return
+  }
+  
+  if (userFile.itemType !== 0) {
+    ElMessage.warning('只能为文件夹设置存储源')
+    return
+  }
+  
+  setStorageSourceDialogRef.value.show({
+    id: userFile.id,
+    name: userFile.name,
+    storageSourceId: userFile.storageSourceId
+  })
+}
+
+/**
+ * 生成文件直链
+ */
+const handleCreateDirectLink = (userFileInfo: UserFileInfo) => {
+  if (!userFileInfo || !userFileInfo.id || userFileInfo.itemType !== 1) {
+    ElMessage.warning('请选择有效的文件')
+    return
+  }
+
+  ElMessageBox.prompt('请输入直链有效期（天，0 表示永久）', '生成文件直链', {
+    confirmButtonText: '生成',
+    cancelButtonText: '取消',
+    closeOnClickModal: false,
+    inputValue: '7',
+    inputValidator: (value) => {
+      if (value == null || value.trim() === '') {
+        return '请输入有效期'
+      }
+      const days = Number(value)
+      if (Number.isNaN(days) || days < 0 || !Number.isInteger(days)) {
+        return '有效期必须是大于等于 0 的整数'
+      }
+      return true
+    }
+  }).then(async ({ value }) => {
+    const expireDays = Number(value)
+    const { data } = await createDirectLink({
+      id: userFileInfo.id as number,
+      expireDays
+    })
+
+    const suffix = (userFileInfo.suffix || '').toLowerCase()
+    let directType: 'file' | 'image' | 'video' = 'file'
+    if (IMAGE.suffixSet.has(suffix)) {
+      directType = 'image'
+    } else if (VIDEO.suffixSet.has(suffix)) {
+      directType = 'video'
+    }
+
+    const directLink = getDirectLinkUrl(data.token, directType)
+    try {
+      await navigator.clipboard.writeText(directLink)
+      ElMessage.success('直链已生成并复制到剪贴板')
+    } catch (e) {
+      ElMessage.success('直链已生成')
+      ElMessageBox.alert(directLink, '直链地址', {
+        confirmButtonText: '知道了'
+      })
+    }
+  })
+}
 
 /**
  * 清除选中

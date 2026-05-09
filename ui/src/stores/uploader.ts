@@ -1,443 +1,76 @@
 /**
- * 管理用户相关数据
+ * 上传任务状态管理
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { UploadFileItem } from '@/views/netdisk/components/Uploader/types'
-import { STATUS } from '@/views/netdisk/components/Uploader/types'
 import SparkMD5 from 'spark-md5'
-import type { UploadFileRequest } from '@/api/v1/file/types'
-import { uploadFile, cancelUploadFile } from '@/api/v1/file'
+import type { DownloadTaskItem, UploadFileItem } from '@/views/netdisk/components/Uploader/types'
+import { DOWNLOAD_STATUS, STATUS } from '@/views/netdisk/components/Uploader/types'
+import type {
+  UploadChunkRequest,
+  UploadCompleteRequest,
+  UploadInitRequest
+} from '@/api/v1/file/types'
+import {
+  createDownload,
+  getDownloadTask,
+  getDownloadTaskFileUrl,
+  getDownloadUrl,
+  uploadCancel,
+  uploadChunk,
+  uploadComplete,
+  uploadInit
+} from '@/api/v1/file'
 import { useUserStore } from '@/stores/user'
 
-export const useUploaderStore = defineStore('uploader', () => {
+const MAX_CONCURRENT = 3
+const MAX_RETRY = 3
+const RETRY_BASE_DELAY = 1000
+const CHUNK_SIZE = 1024 * 1024 * 5
 
-  // 从pinia获取用户数据
+export const useUploaderStore = defineStore('uploader', () => {
   const userStore = useUserStore()
 
-  // 上传中文件列表
   const uploadingFileList = ref<Array<UploadFileItem>>([])
-
-  // 上传成功文件列表
   const uploadSuccessFileList = ref<Array<UploadFileItem>>([])
-
-  // 上传失败文件列表
   const uploadFailFileList = ref<Array<UploadFileItem>>([])
-
-  /**
-   * 是否展示上传页面状态，默认为false
-   */
+  const downloadingTaskList = ref<Array<DownloadTaskItem>>([])
+  const downloadSuccessTaskList = ref<Array<DownloadTaskItem>>([])
+  const downloadFailTaskList = ref<Array<DownloadTaskItem>>([])
   const isShowUploader = ref(false)
 
-  /**
-   * 修改是否展示上传页面状态
-   */
+  const runningCount = ref(0)
+  const runningSet = new Set<string>()
+  const abortControllerMap = new Map<string, AbortController>()
+
   const updateShowUploader = (value: boolean) => {
     isShowUploader.value = value
   }
 
-  /**
-   * 上传中数量
-   */
-  const uploadingNum = ref<number>(0)
+  const getUploadingFileByUid = (uid: string): UploadFileItem | undefined =>
+    uploadingFileList.value.find(item => item.uid === uid)
 
-  /**
-   * 分片大小
-   */
-  const chunkSize = 1024 * 1024 * 5
+  const getUploadSuccessFileByUid = (uid: string): UploadFileItem | undefined =>
+    uploadSuccessFileList.value.find(item => item.uid === uid)
 
-  // TODO 确定delList的类型
-  const delList = ref<string[]>([])
+  const getUploadFailFileByUid = (uid: string): UploadFileItem | undefined =>
+    uploadFailFileList.value.find(item => item.uid === uid)
 
-  /**
-   * Uploader的增加上传文件的方法
-   */
-  const addUploadFile = async (file: File, uid: string, path: string | null, uploadedCallback: (uploadPath?: string) => void) => {
-    isShowUploader.value = true
+  const getDownloadingTaskById = (taskId: string): DownloadTaskItem | undefined =>
+    downloadingTaskList.value.find(item => item.taskId === taskId)
 
-    const fileItem: UploadFileItem = {
-      // 文件，文件大小，文件流，文件名。。。
-      file: file,
-      // 文件uid
-      uid: uid,
-      // MD5进度
-      md5Progress: 0,
-      // MD5值
-      md5: '',
-      // 文件名
-      fileName: file.webkitRelativePath ? file.webkitRelativePath : file.name,
-      // 上传状态
-      status: STATUS.init.value,
-      // 已上传大小
-      uploadedSize: 0,
-      // 文件总大小
-      totalSize: file.size,
-      // 上传进度
-      uploadProgress: 0,
-      // 当前分片索引
-      currentChunkIndex: 0,
-      // 所属文件夹ID
-      path: path,
-      // 错误信息
-      errorMsg: null,
-      // 任务ID
-      taskId: '',
-      // 回调方法
-      uploadedCallback: uploadedCallback
-    }
+  const getDownloadFailTaskById = (taskId: string): DownloadTaskItem | undefined =>
+    downloadFailTaskList.value.find(item => item.taskId === taskId)
 
-    // 向列表第一条插入元素
-    uploadingFileList.value.push(fileItem)
-    // if (fileItem.totalSize == 0) {
-    //   fileItem.status = STATUS.empty_file.value
-    //   return
-    // }
-
-    // 最大同时上传数量 3
-    if (uploadingNum.value >= 3) {
-      fileItem.status = STATUS.wait.value
-    } else {
-      uploadingNum.value++
-
-      // 上传文件
-      await md5AndUploadFile(uid, 0, uploadedCallback)
-    }
-  }
-
-  /**
-   * 获取上传中文件
-   * @param uid
-   */
-  const getUploadingFileByUid = (uid: string): UploadFileItem | undefined => {
-    const fileItem = uploadingFileList.value.find((item => {
-      return item.uid === uid
-    }))
-    return fileItem
-  }
-
-  /**
-   * 获取上传成功文件
-   * @param uid
-   */
-  const getUploadSuccessFileByUid = (uid: string): UploadFileItem | undefined => {
-    const fileItem = uploadSuccessFileList.value.find((item => {
-      return item.uid === uid
-    }))
-    return fileItem
-  }
-
-  /**
-   * 获取上传失败文件
-   * @param uid
-   */
-  const getUploadFailFileByUid = (uid: string): UploadFileItem | undefined => {
-    const fileItem = uploadFailFileList.value.find((item => {
-      return item.uid === uid
-    }))
-    return fileItem
-  }
-
-  /**
-   * MD5并上传文件
-   */
-  const md5AndUploadFile = async (uid: string, chunkIndex: number, uploadedCallback: (uploadPath?: string) => void) => {
-
-    const file = getUploadingFileByUid(uid)
-
-    if (!file) {
+  const updateDownloadingTask = (taskId: string, updater: (current: DownloadTaskItem) => DownloadTaskItem) => {
+    const index = downloadingTaskList.value.findIndex(item => item.taskId === taskId)
+    if (index === -1) {
       return
     }
-
-    if (chunkIndex == 0) {
-      file.status = STATUS.init.value
-      // 计算MD5
-      const md5FileUid = await computeMD5(file)
-      if (md5FileUid == null) {
-        return
-      }
-    }
-
-    // 上传文件
-    await handleUploadFile(uid, chunkIndex, uploadedCallback)
+    const current = downloadingTaskList.value[index]
+    downloadingTaskList.value[index] = updater({ ...current })
   }
 
-  /**
-   * 计算MD5
-   * @param fileItem
-   */
-  const computeMD5 = (fileItem: UploadFileItem) => {
-    const file = fileItem.file
-    const blobSlice = File.prototype.slice || (File as any).prototype.mozSlice || (File as any).prototype.webkitSlice
-    const chunks = Math.ceil(file.size / chunkSize)
-    let currentChunk = 0
-    const spark = new SparkMD5.ArrayBuffer()
-    const fileReader = new FileReader()
-
-    const loadNext = () => {
-      const start = currentChunk * chunkSize
-      const end = start + chunkSize >= file.size ? file.size : start + chunkSize
-      fileReader.readAsArrayBuffer(blobSlice.call(file, start, end))
-    }
-    loadNext()
-
-    return new Promise((resolve, reject) => {
-      const resultFile = getUploadingFileByUid(fileItem.uid)
-
-      if (!resultFile) {
-        throw new Error('File is not found')
-      }
-
-      fileReader.onload = (progressEvent: ProgressEvent<FileReader>) => {
-        const target = progressEvent.target as FileReader
-        spark.append(target.result)
-        currentChunk++
-        if (currentChunk < chunks) {
-          // console.log(`第${file.name},${currentChunk}分片解析完成，开始第${currentChunk + 1}分片解析`);
-          resultFile.md5Progress = Math.ceil((currentChunk / chunks) * 100)
-          loadNext()
-        } else {
-          const md5 = spark.end()
-          spark.destroy()
-          resultFile.md5Progress = 100
-          resultFile.status = STATUS.uploading.value
-          resultFile.md5 = md5
-          resolve(fileItem.uid)
-        }
-      }
-      fileReader.onerror = () => {
-        resultFile.md5Progress = -1
-        resultFile.status = STATUS.fail.value
-        resolve(fileItem.uid)
-      }
-    }).catch((error) => {
-      // console.log(error);
-      return Promise.resolve(null)
-    })
-  }
-
-  /**
-   * 上传文件
-   * @param uid
-   * @param chunkIndex
-   * @param uploadedCallback
-   */
-  const handleUploadFile = async (uid: string, chunkIndex: number, uploadedCallback: (uploadPath?: string) => void) => {
-    chunkIndex = chunkIndex ? chunkIndex : 0
-    // 分片上传
-    const currentFile = getUploadingFileByUid(uid)
-    if (currentFile) {
-      const file = currentFile.file
-      const fileSize = currentFile.totalSize
-      let chunks = Math.ceil(fileSize / chunkSize)
-      chunks = chunks === 0 ? 1 : chunks
-      let shouldBreak = false
-      for (let i = chunkIndex; i < chunks; i++) {
-        if (shouldBreak) {
-          break
-        }
-
-        const delIndex = delList.value.indexOf(uid)
-        if (delIndex != -1) {
-          delList.value.splice(delIndex, 1)
-          break
-        }
-
-        const currentUploadFile = getUploadingFileByUid(uid)
-
-        if (currentUploadFile) {
-          if (currentUploadFile.status !== STATUS.uploading.value) {
-            break
-          }
-          const start = i * chunkSize
-          const end = start + chunkSize >= fileSize ? fileSize : start + chunkSize
-          const chunkFile = file.slice(start, end)
-
-          const uploadFileRequest: UploadFileRequest = {
-            taskId: currentFile.taskId,
-            fileName: file.name,
-            fileSize: file.size,
-            identifier: currentFile.md5,
-            chunkIndex: i,
-            totalChunks: chunks
-          }
-
-          if (currentFile.path) {
-            uploadFileRequest.path = currentFile.path
-          }
-
-          if (file.webkitRelativePath) {
-            uploadFileRequest.relativePath = file.webkitRelativePath
-          }
-
-          await uploadFile(uploadFileRequest, chunkFile, (progressEvent) => {
-            let loaded = progressEvent.loaded
-            if (loaded > fileSize) {
-              loaded = fileSize
-            }
-            currentUploadFile.uploadedSize = i * chunkSize + loaded
-            const uploadProgress = Math.floor((currentUploadFile.uploadedSize / fileSize) * 100)
-            currentUploadFile.uploadProgress = uploadProgress ? uploadProgress : 0
-          }).then(({ data }) => {
-            currentUploadFile.taskId = data.taskId
-            let statusString = STATUS.fail.value
-            if (data.status === 0) {
-              statusString = STATUS.upload_seconds.value
-            } else if (data.status === 1) {
-              if (currentUploadFile.status === STATUS.pause.value) {
-                statusString = STATUS.pause.value
-              } else {
-                statusString = STATUS.uploading.value
-              }
-            } else if (data.status === 2) {
-              statusString = STATUS.upload_finish.value
-            } else if (data.status === 3) {
-              statusString = STATUS.fail.value
-            }
-
-            currentUploadFile.status = STATUS[statusString].value
-            currentUploadFile.currentChunkIndex = i
-            if (statusString == STATUS.upload_seconds.value || statusString == STATUS.upload_finish.value) {
-              currentUploadFile.uploadProgress = 100
-
-              // 将数据写入上传成功列表
-              uploadSuccessFileList.value.push(currentUploadFile)
-
-              // 从上传列表中去除
-              const index: number = uploadingFileList.value.findIndex((uploadFile) => uploadFile.uid === currentUploadFile.uid)
-              if (index !== -1) {
-                clearUploadRecord(currentUploadFile.uid, index, 1)
-              }
-
-              shouldBreak = true
-              // 执行回调
-              uploadedCallback(uploadFileRequest.path)
-              // 更新用户空间
-              userStore.handleGetUserSpaceUsage()
-            }
-
-            if (data.status === 0 || data.status === 2 || data.status === 3 || (data.status === 1 && currentUploadFile.status === STATUS.pause.value)) {
-              uploadingNum.value--
-              startOneWaitingUpload()
-            }
-          }).catch((error) => {
-            currentUploadFile.errorMsg = error.response.data.msg
-            currentUploadFile.status = STATUS.fail.value
-
-            // 将数据写入上传失败列表
-            uploadFailFileList.value.push(currentUploadFile)
-
-            // 从上传列表中去除
-            const index: number = uploadingFileList.value.findIndex((uploadFile) => uploadFile.uid === currentUploadFile.uid)
-            if (index !== -1) {
-              clearUploadRecord(currentUploadFile.uid, index, 1)
-            }
-
-            shouldBreak = true
-
-            uploadingNum.value--
-            startOneWaitingUpload()
-          })
-        }
-      }
-    }
-  }
-
-  /**
-   * 获取第一个等待中上传文件
-   */
-  const getFirstWaitingFile = () => {
-    const fileItem = uploadingFileList.value.find((item => item.status === STATUS.wait.value))
-    return fileItem
-  }
-
-  /**
-   * 开始一个等待中上传
-   */
-  const startOneWaitingUpload = () => {
-    const file = getFirstWaitingFile()
-    if (file && uploadingNum.value < 3) {
-      uploadingNum.value++
-
-      file.status = STATUS.uploading.value
-      md5AndUploadFile(file.uid, file.currentChunkIndex, file.uploadedCallback)
-    }
-  }
-
-  /**
-   * 开始上传
-   * @param uid 文件ID
-   * @param type 操作类型 1 暂停状态重新开始 2 取消状态重新开始
-   */
-  const startUpload = (uid: string, type: number) => {
-    let file: UploadFileItem | undefined
-    if (type === 1) {
-      file = getUploadingFileByUid(uid)
-    } else if (type === 2) {
-      file = getUploadFailFileByUid(uid)
-    }
-
-    if (file && (file.status === STATUS.pause.value || file.status === STATUS.cancel.value)) {
-      if (file.status === STATUS.cancel.value) {
-        // 将数据写入上传中列表
-        uploadingFileList.value.push(file)
-
-        // 从上传失败列表中去除
-        const index: number = uploadFailFileList.value.findIndex((uploadFile) => file && (uploadFile.uid === file.uid))
-        if (index !== -1) {
-          clearUploadRecord(file.uid, index, 3)
-        }
-      }
-
-      if (uploadingNum.value >= 3) {
-        file.status = STATUS.wait.value
-      } else {
-        uploadingNum.value++
-        file.status = STATUS.uploading.value
-        md5AndUploadFile(uid, file.currentChunkIndex, file.uploadedCallback)
-      }
-    }
-  }
-
-  /**
-   * 暂停上传
-   */
-  const pauseUpload = (uid: string) => {
-    const file = getUploadingFileByUid(uid)
-    if (file && file.status === STATUS.uploading.value) {
-      file.status = STATUS.pause.value
-    }
-  }
-
-  /**
-   * 取消上传
-   */
-  const cancelUpload = (uid: string) => {
-    const file = getUploadingFileByUid(uid)
-    if (file && file.status === STATUS.pause.value) {
-      cancelUploadFile(file.taskId).then(() => {
-        file.status = STATUS.cancel.value
-        file.currentChunkIndex = 0
-        file.uploadProgress = 0
-        file.uploadedSize = 0
-
-        // 将数据写入上传失败列表
-        uploadFailFileList.value.push(file)
-
-        // 从上传列表中去除
-        const index: number = uploadingFileList.value.findIndex((uploadFile) => uploadFile.uid === file.uid)
-        if (index !== -1) {
-          clearUploadRecord(file.uid, index, 1)
-        }
-      })
-    }
-  }
-
-  /**
-   * 清除上传记录
-   * @param uid 文件ID
-   * @param index 索引位置
-   * @param type 操作类型 1 上传中 2 上传成功 3 上传失败
-   */
   const clearUploadRecord = (uid: string, index: number, type: number) => {
     if (type === 1) {
       const file = getUploadingFileByUid(uid)
@@ -451,7 +84,600 @@ export const useUploaderStore = defineStore('uploader', () => {
     }
   }
 
-  // 以对象的格式把state和action返回
+  const clearDownloadRecord = (taskId: string, index: number, type: number) => {
+    if (type === 1) {
+      const task = getDownloadingTaskById(taskId)
+      task && downloadingTaskList.value.splice(index, 1)
+    } else if (type === 2) {
+      const task = downloadSuccessTaskList.value.find(item => item.taskId === taskId)
+      task && downloadSuccessTaskList.value.splice(index, 1)
+    } else if (type === 3) {
+      const task = getDownloadFailTaskById(taskId)
+      task && downloadFailTaskList.value.splice(index, 1)
+    }
+  }
+
+  const sleep = async (ms: number) => {
+    await new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  const calcChunkCount = (size: number): number => {
+    const chunks = Math.ceil(size / CHUNK_SIZE)
+    return chunks === 0 ? 1 : chunks
+  }
+
+  const normalizeErrorMsg = (error: any, fallback = '上传失败'): string => {
+    if (error?.response?.data?.msg) {
+      return error.response.data.msg
+    }
+    if (error?.message) {
+      return error.message
+    }
+    return fallback
+  }
+
+  const updateProgress = (fileItem: UploadFileItem, uploadedSize: number) => {
+    const safeUploadedSize = Math.min(uploadedSize, fileItem.totalSize)
+    fileItem.uploadedSize = safeUploadedSize
+    fileItem.uploadProgress = Math.floor((safeUploadedSize / fileItem.totalSize) * 100) || 0
+
+    const currentTime = Date.now()
+    const timeDiff = (currentTime - (fileItem.lastUpdateTime || currentTime)) / 1000
+    if (timeDiff > 0.5) {
+      const sizeDiff = safeUploadedSize - (fileItem.lastUploadedSize || 0)
+      const speed = Math.floor(sizeDiff / timeDiff)
+      fileItem.uploadSpeed = speed > 0 ? speed : 0
+      if (speed > 0) {
+        const remainingSize = fileItem.totalSize - safeUploadedSize
+        fileItem.remainingTime = Math.ceil(remainingSize / speed)
+      }
+      fileItem.lastUpdateTime = currentTime
+      fileItem.lastUploadedSize = safeUploadedSize
+    }
+  }
+
+  const releaseRunning = (uid: string) => {
+    if (runningSet.has(uid)) {
+      runningSet.delete(uid)
+      runningCount.value = Math.max(0, runningCount.value - 1)
+    }
+  }
+
+  const moveToFailList = (fileItem: UploadFileItem, status: string, errorMsg?: string) => {
+    fileItem.status = status
+    fileItem.errorMsg = errorMsg || fileItem.errorMsg || '上传失败'
+    releaseRunning(fileItem.uid)
+    abortControllerMap.delete(fileItem.uid)
+
+    const index = uploadingFileList.value.findIndex(item => item.uid === fileItem.uid)
+    if (index !== -1) {
+      uploadingFileList.value.splice(index, 1)
+    }
+
+    if (!uploadFailFileList.value.find(item => item.uid === fileItem.uid)) {
+      uploadFailFileList.value.push(fileItem)
+    }
+  }
+
+  const moveToSuccessList = (fileItem: UploadFileItem) => {
+    fileItem.status = STATUS.upload_finish.value
+    fileItem.uploadProgress = 100
+    fileItem.uploadedSize = fileItem.totalSize
+    fileItem.finishTime = new Date().toLocaleString()
+    fileItem.uploadSpeed = 0
+    fileItem.remainingTime = 0
+
+    releaseRunning(fileItem.uid)
+    abortControllerMap.delete(fileItem.uid)
+
+    const index = uploadingFileList.value.findIndex(item => item.uid === fileItem.uid)
+    if (index !== -1) {
+      uploadingFileList.value.splice(index, 1)
+    }
+
+    uploadSuccessFileList.value.unshift(fileItem)
+  }
+
+  const computeMD5 = (fileItem: UploadFileItem) => {
+    const file = fileItem.file
+    const blobSlice = File.prototype.slice || (File as any).prototype.mozSlice || (File as any).prototype.webkitSlice
+    const chunks = calcChunkCount(file.size)
+    let currentChunk = 0
+    const spark = new SparkMD5.ArrayBuffer()
+    const fileReader = new FileReader()
+
+    const loadNext = () => {
+      const start = currentChunk * CHUNK_SIZE
+      const end = start + CHUNK_SIZE >= file.size ? file.size : start + CHUNK_SIZE
+      fileReader.readAsArrayBuffer(blobSlice.call(file, start, end))
+    }
+
+    loadNext()
+
+    return new Promise<string | null>((resolve) => {
+      const resultFile = getUploadingFileByUid(fileItem.uid)
+      if (!resultFile) {
+        resolve(null)
+        return
+      }
+
+      fileReader.onload = (progressEvent: ProgressEvent<FileReader>) => {
+        const target = progressEvent.target as FileReader
+        spark.append(target.result)
+        currentChunk++
+        if (currentChunk < chunks) {
+          resultFile.md5Progress = Math.ceil((currentChunk / chunks) * 100)
+          loadNext()
+        } else {
+          const md5 = spark.end()
+          spark.destroy()
+          resultFile.md5Progress = 100
+          resultFile.md5 = md5
+          resolve(md5)
+        }
+      }
+
+      fileReader.onerror = () => {
+        resultFile.md5Progress = -1
+        resolve(null)
+      }
+    }).catch(() => Promise.resolve(null))
+  }
+
+  const uploadOneChunkWithRetry = async (fileItem: UploadFileItem, chunkIndex: number, totalChunks: number): Promise<void> => {
+    let attempt = 0
+    while (attempt <= MAX_RETRY) {
+      const currentUploadFile = getUploadingFileByUid(fileItem.uid)
+      if (!currentUploadFile) {
+        throw new Error('文件不存在')
+      }
+
+      if (currentUploadFile.status !== STATUS.uploading.value) {
+        throw new Error('上传已暂停或取消')
+      }
+
+      const start = chunkIndex * CHUNK_SIZE
+      const end = start + CHUNK_SIZE >= fileItem.totalSize ? fileItem.totalSize : start + CHUNK_SIZE
+      const chunkFile = fileItem.file.slice(start, end)
+
+      const request: UploadChunkRequest = {
+        taskId: fileItem.taskId,
+        fileName: fileItem.file.name,
+        fileSize: fileItem.file.size,
+        identifier: fileItem.md5,
+        chunkIndex,
+        totalChunks
+      }
+
+      const controller = new AbortController()
+      abortControllerMap.set(fileItem.uid, controller)
+
+      try {
+        await uploadChunk(
+          request,
+          chunkFile,
+          (progressEvent) => {
+            const loaded = Math.min(progressEvent.loaded, chunkFile.size)
+            const uploadedSize = chunkIndex * CHUNK_SIZE + loaded
+            updateProgress(fileItem, uploadedSize)
+          },
+          controller.signal
+        )
+        fileItem.currentChunkIndex = chunkIndex + 1
+        return
+      } catch (error: any) {
+        if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+          throw error
+        }
+
+        if (attempt >= MAX_RETRY) {
+          throw error
+        }
+
+        const delay = RETRY_BASE_DELAY * Math.pow(2, attempt)
+        await sleep(delay)
+        attempt++
+      }
+    }
+  }
+
+  const startFileUpload = async (fileItem: UploadFileItem) => {
+    if (runningSet.has(fileItem.uid)) {
+      return
+    }
+    runningSet.add(fileItem.uid)
+    runningCount.value++
+
+    try {
+      fileItem.status = STATUS.uploading.value
+      fileItem.errorMsg = null
+
+      if (!fileItem.md5) {
+        fileItem.status = STATUS.init.value
+        const md5 = await computeMD5(fileItem)
+        if (!md5) {
+          moveToFailList(fileItem, STATUS.fail.value, 'MD5计算失败')
+          return
+        }
+        fileItem.status = STATUS.uploading.value
+      }
+
+      const totalChunks = calcChunkCount(fileItem.totalSize)
+      const initRequest: UploadInitRequest = {
+        taskId: fileItem.taskId || undefined,
+        path: fileItem.path || undefined,
+        relativePath: fileItem.file.webkitRelativePath || undefined,
+        fileName: fileItem.file.name,
+        fileSize: fileItem.file.size,
+        identifier: fileItem.md5,
+        totalChunks
+      }
+
+      const initResponse = await uploadInit(initRequest)
+      const initData = initResponse.data
+      fileItem.taskId = initData.taskId
+
+      if (initData.status === 0) {
+        fileItem.status = STATUS.upload_seconds.value
+        fileItem.uploadProgress = 100
+        fileItem.uploadedSize = fileItem.totalSize
+        fileItem.finishTime = new Date().toLocaleString()
+        releaseRunning(fileItem.uid)
+        const index = uploadingFileList.value.findIndex(item => item.uid === fileItem.uid)
+        if (index !== -1) {
+          uploadingFileList.value.splice(index, 1)
+        }
+        uploadSuccessFileList.value.unshift(fileItem)
+        fileItem.uploadedCallback(fileItem.path || undefined)
+        userStore.handleGetUserSpaceUsage()
+        return
+      }
+
+      const uploadedChunks = initData.uploadedChunks || []
+      const maxUploadedChunk = uploadedChunks.length > 0 ? Math.max(...uploadedChunks) : -1
+      fileItem.currentChunkIndex = maxUploadedChunk + 1
+      updateProgress(fileItem, initData.uploadedSize || 0)
+
+      for (let i = fileItem.currentChunkIndex; i < totalChunks; i++) {
+        if (fileItem.status !== STATUS.uploading.value) {
+          throw new Error('上传已暂停或取消')
+        }
+        await uploadOneChunkWithRetry(fileItem, i, totalChunks)
+      }
+
+      const completeRequest: UploadCompleteRequest = {
+        taskId: fileItem.taskId,
+        path: fileItem.path || undefined,
+        fileName: fileItem.file.name,
+        fileSize: fileItem.file.size,
+        identifier: fileItem.md5,
+        totalChunks
+      }
+      const completeResponse = await uploadComplete(completeRequest)
+      if (completeResponse.data.status === 2) {
+        moveToSuccessList(fileItem)
+        fileItem.uploadedCallback(fileItem.path || undefined)
+        userStore.handleGetUserSpaceUsage()
+      } else {
+        moveToFailList(fileItem, STATUS.fail.value, '上传完成确认失败')
+      }
+    } catch (error: any) {
+      if (fileItem.status === STATUS.pause.value) {
+        releaseRunning(fileItem.uid)
+        abortControllerMap.delete(fileItem.uid)
+      } else if (fileItem.status === STATUS.cancel.value) {
+        moveToFailList(fileItem, STATUS.cancel.value, '已取消')
+      } else {
+        moveToFailList(fileItem, STATUS.fail.value, normalizeErrorMsg(error))
+      }
+    } finally {
+      scheduleUpload()
+    }
+  }
+
+  const scheduleUpload = () => {
+    while (runningCount.value < MAX_CONCURRENT) {
+      const waitingFile = uploadingFileList.value.find(item => item.status === STATUS.wait.value)
+      if (!waitingFile) {
+        break
+      }
+      startFileUpload(waitingFile)
+    }
+  }
+
+  const addUploadFile = async (file: File, uid: string, path: string | null, uploadedCallback: (uploadPath?: string) => void) => {
+    isShowUploader.value = true
+
+    const fileItem: UploadFileItem = {
+      file,
+      uid,
+      md5Progress: 0,
+      md5: '',
+      fileName: file.webkitRelativePath ? file.webkitRelativePath : file.name,
+      status: STATUS.wait.value,
+      uploadedSize: 0,
+      totalSize: file.size,
+      uploadProgress: 0,
+      currentChunkIndex: 0,
+      path,
+      errorMsg: null,
+      taskId: '',
+      uploadedCallback,
+      uploadSpeed: 0,
+      remainingTime: 0,
+      lastUpdateTime: Date.now(),
+      lastUploadedSize: 0
+    }
+
+    uploadingFileList.value.push(fileItem)
+    scheduleUpload()
+  }
+
+  const pauseUpload = (uid: string) => {
+    const file = getUploadingFileByUid(uid)
+    if (!file) {
+      return
+    }
+    if (file.status === STATUS.uploading.value || file.status === STATUS.wait.value) {
+      file.status = STATUS.pause.value
+      const controller = abortControllerMap.get(uid)
+      controller?.abort()
+    }
+  }
+
+  const cancelUpload = (uid: string) => {
+    const file = getUploadingFileByUid(uid)
+    if (!file) {
+      return
+    }
+
+    file.status = STATUS.cancel.value
+    const controller = abortControllerMap.get(uid)
+    controller?.abort()
+
+    if (file.taskId) {
+      uploadCancel({ taskId: file.taskId }).catch(() => {
+        // 取消接口失败时，仅记录本地取消状态
+      })
+    }
+
+    moveToFailList(file, STATUS.cancel.value, '已取消')
+    scheduleUpload()
+  }
+
+  const startUpload = (uid: string, type: number) => {
+    let file: UploadFileItem | undefined
+    if (type === 1) {
+      file = getUploadingFileByUid(uid)
+    } else if (type === 2) {
+      file = getUploadFailFileByUid(uid)
+    }
+
+    if (!file) {
+      return
+    }
+
+    if (type === 2) {
+      file.currentChunkIndex = 0
+      file.uploadProgress = 0
+      file.uploadedSize = 0
+      file.uploadSpeed = 0
+      file.remainingTime = 0
+      file.lastUpdateTime = Date.now()
+      file.lastUploadedSize = 0
+      file.taskId = ''
+      file.errorMsg = null
+
+      const failIndex = uploadFailFileList.value.findIndex(item => item.uid === file?.uid)
+      if (failIndex !== -1) {
+        uploadFailFileList.value.splice(failIndex, 1)
+      }
+      uploadingFileList.value.push(file)
+    }
+
+    if (file.status === STATUS.pause.value || file.status === STATUS.fail.value || file.status === STATUS.cancel.value || file.status === STATUS.wait.value) {
+      file.status = STATUS.wait.value
+      scheduleUpload()
+    }
+  }
+
+  const startAllUpload = () => {
+    uploadingFileList.value.forEach(file => {
+      if (file.status === STATUS.pause.value || file.status === STATUS.wait.value) {
+        file.status = STATUS.wait.value
+      }
+    })
+    scheduleUpload()
+  }
+
+  const pauseAllUpload = () => {
+    uploadingFileList.value.forEach(file => {
+      if (file.status === STATUS.uploading.value || file.status === STATUS.wait.value) {
+        pauseUpload(file.uid)
+      }
+    })
+  }
+
+  const cancelAllUpload = () => {
+    const filesToCancel = [...uploadingFileList.value].filter(
+      file => file.status === STATUS.pause.value || file.status === STATUS.wait.value || file.status === STATUS.uploading.value
+    )
+    filesToCancel.forEach(file => {
+      cancelUpload(file.uid)
+    })
+  }
+
+  const clearAllSuccessRecord = () => {
+    uploadSuccessFileList.value = []
+  }
+
+  const restartAllFailedUpload = () => {
+    const filesToRestart = [...uploadFailFileList.value].filter(
+      file => file.status === STATUS.cancel.value || file.status === STATUS.fail.value
+    )
+
+    filesToRestart.forEach(file => {
+      const index = uploadFailFileList.value.findIndex(f => f.uid === file.uid)
+      if (index !== -1) {
+        uploadFailFileList.value.splice(index, 1)
+      }
+      file.currentChunkIndex = 0
+      file.uploadProgress = 0
+      file.uploadedSize = 0
+      file.uploadSpeed = 0
+      file.remainingTime = 0
+      file.lastUpdateTime = Date.now()
+      file.lastUploadedSize = 0
+      file.taskId = ''
+      file.errorMsg = null
+      file.status = STATUS.wait.value
+      uploadingFileList.value.push(file)
+    })
+
+    scheduleUpload()
+  }
+
+  const moveDownloadTaskToSuccess = (task: DownloadTaskItem, downloadSign: string, fileName?: string) => {
+    const successTask: DownloadTaskItem = {
+      ...task,
+      status: DOWNLOAD_STATUS.success.value,
+      progress: 100,
+      downloadSign,
+      fileName: fileName || task.fileName,
+      finishTime: new Date().toLocaleString()
+    }
+
+    const index = downloadingTaskList.value.findIndex(item => item.taskId === task.taskId)
+    if (index !== -1) {
+      downloadingTaskList.value.splice(index, 1)
+    }
+    downloadSuccessTaskList.value.unshift(successTask)
+  }
+
+  const moveDownloadTaskToFail = (task: DownloadTaskItem, errorMsg?: string) => {
+    const failTask: DownloadTaskItem = {
+      ...task,
+      status: DOWNLOAD_STATUS.fail.value,
+      errorMsg: errorMsg || '下载失败'
+    }
+    const index = downloadingTaskList.value.findIndex(item => item.taskId === task.taskId)
+    if (index !== -1) {
+      downloadingTaskList.value.splice(index, 1)
+    }
+    if (!downloadFailTaskList.value.find(item => item.taskId === failTask.taskId)) {
+      downloadFailTaskList.value.unshift(failTask)
+    }
+  }
+
+  const pollDownloadTaskStatus = async (task: DownloadTaskItem) => {
+    const maxPollCount = 600
+    let pollCount = 0
+    while (pollCount < maxPollCount) {
+      pollCount++
+      try {
+        const { data } = await getDownloadTask(task.taskId)
+        updateDownloadingTask(task.taskId, current => {
+          current.progress = data.progress || 0
+          current.fileName = data.fileName || current.fileName
+          current.totalFileCount = data.totalFileCount || current.totalFileCount || 0
+          current.completedFileCount = data.completedFileCount || current.completedFileCount || 0
+          current.status = DOWNLOAD_STATUS.downloading.value
+          return current
+        })
+
+        if (data.status === 2) {
+          const current = getDownloadingTaskById(task.taskId)
+          if (!current) {
+            return
+          }
+          if (data.downloadSign) {
+            moveDownloadTaskToSuccess(current, data.downloadSign, data.fileName)
+            window.open(getDownloadTaskFileUrl(data.downloadSign))
+          } else {
+            moveDownloadTaskToFail(current, '下载任务签名缺失')
+          }
+          return
+        }
+
+        if (data.status === 3 || data.status === 4) {
+          const current = getDownloadingTaskById(task.taskId)
+          if (current) {
+            moveDownloadTaskToFail(current, data.errorMsg || '下载任务失败')
+          }
+          return
+        }
+      } catch (e: any) {
+        const current = getDownloadingTaskById(task.taskId)
+        if (current) {
+          moveDownloadTaskToFail(current, normalizeErrorMsg(e, '下载任务查询失败'))
+        }
+        return
+      }
+
+      await sleep(3000)
+    }
+    const current = getDownloadingTaskById(task.taskId)
+    if (current) {
+      moveDownloadTaskToFail(current, '下载任务超时，请重试')
+    }
+  }
+
+  const addDownloadTask = async (taskId: string, ids: number[], fileName?: string) => {
+    isShowUploader.value = true
+    const taskItem: DownloadTaskItem = {
+      taskId,
+      ids,
+      fileName: fileName || '打包下载.zip',
+      status: DOWNLOAD_STATUS.preparing.value,
+      progress: 0,
+      totalFileCount: 0,
+      completedFileCount: 0,
+      errorMsg: null,
+      downloadSign: '',
+      createTime: Date.now()
+    }
+    downloadingTaskList.value.unshift(taskItem)
+    await pollDownloadTaskStatus(taskItem)
+  }
+
+  const startDownloadByIds = async (ids: number[], fileName?: string) => {
+    if (!ids || ids.length === 0) {
+      return
+    }
+    isShowUploader.value = true
+    const { data } = await createDownload(ids.join(','))
+    if (data.type === 'DIRECT' && data.sign) {
+      window.open(getDownloadUrl(data.sign))
+      return
+    }
+    if (data.type === 'TASK' && data.taskId) {
+      await addDownloadTask(data.taskId, ids, fileName)
+    }
+  }
+
+  const clearAllDownloadSuccessRecord = () => {
+    downloadSuccessTaskList.value = []
+  }
+
+  const restartFailedDownload = async (taskId: string) => {
+    const task = getDownloadFailTaskById(taskId)
+    if (!task || !task.ids || task.ids.length === 0) {
+      return
+    }
+    clearDownloadRecord(taskId, downloadFailTaskList.value.findIndex(item => item.taskId === taskId), 3)
+    await startDownloadByIds(task.ids, task.fileName)
+  }
+
+  const restartAllFailedDownload = async () => {
+    const failedTasks = [...downloadFailTaskList.value]
+    downloadFailTaskList.value = []
+    for (const task of failedTasks) {
+      if (task.ids && task.ids.length > 0) {
+        await startDownloadByIds(task.ids, task.fileName)
+      }
+    }
+  }
+
   return {
     isShowUploader,
     updateShowUploader,
@@ -459,9 +685,22 @@ export const useUploaderStore = defineStore('uploader', () => {
     uploadingFileList,
     uploadSuccessFileList,
     uploadFailFileList,
+    downloadingTaskList,
+    downloadSuccessTaskList,
+    downloadFailTaskList,
     pauseUpload,
     startUpload,
     cancelUpload,
-    clearUploadRecord
+    clearUploadRecord,
+    startAllUpload,
+    pauseAllUpload,
+    cancelAllUpload,
+    clearAllSuccessRecord,
+    restartAllFailedUpload,
+    startDownloadByIds,
+    clearDownloadRecord,
+    clearAllDownloadSuccessRecord,
+    restartFailedDownload,
+    restartAllFailedDownload
   }
 })

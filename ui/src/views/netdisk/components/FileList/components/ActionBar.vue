@@ -2,7 +2,7 @@
 import { ElMessage } from 'element-plus'
 import UploadPopup from '@/components/UploadPopup.vue'
 import { ResultErrorMsgEnum } from '@/enums/ResultErrorMsgEnum'
-import { type PropType, ref } from 'vue'
+import { type PropType, ref, onUnmounted } from 'vue'
 
 /**
  * 父类回调方法
@@ -56,20 +56,77 @@ const props = defineProps({
 })
 
 /**
+ * 延迟刷新的定时器
+ */
+let reloadTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 刷新防抖延迟时间（毫秒）
+ * 用于避免短时间内（特别是秒传场景）频繁刷新页面
+ */
+const RELOAD_DEBOUNCE_DELAY = 500
+
+/**
+ * 标准化路径
+ * 将 undefined、null、空字符串统一转换为 null（表示根目录）
+ * 去除路径末尾的斜杠，确保路径格式一致
+ */
+const normalizePath = (path?: string | null): string | null => {
+  // undefined、null、空字符串都视为根目录
+  if (!path) {
+    return null
+  }
+  
+  // 去除末尾的斜杠（如果有）
+  const trimmedPath = path.endsWith('/') ? path.slice(0, -1) : path
+  
+  // 如果去除斜杠后变成空字符串，说明原路径是 "/"，视为根目录
+  return trimmedPath || null
+}
+
+/**
  * 上传完成后重新加载
+ * 
+ * 核心逻辑：
+ * 1. 只刷新上传路径匹配当前页面路径的文件
+ * 2. 使用防抖机制，避免短时间内（特别是秒传）频繁刷新
+ * 3. 延迟后再检查loading状态，确保不在刷新过程中重复刷新
+ * 4. 确保最后一个上传完成的文件会触发刷新
  */
 const uploadFinishReload = (uploadPath?: string) => {
-  if (props.loading) {
+  // 标准化路径，确保比较的一致性
+  const normalizedUploadPath = normalizePath(uploadPath)
+  const normalizedCurrentPath = normalizePath(props.currentPath)
+
+  // 如果上传路径和当前路径不一致，不刷新
+  if (normalizedUploadPath !== normalizedCurrentPath) {
     return
   }
 
-  const path = uploadPath ? uploadPath : null
-  if (props.currentPath !== path) {
-    return
+  // 清除之前的延迟刷新定时器（防抖）
+  if (reloadTimer !== null) {
+    clearTimeout(reloadTimer)
   }
 
-  reload()
+  // 延迟后刷新，避免秒传等场景下短时间内频繁刷新
+  reloadTimer = setTimeout(() => {
+    // 触发时再检查loading状态，避免在刷新过程中再次触发刷新
+    if (!props.loading) {
+      reload()
+    }
+    reloadTimer = null
+  }, RELOAD_DEBOUNCE_DELAY)
 }
+
+/**
+ * 组件销毁时清理定时器，防止内存泄漏
+ */
+onUnmounted(() => {
+  if (reloadTimer !== null) {
+    clearTimeout(reloadTimer)
+    reloadTimer = null
+  }
+})
 
 /**
  * 批量移动文件

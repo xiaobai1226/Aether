@@ -17,12 +17,12 @@
       </div>
 
       <span>
-        <button class="btn-plus-sub" @click="pdfViewCanvasWidthNum-=5">-</button>
+        <button class="btn-plus-sub" @click="zoomOut">-</button>
         <span>
           <span>缩放比例</span>
           <span style="margin-left: 5px">{{ pdfViewCanvasWidthNum }}%</span>
         </span>
-        <button class="btn-plus-sub" @click="pdfViewCanvasWidthNum+=5">+</button>
+        <button class="btn-plus-sub" @click="zoomIn">+</button>
       </span>
 
       <label :class="isLoading ? 'invisible' : 'visible'">
@@ -75,6 +75,14 @@ let pageCount = ref(1)
 let pdfSource = ref(props.fileId ? getFileUrl(props.fileId) : null)
 let showAllPages = ref(true)
 
+const zoomOut = () => {
+  pdfViewCanvasWidthNum.value = Math.max(20, pdfViewCanvasWidthNum.value - 5)
+}
+
+const zoomIn = () => {
+  pdfViewCanvasWidthNum.value = Math.min(300, pdfViewCanvasWidthNum.value + 5)
+}
+
 watch(() => showAllPages.value, () => {
   page.value = showAllPages.value ? 0 : 1
 })
@@ -83,6 +91,13 @@ const handleDocumentRender = () => {
   isLoading.value = false
   pageCount.value = pdfRef.value.doc._pdfInfo.numPages
 }
+
+watch(() => props.fileId, (newFileId) => {
+  isLoading.value = true
+  pageCount.value = 1
+  page.value = showAllPages.value ? 0 : 1
+  pdfSource.value = newFileId ? getFileUrl(newFileId) : null
+})
 
 const { ArrowLeft, ArrowRight, NumpadAdd, NumpadSubtract } = useMagicKeys()
 
@@ -101,10 +116,10 @@ watch(() => [ArrowLeft.value, ArrowRight.value], (value) => {
 // 支持按键缩放
 watch(() => [NumpadSubtract.value, NumpadAdd.value], (value) => {
   if (value[0]) {
-    pdfViewCanvasWidthNum.value -= 5
+    zoomOut()
   }
   if (value[1]) {
-    pdfViewCanvasWidthNum.value += 5
+    zoomIn()
   }
 })
 </script>

@@ -115,8 +115,10 @@ const handleLogin = () => {
     if (valid) {
       accountStore.accountLogin(loginForm.value)
         .then(() => {
-          // 跳转首页
-          router.replace({ path: '/' })
+          // 获取重定向地址
+          const redirect = router.currentRoute.value.query.redirect as string
+          // 如果有重定向地址，跳转到重定向地址，否则跳转到首页
+          router.replace({ path: redirect || '/' })
         })
         .catch(() => {
           // 验证失败，重新生成验证码

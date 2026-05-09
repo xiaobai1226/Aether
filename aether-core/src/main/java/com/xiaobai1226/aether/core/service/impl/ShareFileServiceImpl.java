@@ -6,21 +6,21 @@ import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
-import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
-import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
-import com.xiaobai1226.aether.core.dao.redis.ShareRedisDAO;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.core.domain.dto.ShareFileDTO;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.xiaobai1226.aether.core.cache.ShareCache;
 import com.xiaobai1226.aether.core.domain.dto.ShareInfoDTO;
-import com.xiaobai1226.aether.domain.entity.ShareDO;
-import com.xiaobai1226.aether.domain.entity.ShareUserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
 import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
 import com.xiaobai1226.aether.common.exception.FailResultException;
-import com.xiaobai1226.aether.core.mapper.ShareMapper;
-import com.xiaobai1226.aether.core.mapper.ShareUserFileMapper;
-import com.xiaobai1226.aether.core.mapper.UserFileMapper;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.dto.ShareFileDTO;
+import com.xiaobai1226.aether.dao.domain.entity.ShareDO;
+import com.xiaobai1226.aether.dao.domain.entity.ShareUserFileDO;
+import com.xiaobai1226.aether.dao.mapper.ShareMapper;
+import com.xiaobai1226.aether.dao.mapper.ShareUserFileMapper;
+import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
 import com.xiaobai1226.aether.dao.mapper.UserMapper;
 import com.xiaobai1226.aether.core.service.intf.ShareFileService;
 import com.xiaobai1226.aether.core.service.intf.UserFileService;
@@ -65,14 +65,14 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
     private UserFileService userFileService;
 
     /**
-     * 分享文件Redis缓存
+     * 分享文件缓存
      */
     @Inject
-    private ShareRedisDAO shareRedisDAO;
+    private ShareCache shareCache;
 
     @Override
     @Tran
-    public String create(List<Integer> userFileIds, String extractionCode, Integer validityPeriod, Integer userId) {
+    public String create(List<Long> userFileIds, String extractionCode, Integer validityPeriod, final Long userId) {
         var shareId = IdUtil.simpleUUID();
 
         var insertResult = shareMapper.insert(new ShareDO().setId(shareId).setExtractionCode(extractionCode).setValidityPeriod(validityPeriod).setUserId(userId));
@@ -99,7 +99,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
     }
 
     @Override
-    public Page<ShareDO> getShareDOListByPage(Integer userId, PageVO shareFileVO) {
+    public Page<ShareDO> getShareDOListByPage(final Long userId, PageVO shareFileVO) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(shareMapper).eq(ShareDO::getUserId, userId).orderByDesc(ShareDO::getCreateTime);
 
         Page<ShareDO> page = new Page<>(shareFileVO.getPageNum(), shareFileVO.getPageSize());
@@ -108,14 +108,14 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
     }
 
     @Override
-    public List<ShareDO> getShareDOList(Integer userId, List<String> shareIds) {
+    public List<ShareDO> getShareDOList(final Long userId, List<String> shareIds) {
         var lambdaQuery = new LambdaQueryChainWrapper<>(shareMapper).eq(ShareDO::getUserId, userId).in(ShareDO::getId, shareIds);
 
         return lambdaQuery.list();
     }
 
     @Override
-    public PageResult<ShareFileDTO> getShareFileList(Integer userId, PageVO shareFileVO) {
+    public PageResult<ShareFileDTO> getShareFileList(final Long userId, PageVO shareFileVO) {
         var shareDOListPage = getShareDOListByPage(userId, shareFileVO);
 
         if (shareDOListPage == null || CollUtil.isEmpty(shareDOListPage.getRecords())) {
@@ -133,7 +133,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
             throw new FailResultException(SYSTEM_ERROR);
         }
 
-        var userFileIds = new ArrayList<Integer>();
+        var userFileIds = new ArrayList<Long>();
 
         for (var shareUserFileDO : shareUserFileDOList) {
             userFileIds.add(shareUserFileDO.getUserFileId());
@@ -201,7 +201,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
 
     @Override
     @Tran
-    public void cancelShareFile(Integer userId, List<String> shareIds) {
+    public void cancelShareFile(final Long userId, List<String> shareIds) {
         var delCount = shareMapper.deleteBatchIds(shareIds);
 
         if (delCount != shareIds.size()) {
@@ -400,7 +400,7 @@ public class ShareFileServiceImpl extends ServiceImpl<ShareUserFileMapper, Share
 //        }
 //
 //        // TODO 将数据记录下来，短时间内打开不需要再次输入提取码，增加iP或设备信息，不然所有人打开这个都可以使用了
-//        shareRedisDAO.putShareInfo(checkExtractionCodeVO.getShareId(), finalShareFileDTO);
+//        shareCache.putShareInfo(checkExtractionCodeVO.getShareId(), finalShareFileDTO);
 //    }
 //
 //    @Override

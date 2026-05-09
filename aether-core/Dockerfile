@@ -1,5 +1,5 @@
 # 使用 OpenJDK 21 作为基础镜像
-FROM openjdk:21-slim
+FROM eclipse-temurin:21-jre-jammy
 
 # 更新 apt 源并安装 FFmpeg Imagemagick
 RUN apt update && apt install -y ffmpeg imagemagick && rm -rf /var/lib/apt/lists/*

@@ -1,5 +1,7 @@
 package com.xiaobai1226.aether.core.domain.dto;
 
+import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

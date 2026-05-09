@@ -29,7 +29,34 @@ export interface UploadFileItem {
   // 任务ID
   taskId: string,
   // 回调方法
-  uploadedCallback: (uploadPath?: string) => void
+  uploadedCallback: (uploadPath?: string) => void,
+  // 完成时间
+  finishTime?: string,
+  // 上传速度（字节/秒）
+  uploadSpeed?: number,
+  // 预计剩余时间（秒）
+  remainingTime?: number,
+  // 上次更新时间戳（用于计算速度）
+  lastUpdateTime?: number,
+  // 上次上传大小（用于计算速度）
+  lastUploadedSize?: number
+}
+
+/**
+ * 下载任务信息
+ */
+export interface DownloadTaskItem {
+  taskId: string,
+  fileName: string,
+  status: string,
+  progress: number,
+  totalFileCount: number,
+  completedFileCount: number,
+  errorMsg: string | null,
+  downloadSign: string,
+  ids: number[],
+  createTime: number,
+  finishTime?: string
 }
 
 // 定义STATUS对象
@@ -97,5 +124,35 @@ export const STATUS: STATUS_OBJ = {
     desc: '等待中',
     color: '#409eff',
     icon: 'dengdaizhong'
+  }
+}
+
+/**
+ * 下载任务状态
+ */
+export const DOWNLOAD_STATUS: STATUS_OBJ = {
+  preparing: {
+    value: 'preparing',
+    desc: '准备中',
+    color: '#e6a23c',
+    icon: 'clock'
+  },
+  downloading: {
+    value: 'downloading',
+    desc: '打包中',
+    color: '#409eff',
+    icon: 'dengdaizhong'
+  },
+  success: {
+    value: 'success',
+    desc: '打包完成',
+    color: '#67c23a',
+    icon: 'ok'
+  },
+  fail: {
+    value: 'fail',
+    desc: '打包失败',
+    color: '#F75000',
+    icon: 'close'
   }
 }

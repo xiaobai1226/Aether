@@ -93,10 +93,16 @@ const setPath = () => {
     <span v-if="folderList.length > 0" class="link" @click="setCurrentFolder(-1)">全部文件</span>
     <template v-for="(name, index) in folderList" :key="index">
       <span class="iconfont icon-right-arrow"></span>
-      <span class="link" v-if="index < folderList.length - 1" @click="setCurrentFolder(index)">{{
-          name
-        }}</span>
-      <span v-if="index == folderList.length - 1" class="text">{{ name }}</span>
+      <span class="link" v-if="index < folderList.length - 1" @click="setCurrentFolder(index)">
+        <el-tooltip :content="name" placement="bottom" :show-after="500" popper-class="nav-tooltip">
+          <div class="nav-text-wrapper">{{ name }}</div>
+        </el-tooltip>
+      </span>
+      <span v-if="index == folderList.length - 1" class="text">
+        <el-tooltip :content="name" placement="bottom" :show-after="500" popper-class="nav-tooltip">
+          <div class="nav-text-wrapper">{{ name }}</div>
+        </el-tooltip>
+      </span>
     </template>
   </div>
 </template>
@@ -116,19 +122,22 @@ const setPath = () => {
   .link {
     color: #06a7ff;
     cursor: pointer;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
     max-width: 120px;
     box-sizing: border-box;
+    display: inline-block;
   }
 
   .text {
+    max-width: 120px;
+    box-sizing: border-box;
+    display: inline-block;
+  }
+
+  .nav-text-wrapper {
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
-    max-width: 120px;
-    box-sizing: border-box;
+    width: 100%;
   }
 
   .icon-right-arrow {
@@ -136,5 +145,21 @@ const setPath = () => {
     padding: 0 5px;
     font-size: 13px;
   }
+}
+</style>
+
+<style>
+.nav-tooltip {
+  max-width: none !important;
+  background-color: white !important;
+  color: #333 !important;
+  border: 1px solid #e4e7ed !important;
+  padding: 5px 10px !important;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,.1) !important;
+}
+
+.nav-tooltip .el-popper__arrow::before {
+  background-color: white !important;
+  border-color: #e4e7ed !important;
 }
 </style>

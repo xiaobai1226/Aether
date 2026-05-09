@@ -1,27 +1,18 @@
 package com.xiaobai1226.aether.core.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
+import com.xiaobai1226.aether.core.annotation.CurrentUserId;
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
 import com.xiaobai1226.aether.core.domain.vo.DeleteRecycleBinVO;
 import com.xiaobai1226.aether.core.domain.vo.RestoreRecycleBinVO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
-import com.xiaobai1226.aether.common.exception.FailResultException;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
 import com.xiaobai1226.aether.common.domain.dto.Result;
 import org.noear.solon.annotation.*;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
-import java.util.Arrays;
-import java.util.List;
-
 import static com.xiaobai1226.aether.common.constant.GateWayTagConsts.API_V1;
-import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_DEL_CONTENT_EMPTY;
-import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_RESTORE_CONTENT_EMPTY;
-import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.PARAM_IS_INVALID;
 import static com.xiaobai1226.aether.common.enums.ResultSuccessMsgEnum.*;
 
 /**
@@ -44,9 +35,7 @@ public class RecycleBinController {
      */
     @Get
     @Mapping("/getRecycleBinListByPage")
-    public PageResult<RecycleBinFileDTO> getRecycleBinListByPage(PageVO recycleBinVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
+    public PageResult<RecycleBinFileDTO> getRecycleBinListByPage(PageVO recycleBinVO, @CurrentUserId Long userId) {
 
         if (recycleBinVO.getSortField() == null) {
             recycleBinVO.setSortField(1);
@@ -63,17 +52,8 @@ public class RecycleBinController {
      */
     @Post
     @Mapping("/delete")
-    public Result delete(@Validated DeleteRecycleBinVO deleteRecycleBinVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
-
-        var recycleIds = Arrays.stream(deleteRecycleBinVO.getRecycleIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
-
-        if (CollUtil.isEmpty(recycleIds)) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_DEL_CONTENT_EMPTY);
-        }
-
-        recycleBinService.delete(userId, recycleIds);
+    public Result<Void> delete(@Validated DeleteRecycleBinVO deleteRecycleBinVO, @CurrentUserId Long userId) {
+        recycleBinService.delete(userId, deleteRecycleBinVO.getRecycleIds());
 
         return Result.success(SUCCESS_MSG_RECYCLE_BIN_DELETE.msg());
     }
@@ -83,17 +63,8 @@ public class RecycleBinController {
      */
     @Post
     @Mapping("/restore")
-    public Result restore(@Validated RestoreRecycleBinVO restoreRecycleBinVO) {
-        // 获取当前会话账号id, 并转化为`int`类型
-        final var userId = StpUtil.getLoginIdAsInt();
-
-        List<String> recycleIds = Arrays.stream(restoreRecycleBinVO.getRecycleIds().split(StrUtil.COMMA)).filter(s -> !s.isEmpty()).toList();
-
-        if (recycleIds.isEmpty()) {
-            throw new FailResultException(PARAM_IS_INVALID, ERROR_RESTORE_CONTENT_EMPTY);
-        }
-
-        recycleBinService.restore(userId, recycleIds);
+    public Result<Void> restore(@Validated RestoreRecycleBinVO restoreRecycleBinVO, @CurrentUserId Long userId) {
+        recycleBinService.restore(userId, restoreRecycleBinVO.getRecycleIds());
 
         return Result.success(SUCCESS_MSG_RECYCLE_BIN_RESTORE.msg());
     }

@@ -1,13 +1,13 @@
 package com.xiaobai1226.aether.core.service.intf;
 
-import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
-import com.baomidou.mybatisplus.solon.service.IService;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.core.domain.dto.ShareFileDTO;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.xiaobai1226.aether.core.domain.dto.ShareInfoDTO;
-import com.xiaobai1226.aether.domain.entity.ShareDO;
-import com.xiaobai1226.aether.domain.entity.ShareUserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.dto.ShareFileDTO;
+import com.xiaobai1226.aether.dao.domain.entity.ShareDO;
+import com.xiaobai1226.aether.dao.domain.entity.ShareUserFileDO;
 
 import java.util.List;
 
@@ -28,7 +28,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 分享ID
      * @author bai
      */
-    String create(List<Integer> userFileIds, String extractionCode, Integer validityPeriod, Integer userId);
+    String create(List<Long> userFileIds, String extractionCode, Integer validityPeriod, final Long userId);
 
     /**
      * 分页获取分享文件及文件夹列表
@@ -38,7 +38,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 获取到的分享文件数据
      * @author bai
      */
-    Page<ShareDO> getShareDOListByPage(Integer userId, PageVO shareFileVO);
+    Page<ShareDO> getShareDOListByPage(final Long userId, PageVO shareFileVO);
 
     /**
      * 获取分享文件及文件夹列表
@@ -48,7 +48,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 获取到的分享文件数据
      * @author bai
      */
-    List<ShareDO> getShareDOList(Integer userId, List<String> shareIds);
+    List<ShareDO> getShareDOList(final Long userId, List<String> shareIds);
 
     /**
      * 获取分享文件及文件夹列表
@@ -58,7 +58,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 获取到的分享文件数据
      * @author bai
      */
-    PageResult<ShareFileDTO> getShareFileList(Integer userId, PageVO shareFileVO);
+    PageResult<ShareFileDTO> getShareFileList(final Long userId, PageVO shareFileVO);
 
     /**
      * 取消分享文件
@@ -67,7 +67,7 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @param shareIds 分享ID集合
      * @author bai
      */
-    void cancelShareFile(Integer userId, List<String> shareIds);
+    void cancelShareFile(final Long userId, List<String> shareIds);
 
     /**
      * 获取分享信息
@@ -85,33 +85,35 @@ public interface ShareFileService extends IService<ShareUserFileDO> {
      * @return 获取到的分享文件数据
      * @author bai
      */
-//    PageResultDataDTO<UserFileDTO> getShareFileInfoListByShareId(GetShareFileInfoListVO getShareFileInfoListVO);
-//
-//    /**
-//     * 获取分享文件及文件夹列表通过分享ID
-//     *
-//     * @param userId   用户ID
-//     * @param shareIds 分享ID集合
-//     * @return 获取到的分享文件数据
-//     * @author bai
-//     */
-//    List<ShareDO> getShareFileDOListByShareId(Integer userId, List<String> shareIds);
+    // PageResultDataDTO<UserFileDTO>
+    // getShareFileInfoListByShareId(GetShareFileInfoListVO getShareFileInfoListVO);
+    //
+    // /**
+    // * 获取分享文件及文件夹列表通过分享ID
+    // *
+    // * @param userId 用户ID
+    // * @param shareIds 分享ID集合
+    // * @return 获取到的分享文件数据
+    // * @author bai
+    // */
+    // List<ShareDO> getShareFileDOListByShareId(Integer userId, List<String>
+    // shareIds);
 
-//
-//    /**
-//     * 校验提取码
-//     *
-//     * @param checkExtractionCodeVO 检查校验码VO
-//     * @author bai
-//     */
-//    void checkExtractionCode(CheckExtractionCodeVO checkExtractionCodeVO);
-//
-//    /**
-//     * 获取分享信息
-//     *
-//     * @param shareId 分享ID
-//     * @return 分享信息
-//     * @author bai
-//     */
-//    ShareFileDTO getShareFileDTOByShareIdAndName(String shareId, String name);
+    //
+    // /**
+    // * 校验提取码
+    // *
+    // * @param checkExtractionCodeVO 检查校验码VO
+    // * @author bai
+    // */
+    // void checkExtractionCode(CheckExtractionCodeVO checkExtractionCodeVO);
+    //
+    // /**
+    // * 获取分享信息
+    // *
+    // * @param shareId 分享ID
+    // * @return 分享信息
+    // * @author bai
+    // */
+    // ShareFileDTO getShareFileDTOByShareIdAndName(String shareId, String name);
 }

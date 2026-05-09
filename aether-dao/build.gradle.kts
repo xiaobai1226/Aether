@@ -1,11 +1,9 @@
 dependencies {
-    implementation(platform("org.noear:solon-parent:${DependenciesVersion.solonVersion}"))
-    implementation("org.noear:mybatis-plus-extension-solon-plugin")
+    api(libs.mybatis.plus.solon.plugin)
+    implementation(libs.mybatis.plus.jsqlparser)
+    implementation(libs.hikaricp)
+    implementation(libs.mysql.connector)
 
     // 内部模块
     implementation(project(":aether-domain"))
-}
-
-tasks.test {
-    useJUnitPlatform()
 }

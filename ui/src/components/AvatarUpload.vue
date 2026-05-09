@@ -50,7 +50,7 @@ onMounted(() => {
       </template>
     </div>
     <div class="select-btn">
-      <el-upload name="file" :show-file-list="false" accept=".png,.PNG,.jpg,.JPG,.jepg,.JEPG,.gif,.GIF,.bmp,.BMP"
+      <el-upload name="file" :show-file-list="false" accept=".png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.gif,.GIF,.bmp,.BMP"
                  :multiple="false" :http-request="uploadImage">
         <el-button type="primary">选择</el-button>
       </el-upload>

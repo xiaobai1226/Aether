@@ -23,7 +23,7 @@ public class WebDavServiceImpl implements WebDavService {
     private UserService userService;
 
     @Override
-    public Integer checkUsernameAndPassword(String username, String password) {
+    public String checkUsernameAndPassword(String username, String password) {
         // 根据用户名获取用户信息
         var userDO = userService.getUserByUsername(username);
 
@@ -37,6 +37,6 @@ public class WebDavServiceImpl implements WebDavService {
             return null;
         }
 
-        return userDO.getId();
+        return userDO.getId().toString();
     }
 }

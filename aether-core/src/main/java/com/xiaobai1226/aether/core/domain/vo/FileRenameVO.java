@@ -21,7 +21,7 @@ public class FileRenameVO {
      * 用户文件ID
      */
     @NotNull(message = ERROR_FILE_FOLDER_ID_EMPTY)
-    private Integer id;
+    private Long id;
 
     /**
      * 新名称

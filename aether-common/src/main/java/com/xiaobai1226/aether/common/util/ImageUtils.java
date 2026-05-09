@@ -1,7 +1,6 @@
 package com.xiaobai1226.aether.common.util;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
@@ -11,6 +10,7 @@ import com.github.kokorin.jaffree.ffmpeg.UrlOutput;
 import com.xiaobai1226.aether.common.enums.FileTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
 import java.nio.file.Paths;
 
 /**
@@ -94,30 +94,40 @@ public class ImageUtils {
     /**
      * Heic转为Webp格式
      */
-    public static byte[] heic2Webp(String srcImagePath) {
-        // 构建 ImageMagick 命令，输出到标准输出流
-        String command = String.format("convert %s -quality 85 WEBP:-", srcImagePath);
+    public static File heic2WebpFile(String srcImagePath) {
+        var srcFile = FileUtil.file(srcImagePath);
+        if (!FileUtil.exist(srcFile)) {
+            return null;
+        }
+
+        // 缓存转换结果，避免同一文件重复转码导致CPU浪费
+        String cacheFileName = srcFile.getName() + "_" + srcFile.length() + "_" + srcFile.lastModified() + ".webp";
+        var cacheDir = FileUtil.file(System.getProperty("java.io.tmpdir"), "aether", "heic-webp-cache");
+        if (!FileUtil.exist(cacheDir)) {
+            FileUtil.mkdir(cacheDir);
+        }
+
+        var destFile = FileUtil.file(cacheDir, cacheFileName);
+        if (FileUtil.exist(destFile)) {
+            return destFile;
+        }
 
         try {
-            // 执行命令
-            Process process = RuntimeUtil.exec(command);
-
-            // 使用 Hutool 的流工具类简化读取（替代手动循环）
-            var inputStream = process.getInputStream();
-            byte[] webpBytes = IoUtil.readBytes(inputStream);
+            Process process = new ProcessBuilder("convert", srcImagePath, "-quality", "85", destFile.getAbsolutePath()).start();
 
             // 等待命令执行完成
             int exitCode = process.waitFor();
             if (exitCode != 0) {
                 String errorOutput = RuntimeUtil.getErrorResult(process);
                 log.error("Heic转Webp失败，错误信息：" + errorOutput);
+                FileUtil.del(destFile);
                 return null;
             }
 
-            // 返回 WebP 图片的字节数组
-            return webpBytes;
+            return destFile;
         } catch (Exception e) {
             log.error("Heic转Webp失败，发生异常：" + e.getMessage());
+            FileUtil.del(destFile);
             return null;
         }
     }

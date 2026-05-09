@@ -15,5 +15,5 @@ public interface WebDavService {
      * @return 用户Id
      * @author bai
      */
-    Integer checkUsernameAndPassword(String username, String password);
+    String checkUsernameAndPassword(String username, String password);
 }

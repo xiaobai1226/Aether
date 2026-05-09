@@ -2,26 +2,22 @@ package com.xiaobai1226.aether.core.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
-import com.baomidou.mybatisplus.solon.plugins.pagination.Page;
-import com.baomidou.mybatisplus.solon.service.impl.ServiceImpl;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
+import cn.hutool.core.date.DateUtil;
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
-import com.xiaobai1226.aether.core.domain.dto.UserFileDTO;
-import com.xiaobai1226.aether.domain.entity.FileDO;
-import com.xiaobai1226.aether.domain.entity.RecycleBinDO;
-import com.xiaobai1226.aether.domain.entity.UserDO;
-import com.xiaobai1226.aether.domain.entity.UserFileDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
-import com.xiaobai1226.aether.core.enums.UserFileItemTypeEnum;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiaobai1226.aether.common.exception.FailResultException;
-import com.xiaobai1226.aether.core.mapper.FileMapper;
-import com.xiaobai1226.aether.core.mapper.RecycleBinMapper;
-import com.xiaobai1226.aether.core.mapper.UserFileMapper;
 import com.xiaobai1226.aether.core.service.intf.RecycleBinService;
-import com.xiaobai1226.aether.core.service.intf.UserFileService;
-import com.xiaobai1226.aether.core.service.intf.UserService;
-import com.xiaobai1226.aether.common.util.FileUtils;
+import com.xiaobai1226.aether.core.usecase.recycle.RestoreFileUseCase;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.dto.UserFileDTO;
+import com.xiaobai1226.aether.dao.domain.entity.RecycleBinDO;
+import com.xiaobai1226.aether.dao.domain.entity.UserFileDO;
+import com.xiaobai1226.aether.dao.mapper.RecycleBinMapper;
+import com.xiaobai1226.aether.dao.mapper.UserFileMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -29,12 +25,8 @@ import org.noear.solon.data.annotation.Tran;
 
 import java.util.*;
 
-import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_DEL_CONTENT_EMPTY;
-import static com.xiaobai1226.aether.common.constant.ResultErrorMsgConsts.ERROR_RESTORE_CONTENT_EMPTY;
-import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.BAD_REQUEST_ERROR;
 import static com.xiaobai1226.aether.common.enums.ResultCodeEnum.SYSTEM_ERROR;
 import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.DEL;
-import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
 
 /**
  * 回收站服务接口实现类
@@ -42,25 +34,23 @@ import static com.xiaobai1226.aether.core.enums.UserFileStatusEnum.NORMAL;
  * @author bai
  */
 @Component
+@Slf4j
 public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, RecycleBinDO> implements RecycleBinService {
 
     @Db
     private UserFileMapper userFileMapper;
 
     @Db
-    private FileMapper fileMapper;
-
-    @Db
     private RecycleBinMapper recycleBinMapper;
 
-    @Inject("${project.path.root}")
-    private String rootPath;
+    @Inject("${project.recycle-bin.retention-days:10}")
+    private Integer retentionDays;
 
     @Inject
-    private UserService userService;
+    private com.xiaobai1226.aether.core.usecase.recycle.PurgeRecycleUseCase purgeRecycleUseCase;
 
     @Inject
-    private UserFileService userFileService;
+    private RestoreFileUseCase restoreFileUseCase;
 
     @Tran
     @Override
@@ -72,30 +62,36 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
     }
 
     @Override
-    public PageResult<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO) {
-        var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper).eq(RecycleBinDO::getUserId, userId).eq(RecycleBinDO::getRoot, 1);
+    public PageResult<RecycleBinFileDTO> getRecycleBinList(final Long userId, PageVO recycleBinVO) {
+        var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper).eq(RecycleBinDO::getUserId, userId)
+                .eq(RecycleBinDO::getRoot, 1);
 
         // 1 文件名 2 删除时间 3 文件大小 4 有效时间
-//        if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() == 1) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::get);
-//        } else if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() == 2) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::get);
-//        } else
+        // if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() == 1) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::get);
+        // } else if (recycleBinVO.getSortField() == 1 && recycleBinVO.getSortOrder() ==
+        // 2) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::get);
+        // } else
 
         if (recycleBinVO.getSortField() == 2 && recycleBinVO.getSortOrder() == 1) {
             lambdaQuery.orderByAsc(RecycleBinDO::getCreateTime);
         } else if (recycleBinVO.getSortField() == 2 && recycleBinVO.getSortOrder() == 2) {
             lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
         }
-//            else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() == 1) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
-//        } else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() == 2) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
-//        } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() == 1) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
-//        } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() == 2) {
-//            lambdaQuery.orderByDesc(RecycleBinDO::get);
-//        }
+        // else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() ==
+        // 1) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+        // } else if (recycleBinVO.getSortField() == 3 && recycleBinVO.getSortOrder() ==
+        // 2) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+        // } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() ==
+        // 1) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::getCreateTime);
+        // } else if (recycleBinVO.getSortField() == 4 && recycleBinVO.getSortOrder() ==
+        // 2) {
+        // lambdaQuery.orderByDesc(RecycleBinDO::get);
+        // }
         var recycleBinListPage = lambdaQuery.page(new Page<>(recycleBinVO.getPageNum(), recycleBinVO.getPageSize()));
 
         // 判断结果是否为空
@@ -103,7 +99,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             return null;
         }
 
-        var userFileIds = new ArrayList<Integer>();
+        var userFileIds = new ArrayList<Long>();
         for (var recycleBin : recycleBinListPage.getRecords()) {
             userFileIds.add(recycleBin.getUserFileId());
         }
@@ -130,7 +126,8 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
             }
         }
 
-        var recycleBinFileIPage = new Page<RecycleBinFileDTO>(recycleBinListPage.getCurrent(), recycleBinListPage.getSize(), recycleBinListPage.getTotal());
+        var recycleBinFileIPage = new Page<RecycleBinFileDTO>(recycleBinListPage.getCurrent(),
+                recycleBinListPage.getSize(), recycleBinListPage.getTotal());
         recycleBinFileIPage.setPages(recycleBinListPage.getPages());
         recycleBinFileIPage.setRecords(recycleBinDTOList);
         return new PageResult<>(recycleBinFileIPage);
@@ -138,231 +135,66 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, Recycle
 
     @Tran
     @Override
-    public void delete(Integer userId, List<String> recycleIds) {
-        var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
-        var recycleBinWrapper = lambdaQuery.eq(RecycleBinDO::getUserId, userId);
-
-        // 删除全部文件，如果只有一个元素，且为-1, 则为全部删除
-        if (recycleIds.size() != 1 || !Objects.equals(recycleIds.getFirst(), "-1")) {
-            recycleBinWrapper.in(RecycleBinDO::getRecycleId, recycleIds);
-        }
-
-        var recycleBinDOList = recycleBinWrapper.list();
-
-        // 判断结果是否为空
-        if (CollUtil.isEmpty(recycleBinDOList)) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_DEL_CONTENT_EMPTY);
-        }
-
-        // 回收站文件ID
-        var recycleBinIds = new ArrayList<Integer>();
-        // 用户文件ID
-        var userFileIds = new ArrayList<Integer>();
-        for (var recycleBinDO : recycleBinDOList) {
-            userFileIds.add(recycleBinDO.getUserFileId());
-            recycleBinIds.add(recycleBinDO.getId());
-        }
-
-        // 删除回收站内容
-        var delRecycleBinFileCount = recycleBinMapper.deleteBatchIds(recycleBinIds);
-        if (delRecycleBinFileCount != recycleBinIds.size()) {
-            throw new FailResultException(SYSTEM_ERROR);
-        }
-
-        var userFileDO = new UserFileDO().setUserId(userId).setFileStatus(DEL.flag());
-        var userFileList = userFileMapper.getUserFileDTOByIds(userFileDO, userFileIds);
-
-        if (CollUtil.isEmpty(userFileList) || recycleBinDOList.size() != userFileList.size()) {
-            throw new FailResultException(SYSTEM_ERROR);
-        }
-
-        var fileIds = new HashSet<Integer>();
-        var totalSize = 0L;
-        for (var userFile : userFileList) {
-            if (UserFileItemTypeEnum.isFile(userFile.getItemType()) && userFile.getFileId() != null) {
-                fileIds.add(userFile.getFileId());
-                totalSize += userFile.getSize();
-            }
-        }
-
-        // 删除用户文件内容
-        var delUserFileCount = userFileMapper.deleteBatchIds(userFileIds);
-        if (delUserFileCount != userFileIds.size()) {
-            throw new FailResultException(SYSTEM_ERROR);
-        }
-
-        // 更新用户所使用的空间
-        if (totalSize > 0) {
-            // 更新用户已使用存储空间
-            var userSpaceUsageDTO = userService.getUserSpaceUsage(userId);
-            var userDO = new UserDO();
-            userDO.setId(userId);
-            userDO.setUsedStorage(userSpaceUsageDTO.getUsedStorage() - totalSize);
-            userService.updateUser(userDO);
-        }
-
-        if (CollUtil.isEmpty(fileIds)) {
-            return;
-        }
-
-        // TODO 确认一个事务内，前面删除了，这里是否查得到，如果查得到会导致逻辑出错，file无法删除了
-        var userFileLambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
-        var userFileDOList = userFileLambdaQuery.in(UserFileDO::getFileId, fileIds).list();
-
-
-        var delFileIds = new HashSet<Integer>();
-        // 如果为空，直接返回
-        if (CollUtil.isEmpty(userFileDOList)) {
-            delFileIds = fileIds;
-        } else {
-            for (var fileId : fileIds) {
-                var isExist = false;
-                for (var userFile : userFileDOList) {
-                    if (Objects.equals(fileId, userFile.getFileId())) {
-                        isExist = true;
-                        break;
-                    }
-                }
-                if (!isExist) {
-                    delFileIds.add(fileId);
-                }
-            }
-        }
-
-        if (CollUtil.isEmpty(delFileIds)) {
-            return;
-        }
-
-        // TODO 以下操作单独封装在FileService中，并可以异步执行
-        // 查询要删除的文件详情
-        var fileLambdaQuery = new LambdaQueryChainWrapper<>(fileMapper);
-        var delFileList = fileLambdaQuery.in(FileDO::getId, delFileIds).list();
-        if (CollUtil.isEmpty(delFileList)) {
-            return;
-        }
-
-        // 删除文件内容
-        var delFileCount = fileMapper.deleteBatchIds(delFileIds);
-        if (delFileCount != delFileIds.size()) {
-            // TODO 返回前台成功，增加后台报警机制
-        }
-
-        // 删除文件
-        for (var delFile : delFileList) {
-            FileUtils.deleteFile(delFile.getSuffix(), delFile.getThumbnail(), delFile.getPath(), rootPath);
-        }
+    public void delete(final Long userId, List<String> recycleIds) {
+        // 委托给 UseCase 处理完整的业务逻辑（包括配额释放和物理文件删除）
+        purgeRecycleUseCase.execute(recycleIds, userId);
     }
 
     @Tran
     @Override
-    public void restore(Integer userId, List<String> recycleIds) {
-        var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
-        var recycleBinDOList = lambdaQuery.eq(RecycleBinDO::getUserId, userId).in(RecycleBinDO::getRecycleId, recycleIds).list();
+    public void restore(final Long userId, List<String> recycleIds) {
+        // 委托给 UseCase 处理完整的业务逻辑（包括重名检查、父目录验证和存储源迁移）
+        restoreFileUseCase.execute(recycleIds, userId);
+    }
 
-        // 判断结果是否为空
-        if (CollUtil.isEmpty(recycleBinDOList)) {
-            throw new FailResultException(BAD_REQUEST_ERROR, ERROR_RESTORE_CONTENT_EMPTY);
-        }
+    @Override
+    @Tran
+    public void cleanExpiredRecycleBinFiles() {
+        try {
+            // 计算N天前的时间（从配置中读取保留天数）
+            Date expireDate = DateUtil.offsetDay(new Date(), -retentionDays);
+            String expireDateStr = DateUtil.format(expireDate, "yyyy-MM-dd HH:mm:ss");
 
-        // 回收ID
-        var recycleBinIds = new ArrayList<Integer>();
-        // 用户文件ID
-        var userFileIds = new ArrayList<Integer>();
-        // 根文件ID
-        var rootUserFileIdSet = new HashSet<Integer>();
-        for (var recycleBinDO : recycleBinDOList) {
-            userFileIds.add(recycleBinDO.getUserFileId());
-            recycleBinIds.add(recycleBinDO.getId());
-            if (recycleBinDO.getRoot() == 1) {
-                rootUserFileIdSet.add(recycleBinDO.getUserFileId());
-            }
-        }
+            log.info("开始清理{}之前的回收站文件（保留期限{}天）", expireDateStr, retentionDays);
 
-        // 删除回收站内容
-        var delRecycleBinFileCount = recycleBinMapper.deleteBatchIds(recycleBinIds);
-        if (delRecycleBinFileCount != recycleBinIds.size()) {
-            throw new FailResultException(SYSTEM_ERROR);
-        }
+            // 查询10天前的回收站记录
+            var lambdaQuery = new LambdaQueryChainWrapper<>(recycleBinMapper);
+            var expiredRecycleBinList = lambdaQuery.lt(RecycleBinDO::getCreateTime, expireDateStr).list();
 
-        // 查询用户文件信息
-        var userFileLambdaQuery = new LambdaQueryChainWrapper<>(userFileMapper);
-        var userFileDOList = userFileLambdaQuery.eq(UserFileDO::getUserId, userId).eq(UserFileDO::getFileStatus, DEL.flag()).in(UserFileDO::getId, userFileIds).list();
-
-        if (CollUtil.isEmpty(userFileDOList) || recycleBinDOList.size() != userFileDOList.size()) {
-            throw new FailResultException(SYSTEM_ERROR);
-        }
-
-        // 存储本次还原文件的名称
-        var restoreNameSet = new HashSet<String>();
-
-        for (var userFileDO : userFileDOList) {
-            if (!rootUserFileIdSet.contains(userFileDO.getId())) {
-                continue;
+            if (CollUtil.isEmpty(expiredRecycleBinList)) {
+                log.info("没有需要清理的过期回收站文件");
+                return;
             }
 
-            // 检查父目录是否存在
-            // 父文件存在标识
-            var parentExist = true;
-            // 如果不为根目录
-            if (userFileDO.getParentId() != 0) {
-                // 查询文件父节点是否存在
-                var userFileParentDO = userFileService.getUserFileByIdAndUserId(userFileDO.getParentId(), userId, NORMAL);
+            log.info("找到{}条过期回收站记录", expiredRecycleBinList.size());
 
-                // 查询结果为空
-                if (userFileParentDO == null) {
-                    parentExist = false;
+            // 按用户分组处理
+            Map<Long, List<String>> userRecycleIdMap = new HashMap<>();
+            for (var recycleBinDO : expiredRecycleBinList) {
+                userRecycleIdMap.computeIfAbsent(recycleBinDO.getUserId(), k -> new ArrayList<>())
+                        .add(recycleBinDO.getRecycleId());
+            }
+
+            // 逐个用户清理
+            int totalCleaned = 0;
+            for (Map.Entry<Long, List<String>> entry : userRecycleIdMap.entrySet()) {
+                Long userId = entry.getKey();
+                List<String> recycleIds = entry.getValue();
+
+                try {
+                    // 调用删除方法
+                    delete(userId, recycleIds);
+                    totalCleaned += recycleIds.size();
+                    log.info("用户{}的{}条过期回收站文件已清理", userId, recycleIds.size());
+                } catch (Exception e) {
+                    log.error("清理用户{}的过期回收站文件失败: {}", userId, e.getMessage(), e);
                 }
             }
 
-            var parentId = userFileDO.getParentId();
-
-            // 如果父目录不存在
-            if (!parentExist) {
-                // 如果父目录不存在，则将parentId改为根节点
-                parentId = 0;
-            }
-
-            // 是否重名
-            var isExistRepeatName = false;
-
-            // 检查已改名的文件，有没有同名文件或文件夹（避免还原多个同名文件或文件夹时导致还原后名称重复）
-            var checkName = parentId + "-" + userFileDO.getName();
-            if (restoreNameSet.contains(checkName)) {
-                isExistRepeatName = true;
-            } else {
-                // 检查父目录下，有没有与根元素同名文件或文件夹
-//            var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(), userId, parentId, NORMAL, UserFileItemTypeEnum.getEnumByFlag(userFileDO.getItemType()));
-                var sameNameFile = userFileService.getUserFileByName(userFileDO.getName(), userId, parentId, NORMAL);
-
-                // 查询结果不为空
-                if (sameNameFile != null) {
-                    isExistRepeatName = true;
-                }
-            }
-
-            // 如果重名则改名
-            if (isExistRepeatName) {
-                // 有同名文件\文件夹，修改文件名
-                var newName = FileUtils.rename(userFileDO.getName());
-                var updateResult = userFileService.updateFileNameById(userFileDO.getId(), userId, newName, DEL);
-
-                if (!updateResult) {
-                    throw new FailResultException(SYSTEM_ERROR);
-                }
-
-                restoreNameSet.add(parentId + "-" + newName);
-            } else {
-                restoreNameSet.add(checkName);
-            }
-
-            // 如果父目录不存在
-            if (!parentExist) {
-                // 如果父目录不存在，则将父目录改为根节点
-                userFileService.updateParentIdByIds(List.of(userFileDO.getId()), 0, userId, DEL);
-            }
+            log.info("回收站自动清理完成，共清理{}条记录", totalCleaned);
+        } catch (Exception e) {
+            log.error("清理过期回收站文件失败: {}", e.getMessage(), e);
+            throw e;
         }
-
-        // 修改状态
-        userFileService.updateUserFileStatusById(userFileIds, userId, NORMAL);
     }
 }

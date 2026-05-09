@@ -203,11 +203,6 @@ public class ResultErrorMsgConsts {
     public static final String ERROR_RENAME = "重命名失败";
 
     /**
-     * 取消上传失败错误
-     */
-    public static final String ERROR_CANCEL_UPLOAD = "取消上传失败";
-
-    /**
      * 文件(夹)名称格式错误
      */
     public static final String ERROR_FILE_NAME_FORMAT = "文件(夹)名称不能包含<>|*?/";
@@ -246,6 +241,26 @@ public class ResultErrorMsgConsts {
      * 总切片数为空错误
      */
     public static final String ERROR_TOTAL_CHUNKS_EMPTY = "总切片数不能为空";
+
+    /**
+     * 上传任务不存在或已过期
+     */
+    public static final String ERROR_UPLOAD_TASK_EXPIRED = "上传任务不存在或已过期，请重新初始化";
+
+    /**
+     * 分片索引不合法
+     */
+    public static final String ERROR_UPLOAD_CHUNK_RANGE_INVALID = "分片索引不合法";
+
+    /**
+     * 上传任务参数冲突
+     */
+    public static final String ERROR_UPLOAD_TASK_CONFLICT = "上传任务参数冲突，请重新初始化";
+
+    /**
+     * 分片尚未上传完整
+     */
+    public static final String ERROR_UPLOAD_CHUNKS_INCOMPLETE = "分片尚未上传完整，请继续上传后重试";
 
     /**
      * 移动内容为空错误
@@ -336,4 +351,105 @@ public class ResultErrorMsgConsts {
      * sign非法错误
      */
     public static final String ERROR_SIGN = "sign不合法";
+
+    /**
+     * 下载任务不存在或已过期
+     */
+    public static final String ERROR_DOWNLOAD_TASK_NOT_FOUND = "下载任务不存在或已过期";
+
+    /**
+     * 下载任务尚未完成
+     */
+    public static final String ERROR_DOWNLOAD_TASK_NOT_READY = "下载任务尚未完成";
+
+    /**
+     * 下载任务执行失败
+     */
+    public static final String ERROR_DOWNLOAD_TASK_FAILED = "下载任务执行失败，请重试";
+
+    ///////////////////////////////////////////////// 存储源 ///////////////////////////////////////////////
+    /**
+     * 存储源ID为空错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_ID_EMPTY = "存储源ID不能为空";
+
+    /**
+     * 存储源名称为空错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_NAME_EMPTY = "存储源名称不能为空";
+
+    /**
+     * 存储源类型为空错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_TYPE_EMPTY = "存储源类型不能为空";
+
+    /**
+     * 存储源路径为空错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_PATH_EMPTY = "存储路径不能为空";
+
+    /**
+     * 存储源路径格式错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_PATH_FORMAT = "存储路径必须是绝对路径";
+
+    /**
+     * 存储源路径已存在错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_PATH_EXIST = "该存储路径已存在";
+
+    /**
+     * 存储源路径不可访问错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_PATH_UNAVAILABLE = "存储路径不可访问或无写入权限";
+
+    /**
+     * 存储源不存在错误
+     */
+    public static final String ERROR_STORAGE_SOURCE_NO_EXIST = "存储源不存在";
+
+    /**
+     * 无法删除默认存储源错误
+     */
+    public static final String ERROR_CANNOT_DELETE_DEFAULT_STORAGE = "无法删除默认存储源，请先设置其他存储源为默认";
+
+    /**
+     * 无法删除有文件的存储源错误
+     */
+    public static final String ERROR_CANNOT_DELETE_STORAGE_WITH_FILES = "无法删除有文件的存储源";
+
+    /**
+     * 用户没有存储源错误
+     */
+    public static final String ERROR_NO_STORAGE_SOURCE = "请先添加存储源";
+
+    /**
+     * 文件夹ID为空错误
+     */
+    public static final String ERROR_FOLDER_ID_EMPTY = "文件夹ID不能为空";
+
+    /**
+     * 文件迁移失败错误
+     */
+    public static final String ERROR_FILE_MIGRATION = "文件迁移失败";
+
+    /**
+     * 文件直链不存在或已失效
+     */
+    public static final String ERROR_DIRECT_LINK_NO_EXIST = "文件直链不存在或已失效";
+
+    /**
+     * 直链有效期参数不合法
+     */
+    public static final String ERROR_DIRECT_LINK_EXPIRE_DAYS_INVALID = "直链有效期必须大于等于0";
+
+    /**
+     * 页码不能为空
+     */
+    public static final String ERROR_PAGE_NUM_EMPTY = "页码不能为空";
+
+    /**
+     * 每页条数不能为空
+     */
+    public static final String ERROR_PAGE_SIZE_EMPTY = "每页条数不能为空";
 }

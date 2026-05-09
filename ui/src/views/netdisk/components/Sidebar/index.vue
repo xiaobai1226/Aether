@@ -16,12 +16,24 @@ const currentPath = ref<string>(route.path)
 
 const NETDISK_PATH = '/netdisk/main'
 const RECYCLE_BIN_PATH = '/netdisk/recyclebin'
+const DIRECT_LINK_PATH = '/netdisk/directlink'
 const SHARE_PATH = '/netdisk/share'
 
 // 跳转路由
 const jump = (routerPath: string, category: number | null) => {
   if (RECYCLE_BIN_PATH === routerPath) {
     if (currentPath.value === RECYCLE_BIN_PATH) {
+      return
+    }
+
+    router.push({
+      path: routerPath
+    })
+    return
+  }
+
+  if (DIRECT_LINK_PATH === routerPath) {
+    if (currentPath.value === DIRECT_LINK_PATH) {
       return
     }
 
@@ -111,6 +123,12 @@ userStore.handleGetUserSpaceUsage()
          @click="jump(RECYCLE_BIN_PATH, null)">
       <span :class="['iconfont', 'icon-delete']"></span>
       <span class="text">回收站</span>
+    </div>
+
+    <div :class="['menu-item-sub', currentPath == DIRECT_LINK_PATH ?  'active' : '']"
+         @click="jump(DIRECT_LINK_PATH, null)">
+      <span :class="['iconfont', 'icon-link']"></span>
+      <span class="text">直链记录</span>
     </div>
 
     <el-divider class="divider" />

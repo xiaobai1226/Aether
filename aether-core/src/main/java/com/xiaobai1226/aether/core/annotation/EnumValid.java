@@ -9,8 +9,7 @@ import java.lang.annotation.*;
  *
  * @author bai
  */
-@Target({ElementType.FIELD})
-//@Target({ElementType.FIELD, ElementType.METHOD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
+@Target({ ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface EnumValid {
@@ -23,4 +22,7 @@ public @interface EnumValid {
 
     @Note("需要校验的字段")
     String vaildField() default "";
+
+    @Note("是否允许为null，默认为false（保持原有逻辑）")
+    boolean allowNull() default false;
 }

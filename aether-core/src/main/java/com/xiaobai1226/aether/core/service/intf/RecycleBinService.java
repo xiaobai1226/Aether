@@ -1,10 +1,10 @@
 package com.xiaobai1226.aether.core.service.intf;
 
-import com.baomidou.mybatisplus.solon.service.IService;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.xiaobai1226.aether.core.domain.dto.RecycleBinFileDTO;
-import com.xiaobai1226.aether.domain.entity.RecycleBinDO;
 import com.xiaobai1226.aether.core.domain.vo.common.PageVO;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.RecycleBinDO;
 
 import java.util.List;
 
@@ -31,7 +31,7 @@ public interface RecycleBinService extends IService<RecycleBinDO> {
      * @return 获取到的用户文件数据
      * @author bai
      */
-    PageResult<RecycleBinFileDTO> getRecycleBinList(Integer userId, PageVO recycleBinVO);
+    PageResult<RecycleBinFileDTO> getRecycleBinList(final Long userId, PageVO recycleBinVO);
 
     /**
      * 清空回收站
@@ -39,7 +39,7 @@ public interface RecycleBinService extends IService<RecycleBinDO> {
      * @param userId 用户ID
      * @author bai
      */
-    void delete(Integer userId, List<String> recycleIds);
+    void delete(final Long userId, List<String> recycleIds);
 
     /**
      * 还原回收站
@@ -47,5 +47,13 @@ public interface RecycleBinService extends IService<RecycleBinDO> {
      * @param userId 用户ID
      * @author bai
      */
-    void restore(Integer userId, List<String> recycleIds);
+    void restore(final Long userId, List<String> recycleIds);
+
+    /**
+     * 清理过期的回收站文件
+     * 删除10天前的回收站文件
+     *
+     * @author bai
+     */
+    void cleanExpiredRecycleBinFiles();
 }

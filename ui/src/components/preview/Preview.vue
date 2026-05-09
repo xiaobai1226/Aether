@@ -8,9 +8,10 @@ import PreviewExcel from '@/components/preview/PreviewExcel.vue'
 import PreviewPdf from '@/components/preview/PreviewPdf.vue'
 import PreviewTxt from '@/components/preview/PreviewTxt.vue'
 import PreviewMusic from '@/components/preview/PreviewMusic.vue'
+import PreviewMarkdown from '@/components/preview/PreviewMarkdown.vue'
 import PreviewDownload from '@/components/preview/PreviewDownload.vue'
 import Window from '@/components/Window.vue'
-import { CODE, EXCEL, IMAGE, MUSIC, PDF, TXT, VIDEO, WORD } from '@/enums/IconEnum'
+import { CODE, EXCEL, IMAGE, MARKDOWN, MUSIC, PDF, TXT, VIDEO, WORD } from '@/enums/IconEnum'
 
 const windowShow = ref(false)
 const closeWindow = () => {
@@ -25,15 +26,55 @@ const imageViewRef = ref()
 const fileInfo = ref<UserFileInfo>({ itemType: 1, path: '' })
 
 /**
- * 显示预览
- * @param data
- * @param showPart
+ * 获取预览窗口宽度
  */
-const showPreview = (data: UserFileInfo, showPart) => {
+const getPreviewWidth = () => {
+  if (!fileInfo.value.suffix) return 900
+  
+  // 视频类文件使用最大宽度
+  if (VIDEO.suffixSet.has(fileInfo.value.suffix)) {
+    return 1500
+  }
+  
+  // Markdown 文档使用较大宽度以提供更好的阅读体验
+  if (MARKDOWN.suffixSet.has(fileInfo.value.suffix)) {
+    return 1200
+  }
+  
+  // PDF 文档也适合使用较大宽度
+  if (PDF.suffixSet.has(fileInfo.value.suffix)) {
+    return 1100
+  }
+  
+  // 文本和代码文件使用较大宽度，避免代码行过度换行
+  if (TXT.suffixSet.has(fileInfo.value.suffix) || CODE.suffixSet.has(fileInfo.value.suffix)) {
+    return 1100
+  }
+  
+  // 其他文件使用默认宽度
+  return 900
+}
+
+/**
+ * 显示预览
+ * @param data 当前要预览的文件
+ * @param showPart
+ * @param fileList 当前目录的所有文件列表（用于图片预览时的左右切换）
+ */
+const showPreview = (data: UserFileInfo, showPart?: any, fileList?: UserFileInfo[]) => {
   fileInfo.value = data
   if (data.suffix && IMAGE.suffixSet.has(data.suffix)) {
+    // 如果是图片，传递当前目录的所有图片列表
     nextTick(() => {
-      imageViewRef.value.show(0)
+      if (fileList && fileList.length > 0) {
+        // 筛选出所有图片文件
+        const imageFiles = fileList.filter(file => 
+          file.itemType === 1 && file.suffix && IMAGE.suffixSet.has(file.suffix)
+        )
+        imageViewRef.value.show(0, data.name, imageFiles, data.id)
+      } else {
+        imageViewRef.value.show(0, data.name)
+      }
     })
   } else {
     windowShow.value = true
@@ -46,9 +87,9 @@ defineExpose({ showPreview })
 <template>
   <!--  <PreviewImage v-if="fileInfo.category == 3" ref="imageViewRef" :imageList="[imageUrl]"/>-->
   <PreviewImage v-if="(fileInfo.suffix && IMAGE.suffixSet.has(fileInfo.suffix))" ref="imageViewRef"
-                :fileId="fileInfo.id" />
+                :fileId="fileInfo.id" :fileName="fileInfo.name" />
   <Window :show="windowShow" @close="closeWindow"
-          :width="(fileInfo.suffix && VIDEO.suffixSet.has(fileInfo.suffix)) ? 1500 : 900"
+          :width="getPreviewWidth()"
           :title="fileInfo.name" :align="(fileInfo.suffix && VIDEO.suffixSet.has(fileInfo.suffix)) ? 'center' : 'top'"
           v-else>
     <PreviewVideo :fileId="fileInfo.id" :name="fileInfo.name"
@@ -57,6 +98,8 @@ defineExpose({ showPreview })
                 v-else-if="(fileInfo.suffix && (WORD.suffixSet.has(fileInfo.suffix)))" />
     <PreviewExcel :fileId="fileInfo.id" v-else-if="(fileInfo.suffix &&  EXCEL.suffixSet.has(fileInfo.suffix))" />
     <PreviewPdf :fileId="fileInfo.id" v-else-if="(fileInfo.suffix &&  PDF.suffixSet.has(fileInfo.suffix))" />
+    <PreviewMarkdown :fileId="fileInfo.id" :fileName="fileInfo.name"
+                     v-else-if="(fileInfo.suffix &&  MARKDOWN.suffixSet.has(fileInfo.suffix))" />
     <PreviewTxt :fileId="fileInfo.id"
                 v-else-if="(fileInfo.suffix &&  (TXT.suffixSet.has(fileInfo.suffix) || CODE.suffixSet.has(fileInfo.suffix)))" />
     <PreviewMusic :fileId="fileInfo.id" :fileName="fileInfo.name"

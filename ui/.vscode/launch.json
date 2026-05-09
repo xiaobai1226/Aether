@@ -1,0 +1,19 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Aether-Web",
+            "runtimeExecutable": "npm", // 使用npm作为运行工具
+            "runtimeArgs": ["run", "dev"], // 传递参数：执行npm run dev
+            "console": "integratedTerminal", // 在集成终端中显示输出（方便查看日志）
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        }
+    ]
+}

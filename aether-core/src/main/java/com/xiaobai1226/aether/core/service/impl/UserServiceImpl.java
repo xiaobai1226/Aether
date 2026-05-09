@@ -4,11 +4,11 @@ import cn.dev33.satoken.secure.BCrypt;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.solon.conditions.query.LambdaQueryChainWrapper;
-import com.xiaobai1226.aether.core.dao.redis.UserRedisDAO;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.xiaobai1226.aether.core.cache.UserCache;
 import com.xiaobai1226.aether.core.domain.dto.UserSpaceUsageDTO;
-import com.xiaobai1226.aether.domain.entity.UserDO;
 import com.xiaobai1226.aether.core.domain.vo.RegisterVO;
+import com.xiaobai1226.aether.dao.domain.entity.UserDO;
 import com.xiaobai1226.aether.dao.mapper.UserMapper;
 import com.xiaobai1226.aether.core.service.intf.UserService;
 import org.apache.ibatis.solon.annotation.Db;
@@ -30,7 +30,7 @@ public class UserServiceImpl implements UserService {
     private UserMapper userMapper;
 
     @Inject
-    private UserRedisDAO userRedisDAO;
+    private UserCache userCache;
 
     @Override
     public UserDO getUserByUsername(String username) {
@@ -39,17 +39,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateUserLastLoginTime(Integer userId) {
+    public void updateUserLastLoginTime(final Long userId) {
         var lambdaUpdate = new LambdaUpdateWrapper<UserDO>();
         lambdaUpdate.eq(UserDO::getId, userId).set(UserDO::getLastLoginTime, DateUtil.now());
         userMapper.update(null, lambdaUpdate);
     }
 
     @Override
-    public UserSpaceUsageDTO getUserSpaceUsage(Integer userId) {
+    public UserSpaceUsageDTO getUserSpaceUsage(final Long userId) {
         var userDO = userMapper.selectById(userId);
         var remainStorage = userDO.getTotalStorage() - userDO.getUsedStorage();
-        var uploadingUsedStorage = userRedisDAO.getUploadingFileSize(userId);
+        var uploadingUsedStorage = userCache.getUploadingFileSize(userId);
         var realRemainStorage = remainStorage - uploadingUsedStorage;
         return new UserSpaceUsageDTO(userDO.getUsedStorage(), userDO.getTotalStorage(), remainStorage, uploadingUsedStorage, realRemainStorage);
     }
@@ -60,7 +60,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Integer updatePasswordById(Integer id, String password) {
+    public Integer updatePasswordById(Long id, String password) {
         var lambdaUpdate = new LambdaUpdateWrapper<UserDO>();
         lambdaUpdate.eq(UserDO::getId, id).set(UserDO::getPassword, BCrypt.hashpw(password));
         return userMapper.update(null, lambdaUpdate);
@@ -105,14 +105,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Integer updateUsedStorage(Integer userId, Long usedStorage) {
+    public Integer updateUsedStorage(final Long userId, Long usedStorage) {
         // TODO 确认好我到底使不使用这个字段后再开发
         return null;
     }
 
     @Override
-    public Integer updateTotalStorage(Integer userId, Long totalStorage) {
+    public Integer updateTotalStorage(final Long userId, Long totalStorage) {
         return null;
     }
 }
-

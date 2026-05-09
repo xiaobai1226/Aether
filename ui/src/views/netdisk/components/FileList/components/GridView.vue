@@ -10,7 +10,7 @@ import { PLAY, VIDEO } from '@/enums/IconEnum'
 /**
  * 父类回调方法
  */
-const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file'])
+const emit = defineEmits(['click', 'update-selected', 'download', 'del-file', 'show-edit-panel', 'move-file', 'copy-file', 'set-storage-source', 'create-direct-link'])
 
 const props = defineProps({
   /**
@@ -231,6 +231,10 @@ defineExpose({ clearSelection })
                 <template #dropdown>
                   <el-dropdown-menu>
                     <div class="op-dropdown-item">
+                      <el-dropdown-item @click="emit('create-direct-link', userFile)">
+                        <span class="iconfont icon-link op-dropdown-iconfont" />
+                        <span class="op-dropdown-txt">生成直链</span>
+                      </el-dropdown-item>
                       <el-dropdown-item @click="download(userFile)">
                         <span class="iconfont icon-download op-dropdown-iconfont" />
                         <span class="op-dropdown-txt">下载</span>
@@ -251,6 +255,10 @@ defineExpose({ clearSelection })
                         <span class="iconfont icon-copy op-dropdown-iconfont" />
                         <span class="op-dropdown-txt">复制</span>
                       </el-dropdown-item>
+                      <el-dropdown-item v-if="userFile.itemType === 0" @click="emit('set-storage-source', userFile)">
+                        <span class="iconfont icon-settings op-dropdown-iconfont" />
+                        <span class="op-dropdown-txt">设置存储源</span>
+                      </el-dropdown-item>
                     </div>
                   </el-dropdown-menu>
                 </template>
@@ -261,6 +269,7 @@ defineExpose({ clearSelection })
             <div class="icon">
               <Icon :itemType="userFile.itemType" :suffix="userFile.suffix" :thumbnail="userFile.thumbnail"
                     :icon-config="mode === 0 ? thumbnailIconConfig : largeIconConfig"
+                    :lazy-root-margin="mode === 0 ? '220px' : '180px'"
                     :width="getIconWidth(userFile.thumbnail)" />
               <Icon class="play" v-if="(userFile.suffix && VIDEO.suffixSet.has(userFile.suffix))"
                     :icon-url="PLAY.iconUrl" :width="mode === 0 ? 14 : 20" />
@@ -427,6 +436,10 @@ defineExpose({ clearSelection })
     font-size: 10px;
   }
 
+  .icon-link {
+    font-size: 10px;
+  }
+
   .icon-delete {
     font-size: 11px;
   }
@@ -440,6 +453,10 @@ defineExpose({ clearSelection })
   }
 
   .icon-copy {
+    font-size: 12px;
+  }
+
+  .icon-settings {
     font-size: 12px;
   }
 

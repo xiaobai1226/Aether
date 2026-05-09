@@ -49,4 +49,9 @@ public class LoginUserInfoDTO {
      * 登录前缀
      */
     private String tokenPrefix;
+
+    /**
+     * 是否有存储源
+     */
+    private Boolean hasStorageSource;
 }

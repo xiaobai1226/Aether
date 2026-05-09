@@ -1,10 +1,10 @@
 package com.xiaobai1226.aether.admin.service.intf;
 
+import com.xiaobai1226.aether.admin.domain.vo.AddUserVO;
+import com.xiaobai1226.aether.admin.domain.vo.UpdateUserVO;
 import com.xiaobai1226.aether.admin.domain.vo.UserVO;
-import com.xiaobai1226.aether.domain.dto.common.PageResult;
-import com.xiaobai1226.aether.domain.entity.UserDO;
-import com.xiaobai1226.aether.domain.vo.AddUserVO;
-import com.xiaobai1226.aether.domain.vo.UpdateUserVO;
+import com.xiaobai1226.aether.dao.domain.dto.PageResult;
+import com.xiaobai1226.aether.dao.domain.entity.UserDO;
 
 /**
  * 用户服务接口
